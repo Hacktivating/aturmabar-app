@@ -10,21 +10,22 @@ interface AuthLayoutProps {
 export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title }) => {
   const { i18n } = useTranslation();
   
-  const [isDark, setIsDark] = useState(() => {
-    return document.documentElement.classList.contains('dark');
-  });
+  const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark');
 
   useEffect(() => {
     if (isDark) {
       document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
     }
   }, [isDark]);
 
   const toggleLanguage = () => {
     const nextLang = i18n.language === 'en' ? 'id' : 'en';
     i18n.changeLanguage(nextLang);
+    localStorage.setItem('language', nextLang);
   };
 
   return (
