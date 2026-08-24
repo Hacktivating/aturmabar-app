@@ -31,8 +31,13 @@ export default function Login() {
       setMessage({ type: 'success', text: response.data.message });
       
       // Redirect to dashboard (placeholder route)
+      // Replace the existing setTimeout block with:
       setTimeout(() => {
-        navigate('/dashboard');
+        if (response.data.user.role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
+        }
       }, 1000);
       
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
