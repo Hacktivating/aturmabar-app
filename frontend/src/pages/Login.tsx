@@ -75,6 +75,11 @@ export default function Login() {
             onChange={(e) => setPassword(e.target.value)}
             className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-950 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
           />
+          <div className="flex justify-end">
+            <Link to="/forgot-password" className="text-sm text-blue-600 hover:underline font-medium mt-3">
+              {t('forgot_pwd')}
+            </Link>
+          </div>
         </div>
         <button 
           type="submit" 

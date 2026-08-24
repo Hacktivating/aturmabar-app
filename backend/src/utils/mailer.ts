@@ -35,3 +35,26 @@ export const sendVerificationEmail = async (toEmail: string, token: string) => {
 
   await transporter.sendMail(mailOptions);
 };
+
+export const sendPasswordResetEmail = async (toEmail: string, token: string) => {
+  const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
+
+  const mailOptions = {
+    from: `"AturMabar" <${process.env.EMAIL_USER}>`,
+    to: toEmail,
+    subject: "Password Reset Request",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+        <h2 style="color: #2563eb;">Reset Your Password</h2>
+        <p>You requested a password reset. Click the button below to set a new password:</p>
+        <div style="margin: 25px 0;">
+          <a href="${resetUrl}" style="background-color: #2563eb; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Reset Password</a>
+        </div>
+        <p style="color: #666; font-size: 14px;">This link will expire in 1 hour.</p>
+        <p style="color: #999; font-size: 12px;">If you did not request this, you can safely ignore this email.</p>
+      </div>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
+};

@@ -16,7 +16,8 @@ const resources = {
       "verify_title": "Verify Email",
       "verify_desc": "Checking your verification token...",
       "success_verify": "Email verified successfully. Redirecting to login...",
-      "error_verify": "Invalid or expired token."
+      "error_verify": "Invalid or expired token.",
+      "forgot_pwd": "Forgot Password?", "send_reset": "Send Reset Link", "new_pwd": "New Password", "reset_pwd": "Reset Password", "back_login": "Back to Login",
     }
   },
   id: {
@@ -33,7 +34,8 @@ const resources = {
       "verify_title": "Verifikasi Email",
       "verify_desc": "Memeriksa token verifikasi Anda...",
       "success_verify": "Email berhasil diverifikasi. Mengalihkan ke halaman masuk...",
-      "error_verify": "Token tidak valid atau kedaluwarsa."
+      "error_verify": "Token tidak valid atau kedaluwarsa.",
+      "forgot_pwd": "Lupa Kata Sandi?", "send_reset": "Kirim Tautan Reset", "new_pwd": "Kata Sandi Baru", "reset_pwd": "Atur Ulang Sandi", "back_login": "Kembali ke Masuk",
     }
   }
 };

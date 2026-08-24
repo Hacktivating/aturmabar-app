@@ -4,8 +4,8 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { eq, and, gt } from "drizzle-orm";
 import { db } from "../db";
-import { users, verificationTokens } from "../db/schema";
-import { sendVerificationEmail } from "../utils/mailer";
+import { users, verificationTokens, passwordResetTokens } from "../db/schema";
+import { sendVerificationEmail, sendPasswordResetEmail } from "../utils/mailer";
 
 const router = Router();
 
@@ -150,6 +150,74 @@ router.post("/login", async (req, res) => {
     });
   } catch (error) {
     console.error("Login Error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// FORGOT PASSWORD
+router.post("/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: "Email is required" });
+
+    const user = await db.query.users.findFirst({
+      where: eq(users.email, email),
+    });
+
+    if (!user) {
+      // Return 200 even if user doesn't exist to prevent email enumeration
+      return res.status(200).json({ message: "If an account exists, a reset link has been sent." });
+    }
+
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour expiration
+
+    await db.insert(passwordResetTokens).values({
+      userId: user.id,
+      token,
+      expiresAt,
+    });
+
+    await sendPasswordResetEmail(user.email, token);
+
+    return res.status(200).json({ message: "If an account exists, a reset link has been sent." });
+  } catch (error) {
+    console.error("Forgot Password Error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// RESET PASSWORD
+router.post("/reset-password", async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) return res.status(400).json({ error: "Token and new password are required" });
+
+    const record = await db.query.passwordResetTokens.findFirst({
+      where: and(
+        eq(passwordResetTokens.token, token),
+        gt(passwordResetTokens.expiresAt, new Date())
+      ),
+    });
+
+    if (!record) {
+      return res.status(400).json({ error: "Invalid or expired token" });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    await db
+      .update(users)
+      .set({ passwordHash })
+      .where(eq(users.id, record.userId));
+
+    await db
+      .delete(passwordResetTokens)
+      .where(eq(passwordResetTokens.id, record.id));
+
+    return res.status(200).json({ message: "Password reset successful. You can now log in." });
+  } catch (error) {
+    console.error("Reset Password Error:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
