@@ -18,7 +18,7 @@ export default function VerifyEmailChange() {
   useEffect(() => {
     if (!token) {
       setStatus('error');
-      setMessage('Invalid or missing token.');
+      setMessage(t('missing_token'));
       return;
     }
 
@@ -29,45 +29,43 @@ export default function VerifyEmailChange() {
       try {
         const response = await api.post('/auth/verify-email-change', { token });
         setStatus('success');
-        setMessage(response.data.message || 'Email successfully updated.');
+        setMessage(response.data.message || t('verify_email_success'));
         
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         
-        setTimeout(() => {
-          navigate('/login');
-        }, 3000);
+        setTimeout(() => navigate('/login'), 3000);
       } catch (error: any) {
         setStatus('error');
-        setMessage(error.response?.data?.error || 'Verification failed.');
+        setMessage(error.response?.data?.error || t('op_failed'));
       }
     };
 
     verifyEmailChange();
-  }, [token, navigate]);
+  }, [token, navigate, t]);
 
   return (
-    <AuthLayout title="Verify Email Change">
-      <div className="flex flex-col items-center justify-center py-8 text-center">
+    <AuthLayout title={t('verify_title')}>
+      <div className="flex flex-col items-center justify-center py-8 text-center animate-in zoom-in-95 duration-300">
         {status === 'loading' && (
           <>
             <Loader2 className="animate-spin text-blue-600 mb-4" size={48} />
-            <p className="text-gray-600 dark:text-gray-400">Verifying your new email address...</p>
+            <p className="text-slate-600 dark:text-slate-400">{t('verifying')}</p>
           </>
         )}
         
         {status === 'success' && (
           <>
-            <CheckCircle className="text-green-500 mb-4" size={48} />
-            <p className="text-green-600 dark:text-green-400 font-medium">{message}</p>
-            <p className="text-sm text-gray-500 mt-2">Please log in again with your new email. Redirecting...</p>
+            <CheckCircle className="text-emerald-500 mb-4" size={48} />
+            <p className="text-emerald-700 dark:text-emerald-400 font-semibold">{message}</p>
+            <p className="text-sm text-slate-500 mt-2">{t('redirect_login')}</p>
           </>
         )}
 
         {status === 'error' && (
           <>
-            <XCircle className="text-red-500 mb-4" size={48} />
-            <p className="text-red-600 dark:text-red-400 font-medium">{message}</p>
+            <XCircle className="text-rose-500 mb-4" size={48} />
+            <p className="text-rose-700 dark:text-rose-400 font-semibold">{message}</p>
           </>
         )}
       </div>

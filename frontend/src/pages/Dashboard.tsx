@@ -1,50 +1,57 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Zap, LogOut, Settings, X, ShieldAlert, User, Lock, Globe, Image as ImageIcon, Upload, Sun, Moon } from 'lucide-react';
+import { ShieldAlert, LogOut, Trash2, Edit2, Plus, X, Search, CheckCircle, XCircle, Clock, Sun, Moon, Globe } from 'lucide-react';
 import api from '../api/axios';
 
-const PRESET_AVATARS = ['🏸', '🏆', '👟', '👕', '🔥', '🌟', '⚡', '💪'];
+interface Account {
+  id: number;
+  username: string;
+  email: string;
+  isVerified: boolean;
+  communities: any[];
+}
 
-export default function Dashboard() {
+export default function AdminDashboard() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  const [userData, setUserData] = useState<any>(null);
-  const [communityData, setCommunityData] = useState<any>(null);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [targetId, setTargetId] = useState<number | null>(null);
   
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'profile' | 'account' | 'general'>('profile');
-  
-  const [profileForm, setProfileForm] = useState({ communityName: '', logo: '' });
-  const [accountForm, setAccountForm] = useState({ newEmail: '', oldPassword: '', newPassword: '', confirmPassword: '' });
+  const [formData, setFormData] = useState({
+    email: '', username: '', password: '', communityName: '', subscriptionType: '', customDate: ''
+  });
+
   const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark');
-  
-  const [message, setMessage] = useState<{ type: 'success'|'error', text: string } | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     if (isDark) { document.documentElement.classList.add('dark'); localStorage.setItem('theme', 'dark'); }
     else { document.documentElement.classList.remove('dark'); localStorage.setItem('theme', 'light'); }
   }, [isDark]);
 
-  const fetchData = async () => {
+  const toggleLanguage = () => {
+    const newLang = i18n.language === 'en' ? 'id' : 'en';
+    i18n.changeLanguage(newLang);
+    localStorage.setItem('language', newLang);
+  };
+
+  const fetchAccounts = async () => {
     try {
-      const response = await api.get('/users/me');
-      setUserData(response.data.user);
-      setCommunityData(response.data.community);
-      setProfileForm({ communityName: response.data.community.name, logo: response.data.community.logo });
-      setAccountForm(prev => ({ ...prev, newEmail: response.data.user.email }));
-    } catch (error) {
-      navigate('/login');
+      const response = await api.get('/admin/accounts');
+      setAccounts(response.data);
+    } catch (err) {
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchData(); }, [navigate]);
+  useEffect(() => { fetchAccounts(); }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -52,295 +59,250 @@ export default function Dashboard() {
     navigate('/login');
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setProfileForm({ ...profileForm, logo: reader.result as string });
-      reader.readAsDataURL(file);
-    }
+  const filteredAccounts = accounts.filter(acc => {
+    const term = searchQuery.toLowerCase();
+    const commName = acc.communities[0]?.name || '';
+    return acc.username.toLowerCase().includes(term) || 
+           acc.email.toLowerCase().includes(term) || 
+           commName.toLowerCase().includes(term);
+  });
+
+  const openCreateModal = () => {
+    setIsEditMode(false);
+    setTargetId(null);
+    setFormData({ email: '', username: '', password: '', communityName: '', subscriptionType: '', customDate: '' });
+    setIsModalOpen(true);
   };
 
-  const handleUpdateProfile = async (e: React.FormEvent) => {
+  const openEditModal = (account: Account) => {
+    setIsEditMode(true);
+    setTargetId(account.id);
+    const comm = account.communities[0] || {};
+    setFormData({ 
+      email: account.email, username: account.username, password: '', 
+      communityName: comm.name || '', subscriptionType: '', customDate: ''
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsProcessing(true);
-    setMessage(null);
     try {
-      await api.put('/users/profile', profileForm);
-      setMessage({ type: 'success', text: t('save_changes') + ' Successful' });
-      fetchData();
+      if (isEditMode && targetId) {
+        await api.put(`/admin/accounts/${targetId}`, { username: formData.username, email: formData.email, communityName: formData.communityName });
+        if (formData.password) await api.patch(`/admin/accounts/${targetId}/password`, { newPassword: formData.password });
+        if (formData.subscriptionType) await api.patch(`/admin/accounts/${targetId}/subscription`, { type: formData.subscriptionType, customDate: formData.customDate });
+      } else {
+        await api.post('/admin/accounts', formData);
+        if (formData.subscriptionType) {
+          const res = await api.get('/admin/accounts');
+          const newUser = res.data.find((a: Account) => a.email === formData.email);
+          if (newUser) await api.patch(`/admin/accounts/${newUser.id}/subscription`, { type: formData.subscriptionType, customDate: formData.customDate });
+        }
+      }
+      setIsModalOpen(false);
+      fetchAccounts();
     } catch (err: any) {
-      setMessage({ type: 'error', text: err.response?.data?.error || 'Update failed' });
-    } finally {
-      setIsProcessing(false);
+      alert(err.response?.data?.error || t('op_failed'));
     }
   };
 
-  const handleRequestEmailChange = async () => {
-    if (accountForm.newEmail === userData.email) return;
-    setIsProcessing(true);
-    setMessage(null);
+  const handleDelete = async (id: number) => {
+    if (!window.confirm(t('delete_confirm'))) return;
     try {
-      const res = await api.post('/users/request-email', { newEmail: accountForm.newEmail });
-      setMessage({ type: 'success', text: res.data.message });
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.response?.data?.error || 'Email request failed' });
-    } finally {
-      setIsProcessing(false);
+      await api.delete(`/admin/accounts/${id}`);
+      fetchAccounts();
+    } catch (err) {
+      alert(t('delete_failed'));
     }
   };
 
-  const handleUpdatePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (accountForm.newPassword !== accountForm.confirmPassword) return setMessage({ type: 'error', text: 'Passwords do not match' });
-    setIsProcessing(true);
-    setMessage(null);
-    try {
-      await api.put('/users/password', { oldPassword: accountForm.oldPassword, newPassword: accountForm.newPassword });
-      setMessage({ type: 'success', text: t('save_changes') + ' Successful' });
-      setAccountForm({ ...accountForm, oldPassword: '', newPassword: '', confirmPassword: '' });
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.response?.data?.error || 'Password update failed' });
-    } finally {
-      setIsProcessing(false);
-    }
+  const renderStatusBadge = (status: string, endsAt: string) => {
+    if (status === 'lifetime') return <span className="flex items-center gap-1.5 px-2.5 py-1 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 rounded-md text-xs font-semibold"><CheckCircle size={14}/> {t('lifetime')}</span>;
+    const isExpired = endsAt ? new Date(endsAt) < new Date() : true;
+    if (status === 'active' && !isExpired) return <span className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-md text-xs font-semibold"><Clock size={14}/> {t('active')}</span>;
+    return <span className="flex items-center gap-1.5 px-2.5 py-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 rounded-md text-xs font-semibold"><XCircle size={14}/> {t('inactive')}</span>;
   };
 
-  const toggleLanguage = (lang: string) => {
-    i18n.changeLanguage(lang);
-    localStorage.setItem('language', lang);
-  };
-
-  if (loading) return <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">{t('loading')}</div>;
-
-  const isExpired = communityData?.subscriptionStatus !== 'lifetime' && (!communityData?.subscriptionEndsAt || new Date(communityData.subscriptionEndsAt) < new Date());
-  const isBlocked = communityData?.subscriptionStatus === 'inactive' || isExpired;
-  
-  const inputStyles = "w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all";
+  const inputStyles = "w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-950/50 border border-gray-300 dark:border-gray-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all";
   const labelStyles = "block text-xs font-semibold mb-1 text-gray-500 uppercase tracking-wider";
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 transition-colors duration-200">
-      <nav className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 sm:px-6 py-4 flex justify-between items-center sticky top-0 z-20">
-        <div className="flex items-center gap-2">
-          <div className="bg-blue-600 p-1.5 rounded-md flex items-center justify-center text-white shrink-0">
-            <Zap size={18} fill="currentColor" />
+    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0F172A] text-slate-900 dark:text-slate-100 font-sans">
+      <nav className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 sm:px-6 py-4 flex justify-between items-center sticky top-0 z-10">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="bg-indigo-600 p-1.5 sm:p-2 rounded-lg flex items-center justify-center shadow-sm">
+            <ShieldAlert className="text-white" size={18} />
           </div>
-          <span className="text-lg sm:text-xl font-bold tracking-tight hidden sm:block">AturMabar</span>
+          <span className="text-base sm:text-lg font-bold tracking-tight hidden sm:inline">{t('sys_admin')}</span>
+          <span className="text-lg font-bold tracking-tight sm:hidden">Admin</span>
         </div>
         
         <div className="flex items-center gap-2 sm:gap-4">
-          <div className="flex items-center gap-2 pr-2 sm:pr-4 border-r border-gray-200 dark:border-gray-800 max-w-[140px] sm:max-w-xs">
-            <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-sm shrink-0 overflow-hidden">
-              {communityData?.logo?.startsWith('data:image') ? <img src={communityData.logo} alt="logo" className="w-full h-full object-cover"/> : communityData?.logo || '🏸'}
-            </div>
-            <span className="text-sm font-semibold truncate">{communityData?.name}</span>
-          </div>
-
-          <button onClick={() => { setIsSettingsOpen(true); setMessage(null); }} className="p-2 text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition shrink-0">
-            <Settings size={20} />
+          <button onClick={toggleLanguage} className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors px-2 sm:px-3 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+            <Globe size={16} />
+            {i18n.language.toUpperCase()}
           </button>
-          <button onClick={handleLogout} className="flex items-center gap-2 text-sm text-red-600 font-medium hover:bg-red-50 dark:hover:bg-red-900/20 px-2 sm:px-3 py-1.5 rounded-md transition-colors shrink-0">
+          <button onClick={() => setIsDark(!isDark)} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
+            {isDark ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+          <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
+          <button onClick={handleLogout} className="flex items-center gap-2 text-sm text-rose-600 font-medium px-3 sm:px-4 py-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors">
             <LogOut size={16} /> <span className="hidden sm:inline">{t('logout')}</span>
           </button>
         </div>
       </nav>
 
-      <main className="relative p-4 sm:p-6 max-w-7xl mx-auto h-[calc(100vh-80px)]">
-        {isBlocked && (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 dark:bg-gray-950/80 backdrop-blur-sm rounded-xl p-4">
-            <div className="bg-white dark:bg-gray-900 p-6 sm:p-8 rounded-2xl shadow-xl w-full max-w-md text-center border border-gray-200 dark:border-gray-800">
-              <div className="mx-auto w-12 h-12 sm:w-16 sm:h-16 bg-red-100 dark:bg-red-900/30 text-red-600 rounded-full flex items-center justify-center mb-4">
-                <ShieldAlert size={28} className="sm:w-8 sm:h-8" />
+      <main className="p-4 sm:p-8 max-w-7xl mx-auto">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t('comm_accounts')}</h1>
+            <p className="text-slate-500 text-sm mt-1">{t('manage_desc')}</p>
+          </div>
+          <button onClick={openCreateModal} className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm">
+            <Plus size={16} /> {t('new_account')}
+          </button>
+        </div>
+
+        <div className="mb-6 relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search className="text-gray-400" size={18} />
+          </div>
+          <input 
+            type="text" placeholder={t('search_ph')}
+            value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm transition-all"
+          />
+        </div>
+        
+        {loading ? <div className="animate-pulse h-32 bg-slate-200 dark:bg-slate-800 rounded-xl w-full"></div> : (
+          <div className="flex flex-col gap-4">
+            {filteredAccounts.map((account) => {
+              const community = account.communities[0] || {};
+              return (
+                <div key={account.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 sm:p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-2xl shrink-0 overflow-hidden">
+                      {community.logo?.startsWith('data:image') ? <img src={community.logo} alt="logo" className="w-full h-full object-cover"/> : community.logo || '🏸'}
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-base truncate">{community.name || 'N/A'}</h3>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-sm text-slate-500 mt-0.5">
+                        <span className="font-medium text-slate-700 dark:text-slate-300 truncate">@{account.username}</span>
+                        <span className="hidden sm:inline">•</span>
+                        <span className="truncate">{account.email}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800">
+                    <div className="flex flex-col items-start sm:items-end">
+                      <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-1 hidden sm:block">{t('status')}</span>
+                      <div className="flex items-center gap-2">
+                        {renderStatusBadge(community.subscriptionStatus, community.subscriptionEndsAt)}
+                        {community.subscriptionStatus === 'active' && community.subscriptionEndsAt && (
+                          <span className="text-[10px] text-slate-400 font-medium tracking-wide">
+                            EXP: {new Date(community.subscriptionEndsAt).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
+                      <button onClick={() => openEditModal(account)} className="flex-1 sm:flex-none flex items-center justify-center p-2 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 dark:bg-slate-800 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-400 rounded-lg text-slate-600 dark:text-slate-400 transition-colors">
+                        <Edit2 size={16} />
+                      </button>
+                      <button onClick={() => handleDelete(account.id)} className="flex-1 sm:flex-none flex items-center justify-center p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 rounded-lg transition-colors">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+            {filteredAccounts.length === 0 && (
+              <div className="p-8 text-center text-slate-500 bg-white dark:bg-slate-900 rounded-xl border border-dashed border-slate-300 dark:border-slate-700">
+                {t('no_accounts')}
               </div>
-              <h2 className="text-xl sm:text-2xl font-bold mb-2">{t('sub_inactive')}</h2>
-              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-6">
-                {t('sub_desc')}
-              </p>
-              <button onClick={handleLogout} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors">
-                {t('return_login')}
-              </button>
-            </div>
+            )}
           </div>
         )}
-
-        <div className={`transition-opacity ${isBlocked ? 'opacity-20 pointer-events-none' : 'opacity-100'}`}>
-          <h1 className="text-xl sm:text-2xl font-semibold mb-4">{t('welcome')}, {communityData?.name}</h1>
-          <div className="p-4 sm:p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm">
-            <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">{t('dashboard_init')}</p>
-          </div>
-        </div>
       </main>
 
-      {/* Responsive Settings Modal */}
-      {isSettingsOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-900 w-full h-[90dvh] sm:h-auto sm:max-h-[85vh] sm:max-w-3xl rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90dvh]">
+            <div className="flex justify-between items-center p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="font-bold text-lg">{isEditMode ? t('edit_account') : t('create_account')}</h3>
+              <button onClick={() => setIsModalOpen(false)} className="p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"><X size={18} /></button>
+            </div>
             
-            {/* Mobile Header */}
-            <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-800 md:hidden shrink-0">
-              <h3 className="font-bold text-lg">{t('settings')}</h3>
-              <button onClick={() => setIsSettingsOpen(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"><X size={20} /></button>
+            <div className="p-4 sm:p-6 overflow-y-auto">
+              <form id="admin-form" onSubmit={handleSubmit} className="flex flex-col gap-5 sm:gap-6">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-3">{t('profile_data')}</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className={labelStyles}>{t('username')}</label>
+                      <input type="text" required value={formData.username} onChange={(e) => setFormData({...formData, username: e.target.value})} className={inputStyles} />
+                    </div>
+                    <div>
+                      <label className={labelStyles}>{t('email')}</label>
+                      <input type="email" required value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className={inputStyles} />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-3">{t('security')}</h4>
+                  <div>
+                    <label className={labelStyles}>{isEditMode ? t('override_pass') : t('password')}</label>
+                    <input type="password" required={!isEditMode} placeholder={isEditMode ? t('leave_blank_unchanged') : '••••••••'} value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} className={inputStyles} />
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-3">{t('comm_settings')}</h4>
+                  <div>
+                    <label className={labelStyles}>{t('community_name')}</label>
+                    <input type="text" required value={formData.communityName} onChange={(e) => setFormData({...formData, communityName: e.target.value})} className={inputStyles} />
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-50 dark:bg-slate-950/50 rounded-xl border border-slate-200 dark:border-slate-800">
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-3">{t('sys_access')}</h4>
+                  <div className="flex flex-col gap-3">
+                    <div>
+                      <label className={labelStyles}>{t('sub_action')}</label>
+                      <select value={formData.subscriptionType} onChange={(e) => setFormData({...formData, subscriptionType: e.target.value, customDate: ''})} className={inputStyles}>
+                        <option value="">{isEditMode ? t('keep_status') : t('select_initial')}</option>
+                        <option value="revoke">{t('revoke')}</option>
+                        <option value="2_weeks">Active - 2 Weeks</option>
+                        <option value="1_month">Active - 1 Month</option>
+                        <option value="3_months">Active - 3 Months</option>
+                        <option value="lifetime">{t('lifetime')}</option>
+                        <option value="custom">Active - Custom Date</option>
+                      </select>
+                    </div>
+
+                    {formData.subscriptionType === 'custom' && (
+                      <div>
+                        <label className={labelStyles}>{t('custom_date')}</label>
+                        <input type="date" required value={formData.customDate} onChange={(e) => setFormData({...formData, customDate: e.target.value})} className={`[&::-webkit-calendar-picker-indicator]:dark:invert ${inputStyles}`} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </form>
             </div>
-
-            {/* Navigation Tabs */}
-            <div className="md:w-64 bg-gray-50 dark:bg-gray-950/50 border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-800 p-2 md:p-4 flex flex-row md:flex-col gap-2 overflow-x-auto shrink-0 scrollbar-hide">
-              <h3 className="font-bold text-lg hidden md:block mb-4 px-2">{t('settings')}</h3>
-              
-              <button onClick={() => { setActiveTab('profile'); setMessage(null); }} className={`flex items-center gap-2 md:gap-3 px-3 py-2 md:py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${activeTab === 'profile' ? 'bg-white dark:bg-gray-800 shadow-sm text-blue-600' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900'}`}>
-                <User size={18} /> {t('profile')}
+            
+            <div className="p-4 sm:p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex justify-end gap-3 shrink-0 pb-safe">
+              <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 sm:flex-none px-4 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors">
+                {t('cancel')}
               </button>
-              <button onClick={() => { setActiveTab('account'); setMessage(null); }} className={`flex items-center gap-2 md:gap-3 px-3 py-2 md:py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${activeTab === 'account' ? 'bg-white dark:bg-gray-800 shadow-sm text-blue-600' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900'}`}>
-                <Lock size={18} /> {t('account')}
+              <button type="submit" form="admin-form" className="flex-1 sm:flex-none px-5 py-2.5 text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm transition-colors">
+                {isEditMode ? t('save') : t('create')}
               </button>
-              <button onClick={() => { setActiveTab('general'); setMessage(null); }} className={`flex items-center gap-2 md:gap-3 px-3 py-2 md:py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${activeTab === 'general' ? 'bg-white dark:bg-gray-800 shadow-sm text-blue-600' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900'}`}>
-                <Globe size={18} /> {t('general')}
-              </button>
-            </div>
-
-            {/* Content Area */}
-            <div className="flex-1 flex flex-col relative overflow-hidden">
-              <button onClick={() => setIsSettingsOpen(false)} className="hidden md:block absolute top-4 right-4 p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors z-10">
-                <X size={20} />
-              </button>
-
-              <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">
-                {message && (
-                  <div className={`mb-6 p-3 sm:p-4 rounded-lg text-sm font-medium border ${message.type === 'error' ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/50 dark:border-red-900/50' : 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950/50 dark:border-green-900/50'}`}>
-                    {message.text}
-                  </div>
-                )}
-
-                {activeTab === 'profile' && (
-                  <form onSubmit={handleUpdateProfile} className="space-y-5 sm:space-y-6 animate-in fade-in duration-300">
-                    <div>
-                      <h2 className="text-lg sm:text-xl font-bold mb-1">{t('profile')}</h2>
-                      <p className="text-xs sm:text-sm text-gray-500">{t('public_id_desc')}</p>
-                    </div>
-
-                    <div>
-                      <label className={labelStyles}>{t('community_name')}</label>
-                      <input type="text" required value={profileForm.communityName} onChange={e => setProfileForm({...profileForm, communityName: e.target.value})} className={inputStyles} />
-                    </div>
-
-                    <div>
-                      <label className={labelStyles}>{t('change_logo')}</label>
-                      <div className="flex flex-col xl:flex-row items-center gap-4 sm:gap-6 mt-3">
-                        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gray-100 dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-700 flex items-center justify-center text-4xl shrink-0 overflow-hidden">
-                          {profileForm.logo?.startsWith('data:image') ? <img src={profileForm.logo} alt="logo" className="w-full h-full object-cover"/> : profileForm.logo || <ImageIcon size={32} className="text-gray-400"/>}
-                        </div>
-                        
-                        <div className="flex-1 w-full">
-                          <div className="flex flex-wrap justify-center sm:justify-start gap-2 mb-4">
-                            {PRESET_AVATARS.map((emoji) => (
-                              <button 
-                                key={emoji} type="button" onClick={() => setProfileForm({ ...profileForm, logo: emoji })}
-                                className={`w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-xl sm:text-2xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800/50 dark:hover:bg-gray-800 rounded-lg transition-all border ${profileForm.logo === emoji ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 shadow-sm' : 'border-transparent hover:border-gray-200 dark:hover:border-gray-600'}`}
-                              >
-                                {emoji}
-                              </button>
-                            ))}
-                          </div>
-                          
-                          <div className="flex items-center gap-3">
-                            <div className="h-px bg-gray-200 dark:bg-gray-800 flex-1"></div>
-                            <span className="text-[10px] sm:text-xs text-gray-400 font-medium uppercase tracking-wider">OR</span>
-                            <div className="h-px bg-gray-200 dark:bg-gray-800 flex-1"></div>
-                          </div>
-
-                          <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept="image/*" className="hidden" />
-                          <button type="button" onClick={() => fileInputRef.current?.click()} className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-sm font-medium rounded-lg transition-colors border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300">
-                            <Upload size={16} /> {t('upload_image')}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <button type="submit" disabled={isProcessing} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-lg text-sm transition-colors">
-                      {isProcessing ? t('saving') : t('save_changes')}
-                    </button>
-                  </form>
-                )}
-
-                {activeTab === 'account' && (
-                  <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
-                    <div>
-                      <h2 className="text-lg sm:text-xl font-bold mb-1">{t('account')}</h2>
-                      <p className="text-xs sm:text-sm text-gray-500">{t('account_desc')}</p>
-                    </div>
-
-                    <div className="space-y-4 pb-6 border-b border-gray-200 dark:border-gray-800">
-                      <div>
-                        <label className={labelStyles}>{t('username_cant_change')}</label>
-                        <input type="text" disabled value={userData?.username} className={`${inputStyles} opacity-50 cursor-not-allowed`} />
-                      </div>
-                      <div>
-                        <label className={labelStyles}>{t('new_email')}</label>
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          <input type="email" value={accountForm.newEmail} onChange={e => setAccountForm({...accountForm, newEmail: e.target.value})} className={inputStyles} />
-                          <button type="button" onClick={handleRequestEmailChange} disabled={isProcessing || accountForm.newEmail === userData?.email} className="w-full sm:w-auto shrink-0 bg-gray-900 hover:bg-gray-800 dark:bg-gray-100 dark:hover:bg-white text-white dark:text-gray-900 font-medium py-2.5 px-4 rounded-lg text-sm transition-colors disabled:opacity-50">
-                            {t('send_verification')}
-                          </button>
-                        </div>
-                        <p className="text-[10px] text-gray-500 mt-1">{t('email_unbind_warning')}</p>
-                        {userData?.pendingEmail && <p className="text-xs text-blue-600 mt-2 font-medium">Link sent to: {userData.pendingEmail}</p>}
-                      </div>
-                    </div>
-
-                    <form onSubmit={handleUpdatePassword} className="space-y-4">
-                      <h3 className="text-sm font-bold">{t('update_password')}</h3>
-                      <div>
-                        <label className={labelStyles}>{t('old_password')}</label>
-                        <input type="password" required value={accountForm.oldPassword} onChange={e => setAccountForm({...accountForm, oldPassword: e.target.value})} className={inputStyles} />
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className={labelStyles}>{t('new_password')}</label>
-                          <input type="password" required minLength={6} value={accountForm.newPassword} onChange={e => setAccountForm({...accountForm, newPassword: e.target.value})} className={inputStyles} placeholder={t('leave_blank_pass')} />
-                        </div>
-                        <div>
-                          <label className={labelStyles}>{t('confirm_password')}</label>
-                          <input type="password" required minLength={6} value={accountForm.confirmPassword} onChange={e => setAccountForm({...accountForm, confirmPassword: e.target.value})} className={inputStyles} />
-                        </div>
-                      </div>
-                      <button type="submit" disabled={isProcessing} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-lg text-sm transition-colors">
-                        {isProcessing ? t('updating') : t('update_password')}
-                      </button>
-                    </form>
-                  </div>
-                )}
-
-                {activeTab === 'general' && (
-                  <div className="space-y-6 animate-in fade-in duration-300">
-                    <div>
-                      <h2 className="text-lg sm:text-xl font-bold mb-1">{t('general')}</h2>
-                      <p className="text-xs sm:text-sm text-gray-500">{t('app_pref_desc')}</p>
-                    </div>
-
-                    <div className="space-y-4 max-w-sm">
-                      <div>
-                        <label className={labelStyles}>{t('language')}</label>
-                        <select value={i18n.language} onChange={(e) => toggleLanguage(e.target.value)} className={inputStyles}>
-                          <option value="en">English</option>
-                          <option value="id">Bahasa Indonesia</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className={labelStyles}>{t('appearance')}</label>
-                        <div className="flex gap-2">
-                          <button onClick={() => setIsDark(false)} className={`flex-1 flex items-center justify-center gap-2 py-2.5 border rounded-lg text-sm font-medium transition-all ${!isDark ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800' : 'bg-transparent border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400'}`}>
-                            <Sun size={16}/> {t('light_mode')}
-                          </button>
-                          <button onClick={() => setIsDark(true)} className={`flex-1 flex items-center justify-center gap-2 py-2.5 border rounded-lg text-sm font-medium transition-all ${isDark ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400' : 'bg-transparent border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400'}`}>
-                            <Moon size={16}/> {t('dark_mode')}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         </div>

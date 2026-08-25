@@ -13,18 +13,15 @@ export default function Register() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Wizard State
   const [step, setStep] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Form Data State
   const [formData, setFormData] = useState({
     email: '', username: '', password: '', confirmPassword: '', communityName: ''
   });
   const [socialMedia, setSocialMedia] = useState<{ platform: string, url: string }[]>([]);
   const [logo, setLogo] = useState<string>('');
   
-  // UI State
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -55,11 +52,11 @@ export default function Register() {
   const handleNext = () => {
     setMessage(null);
     if (!formData.email || !formData.username || !formData.password || !formData.confirmPassword) {
-      setMessage({ type: 'error', text: 'Please fill in all account details.' });
+      setMessage({ type: 'error', text: t('fill_account_details') });
       return;
     }
     if (formData.password !== formData.confirmPassword) {
-      setMessage({ type: 'error', text: 'Passwords do not match.' });
+      setMessage({ type: 'error', text: t('pass_unmatch') });
       return;
     }
     setStep(2);
@@ -76,7 +73,7 @@ export default function Register() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.communityName) {
-      setMessage({ type: 'error', text: 'Community name is required.' });
+      setMessage({ type: 'error', text: t('comm_name_req') });
       return;
     }
     
@@ -90,7 +87,7 @@ export default function Register() {
       setTimeout(() => navigate('/login'), 3000);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      setMessage({ type: 'error', text: error.response?.data?.error || 'Server error' });
+      setMessage({ type: 'error', text: error.response?.data?.error || t('server_error') });
     } finally {
       setIsLoading(false);
     }
@@ -103,7 +100,6 @@ export default function Register() {
     <>
       <AuthLayout title={t('register')}>
         
-        {/* Step Indicator */}
         <div className="flex items-center justify-center gap-2 mb-6">
           <div className={`h-1.5 w-12 rounded-full transition-colors ${step >= 1 ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
           <div className={`h-1.5 w-12 rounded-full transition-colors ${step >= 2 ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
@@ -112,17 +108,16 @@ export default function Register() {
         <form onSubmit={step === 1 ? (e) => { e.preventDefault(); handleNext(); } : handleSubmit} className="flex flex-col gap-4">
           {message && <div className={`p-3 rounded-md text-sm font-medium ${message.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/50 dark:border-red-900/50 dark:text-red-400' : 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-950/50 dark:border-green-900/50 dark:text-green-400'}`}>{message.text}</div>}
           
-          {/* STEP 1: Account Details */}
           {step === 1 && (
             <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-right-4 duration-300">
               <div>
                 <label className={labelStyles}>{t('email')}</label>
-                <input type="email" required value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className={inputStyles} placeholder="name@example.com" />
+                <input type="email" required value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className={inputStyles} placeholder={t('ph_email')} />
               </div>
               
               <div>
                 <label className={labelStyles}>{t('username')}</label>
-                <input type="text" required value={formData.username} onChange={(e) => setFormData({...formData, username: e.target.value})} className={inputStyles} placeholder="Choose a username" />
+                <input type="text" required value={formData.username} onChange={(e) => setFormData({...formData, username: e.target.value})} className={inputStyles} placeholder={t('ph_username')} />
               </div>
 
               <div>
@@ -136,7 +131,7 @@ export default function Register() {
               </div>
 
               <div>
-                <label className={labelStyles}>Confirm Password</label>
+                <label className={labelStyles}>{t('confirm_password')}</label>
                 <div className="relative">
                   <input type={showConfirm ? "text" : "password"} required value={formData.confirmPassword} onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})} className={`${inputStyles} pr-10`} placeholder="••••••••" />
                   <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 flex items-center justify-center">
@@ -146,16 +141,14 @@ export default function Register() {
               </div>
 
               <button type="submit" className="mt-2 w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors shadow-sm text-sm">
-                Continue <ChevronRight size={16} />
+                {t('continue')} <ChevronRight size={16} />
               </button>
             </div>
           )}
 
-          {/* STEP 2: Community Details */}
           {step === 2 && (
             <div className="flex flex-col gap-5 animate-in fade-in slide-in-from-right-4 duration-300">
               
-              {/* Logo Selection Trigger */}
               <div className="flex flex-col items-center justify-center">
                 <button 
                   type="button"
@@ -169,21 +162,21 @@ export default function Register() {
                   )}
                   
                   <div className="absolute inset-0 bg-black/60 hidden group-hover:flex items-center justify-center transition-all">
-                    <span className="text-white text-xs font-medium">Edit</span>
+                    <span className="text-white text-xs font-medium">{t('edit')}</span>
                   </div>
                 </button>
               </div>
 
               <div>
-                <label className={labelStyles}>Community Name</label>
-                <input type="text" required placeholder="e.g., Kokobadminton Community" value={formData.communityName} onChange={(e) => setFormData({...formData, communityName: e.target.value})} className={inputStyles} />
+                <label className={labelStyles}>{t('community_name')}</label>
+                <input type="text" required placeholder={t('ph_comm_name')} value={formData.communityName} onChange={(e) => setFormData({...formData, communityName: e.target.value})} className={inputStyles} />
               </div>
 
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <label className={labelStyles} style={{marginBottom: 0}}>Social Links <span className="text-gray-400 font-normal">(Optional)</span></label>
+                  <label className={labelStyles} style={{marginBottom: 0}}>{t('social_links')} <span className="text-gray-400 font-normal">{t('optional')}</span></label>
                   <button type="button" onClick={addSocial} className="text-xs flex items-center gap-1 text-blue-600 hover:text-blue-700 font-medium bg-blue-50 dark:bg-blue-900/30 px-2 py-1.5 rounded-md transition-colors">
-                    <Plus size={14}/> Add Link
+                    <Plus size={14}/> {t('add_link')}
                   </button>
                 </div>
                 
@@ -199,7 +192,7 @@ export default function Register() {
                           <option value="facebook">Facebook</option>
                           <option value="x">X</option>
                           <option value="youtube">YouTube</option>
-                          <option value="other">Other</option>
+                          <option value="other">{t('other')}</option>
                         </select>
                       </div>
                       <input type="url" placeholder="https://" value={social.url} onChange={(e) => updateSocial(index, 'url', e.target.value)} className="flex-1 px-3 py-2 bg-gray-50 dark:bg-gray-950/50 border border-gray-300 dark:border-gray-700 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 outline-none" />
@@ -210,7 +203,7 @@ export default function Register() {
                   ))}
                   {socialMedia.length === 0 && (
                     <div className="text-center py-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-dashed border-gray-200 dark:border-gray-800">
-                      <p className="text-xs text-gray-500">No social links added yet.</p>
+                      <p className="text-xs text-gray-500">{t('no_social_links')}</p>
                     </div>
                   )}
                 </div>
@@ -221,7 +214,7 @@ export default function Register() {
                   <ChevronLeft size={18} />
                 </button>
                 <button type="submit" disabled={isLoading} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium py-2.5 px-4 rounded-lg shadow-sm transition-colors text-sm">
-                  {isLoading ? 'Processing...' : 'Complete Registration'}
+                  {isLoading ? t('processing') : t('complete_reg')}
                 </button>
               </div>
             </div>
@@ -235,12 +228,11 @@ export default function Register() {
         </div>
       </AuthLayout>
 
-      {/* Logo Selection Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white dark:bg-gray-900 w-full max-w-sm rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-800">
-              <h3 className="font-semibold text-gray-900 dark:text-white">Select Community Logo</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-white">{t('select_logo')}</h3>
               <button onClick={() => setIsModalOpen(false)} className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
                 <X size={18} />
               </button>
@@ -261,7 +253,7 @@ export default function Register() {
 
               <div className="relative mb-5">
                 <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200 dark:border-gray-800"></div></div>
-                <div className="relative flex justify-center text-xs"><span className="px-2 bg-white dark:bg-gray-900 text-gray-400 uppercase font-medium">Or upload custom</span></div>
+                <div className="relative flex justify-center text-xs"><span className="px-2 bg-white dark:bg-gray-900 text-gray-400 uppercase font-medium">{t('or_upload')}</span></div>
               </div>
 
               <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept="image/*" className="hidden" />
@@ -270,7 +262,7 @@ export default function Register() {
                 className="w-full flex items-center justify-center gap-2 py-2.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800/80 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg font-medium text-sm transition-colors text-gray-700 dark:text-gray-300"
               >
                 <Upload size={16} />
-                Upload Image
+                {t('upload_image')}
               </button>
             </div>
           </div>

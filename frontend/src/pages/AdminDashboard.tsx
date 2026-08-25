@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldAlert, LogOut, Trash2, Edit2, Plus, X, Search, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { ShieldAlert, LogOut, Trash2, Edit2, Plus, X, Search, CheckCircle, XCircle, Clock, Sun, Moon, Globe } from 'lucide-react';
 import api from '../api/axios';
 
 interface Account {
@@ -24,6 +25,20 @@ export default function AdminDashboard() {
   const [formData, setFormData] = useState({
     email: '', username: '', password: '', communityName: '', subscriptionType: '', customDate: ''
   });
+
+  const { t, i18n } = useTranslation();
+  const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark');
+
+  useEffect(() => {
+    if (isDark) { document.documentElement.classList.add('dark'); localStorage.setItem('theme', 'dark'); }
+    else { document.documentElement.classList.remove('dark'); localStorage.setItem('theme', 'light'); }
+  }, [isDark]);
+
+  const toggleLanguage = () => {
+    const newLang = i18n.language === 'en' ? 'id' : 'en';
+    i18n.changeLanguage(newLang);
+    localStorage.setItem('language', newLang);
+  };
 
   const fetchAccounts = async () => {
     try {
@@ -89,26 +104,27 @@ export default function AdminDashboard() {
       }
       setIsModalOpen(false);
       fetchAccounts();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      alert(err.response?.data?.error || 'Operation failed');
+      alert(err.response?.data?.error || t('op_failed'));
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm("Permanently delete this account and community?")) return;
+    if (!window.confirm(t('delete_confirm'))) return;
     try {
       await api.delete(`/admin/accounts/${id}`);
       fetchAccounts();
     } catch (err) {
-      alert('Delete failed');
+      alert(t('delete_failed'));
     }
   };
 
   const renderStatusBadge = (status: string, endsAt: string) => {
-    if (status === 'lifetime') return <span className="flex items-center gap-1.5 px-2.5 py-1 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 rounded-md text-xs font-semibold"><CheckCircle size={14}/> Lifetime</span>;
+    if (status === 'lifetime') return <span className="flex items-center gap-1.5 px-2.5 py-1 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 rounded-md text-xs font-semibold"><CheckCircle size={14}/> {t('lifetime')}</span>;
     const isExpired = endsAt ? new Date(endsAt) < new Date() : true;
-    if (status === 'active' && !isExpired) return <span className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-md text-xs font-semibold"><Clock size={14}/> Active</span>;
-    return <span className="flex items-center gap-1.5 px-2.5 py-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 rounded-md text-xs font-semibold"><XCircle size={14}/> Inactive</span>;
+    if (status === 'active' && !isExpired) return <span className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-md text-xs font-semibold"><Clock size={14}/> {t('active')}</span>;
+    return <span className="flex items-center gap-1.5 px-2.5 py-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 rounded-md text-xs font-semibold"><XCircle size={14}/> {t('inactive')}</span>;
   };
 
   const inputStyles = "w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-950/50 border border-gray-300 dark:border-gray-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all";
@@ -121,22 +137,33 @@ export default function AdminDashboard() {
           <div className="bg-indigo-600 p-1.5 sm:p-2 rounded-lg flex items-center justify-center shadow-sm">
             <ShieldAlert className="text-white" size={18} />
           </div>
-          <span className="text-base sm:text-lg font-bold tracking-tight hidden sm:inline">System <span className="text-indigo-600 font-black">Admin</span></span>
+          <span className="text-base sm:text-lg font-bold tracking-tight hidden sm:inline">{t('sys_admin')}</span>
           <span className="text-lg font-bold tracking-tight sm:hidden">Admin</span>
         </div>
-        <button onClick={handleLogout} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium px-3 sm:px-4 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-          <LogOut size={16} /> <span className="hidden sm:inline">Logout</span>
-        </button>
+        
+        <div className="flex items-center gap-2 sm:gap-4">
+          <button onClick={toggleLanguage} className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors px-2 sm:px-3 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+            <Globe size={16} />
+            {i18n.language.toUpperCase()}
+          </button>
+          <button onClick={() => setIsDark(!isDark)} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
+            {isDark ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+          <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
+          <button onClick={handleLogout} className="flex items-center gap-2 text-sm text-rose-600 font-medium px-3 sm:px-4 py-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors">
+            <LogOut size={16} /> <span className="hidden sm:inline">{t('logout')}</span>
+          </button>
+        </div>
       </nav>
 
       <main className="p-4 sm:p-8 max-w-7xl mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Community Accounts</h1>
-            <p className="text-slate-500 text-sm mt-1">Manage users, communities, and system access.</p>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{t('comm_accounts')}</h1>
+            <p className="text-slate-500 text-sm mt-1">{t('manage_desc')}</p>
           </div>
           <button onClick={openCreateModal} className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm">
-            <Plus size={16} /> New Account
+            <Plus size={16} /> {t('new_account')}
           </button>
         </div>
 
@@ -145,7 +172,7 @@ export default function AdminDashboard() {
             <Search className="text-gray-400" size={18} />
           </div>
           <input 
-            type="text" placeholder="Search by name, username, or email..." 
+            type="text" placeholder={t('search_ph')}
             value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm transition-all"
           />
@@ -174,7 +201,7 @@ export default function AdminDashboard() {
 
                   <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800">
                     <div className="flex flex-col items-start sm:items-end">
-                      <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-1 hidden sm:block">Status</span>
+                      <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-1 hidden sm:block">{t('status')}</span>
                       <div className="flex items-center gap-2">
                         {renderStatusBadge(community.subscriptionStatus, community.subscriptionEndsAt)}
                         {community.subscriptionStatus === 'active' && community.subscriptionEndsAt && (
@@ -200,7 +227,7 @@ export default function AdminDashboard() {
             })}
             {filteredAccounts.length === 0 && (
               <div className="p-8 text-center text-slate-500 bg-white dark:bg-slate-900 rounded-xl border border-dashed border-slate-300 dark:border-slate-700">
-                No matching accounts found.
+                {t('no_accounts')}
               </div>
             )}
           </div>
@@ -212,61 +239,61 @@ export default function AdminDashboard() {
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white dark:bg-slate-900 w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90dvh]">
             <div className="flex justify-between items-center p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800">
-              <h3 className="font-bold text-lg">{isEditMode ? 'Edit Account' : 'New Account'}</h3>
+              <h3 className="font-bold text-lg">{isEditMode ? t('edit_account') : t('new_account')}</h3>
               <button onClick={() => setIsModalOpen(false)} className="p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"><X size={18} /></button>
             </div>
             
             <div className="p-4 sm:p-6 overflow-y-auto">
               <form id="admin-form" onSubmit={handleSubmit} className="flex flex-col gap-5 sm:gap-6">
                 <div>
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Profile Data</h4>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-3">{t('profile_data')}</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className={labelStyles}>Username</label>
+                      <label className={labelStyles}>{t('username')}</label>
                       <input type="text" required value={formData.username} onChange={(e) => setFormData({...formData, username: e.target.value})} className={inputStyles} />
                     </div>
                     <div>
-                      <label className={labelStyles}>Email</label>
+                      <label className={labelStyles}>{t('email')}</label>
                       <input type="email" required value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className={inputStyles} />
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Security</h4>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-3">{t('security')}</h4>
                   <div>
-                    <label className={labelStyles}>{isEditMode ? 'Override Password' : 'Password'}</label>
-                    <input type="password" required={!isEditMode} placeholder={isEditMode ? 'Leave blank to keep unchanged' : '••••••••'} value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} className={inputStyles} />
+                    <label className={labelStyles}>{isEditMode ? t('override_pass') : t('password')}</label>
+                    <input type="password" required={!isEditMode} placeholder={isEditMode ? t('leave_blank_unchanged') : '••••••••'} value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} className={inputStyles} />
                   </div>
                 </div>
 
                 <div>
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Community Settings</h4>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-3">{t('comm_settings')}</h4>
                   <div>
-                    <label className={labelStyles}>Community Name</label>
+                    <label className={labelStyles}>{t('community_name')}</label>
                     <input type="text" required value={formData.communityName} onChange={(e) => setFormData({...formData, communityName: e.target.value})} className={inputStyles} />
                   </div>
                 </div>
 
                 <div className="p-4 bg-slate-50 dark:bg-slate-950/50 rounded-xl border border-slate-200 dark:border-slate-800">
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-3">System Access</h4>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-3">{t('sys_access')}</h4>
                   <div className="flex flex-col gap-3">
                     <div>
-                      <label className={labelStyles}>Subscription Action</label>
+                      <label className={labelStyles}>{t('sub_action')}</label>
                       <select value={formData.subscriptionType} onChange={(e) => setFormData({...formData, subscriptionType: e.target.value, customDate: ''})} className={inputStyles}>
-                        <option value="">{isEditMode ? 'Keep Current Status' : 'Select Initial Status...'}</option>
-                        <option value="revoke">Revoke Access (Inactive)</option>
+                        <option value="">{isEditMode ? t('keep_status') : t('select_initial')}</option>
+                        <option value="revoke">{t('revoke')}</option>
                         <option value="2_weeks">Active - 2 Weeks</option>
                         <option value="1_month">Active - 1 Month</option>
                         <option value="3_months">Active - 3 Months</option>
-                        <option value="lifetime">Lifetime Access</option>
+                        <option value="lifetime">{t('lifetime')}</option>
                         <option value="custom">Active - Custom Date</option>
                       </select>
                     </div>
 
                     {formData.subscriptionType === 'custom' && (
                       <div>
-                        <label className={labelStyles}>Expiration Date</label>
+                        <label className={labelStyles}>{t('custom_date')}</label>
                         <input type="date" required value={formData.customDate} onChange={(e) => setFormData({...formData, customDate: e.target.value})} className={`[&::-webkit-calendar-picker-indicator]:dark:invert ${inputStyles}`} />
                       </div>
                     )}
@@ -277,10 +304,10 @@ export default function AdminDashboard() {
             
             <div className="p-4 sm:p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex justify-end gap-3 shrink-0 pb-safe">
               <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 sm:flex-none px-4 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors">
-                Cancel
+                {t('cancel')}
               </button>
               <button type="submit" form="admin-form" className="flex-1 sm:flex-none px-5 py-2.5 text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm transition-colors">
-                {isEditMode ? 'Save' : 'Create'}
+                {isEditMode ? t('save') : t('create')}
               </button>
             </div>
           </div>

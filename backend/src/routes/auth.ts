@@ -246,21 +246,46 @@ router.post("/verify-email-change", async (req, res) => {
     const { token } = req.body;
     if (!token) return res.status(400).json({ error: "Token is required" });
 
-    const record = await db.query.verificationTokens.findFirst({
-      where: and(eq(verificationTokens.token, token), gt(verificationTokens.expiresAt, new Date())),
-    });
+    // 1. Find the token using direct select (bulletproof)
+    const [record] = await db.select()
+      .from(verificationTokens)
+      .where(
+        and(
+          eq(verificationTokens.token, token),
+          gt(verificationTokens.expiresAt, new Date())
+        )
+      );
 
-    if (!record) return res.status(400).json({ error: "Invalid or expired token" });
+    if (!record) {
+      return res.status(400).json({ error: "Invalid or expired token. Please request a new link." });
+    }
 
-    const user = await db.query.users.findFirst({ where: eq(users.id, record.userId) });
-    if (!user || !user.pendingEmail) return res.status(400).json({ error: "No pending email change found" });
+    // 2. Find the user
+    const [user] = await db.select()
+      .from(users)
+      .where(eq(users.id, record.userId));
 
-    await db.update(users).set({ email: user.pendingEmail, pendingEmail: null }).where(eq(users.id, user.id));
-    await db.delete(verificationTokens).where(eq(verificationTokens.id, record.id));
+    if (!user || !user.pendingEmail) {
+      return res.status(400).json({ error: "No pending email change found for this account." });
+    }
+
+    // 3. Update the user's email and clear the pending state
+    await db.update(users)
+      .set({ 
+        email: user.pendingEmail, 
+        pendingEmail: null 
+      })
+      .where(eq(users.id, user.id));
+
+    // 4. Delete the used token to prevent reuse
+    await db.delete(verificationTokens)
+      .where(eq(verificationTokens.id, record.id));
 
     return res.status(200).json({ message: "Email successfully updated." });
   } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
+    // This will print the exact error to your backend terminal if it fails
+    console.error("VERIFY EMAIL ERROR:", error);
+    res.status(500).json({ error: "Internal server error during verification" });
   }
 });
 

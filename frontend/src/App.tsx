@@ -23,7 +23,7 @@ function App() {
         <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
         <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/verify-email-change" element={<PublicRoute><VerifyEmailChange /></PublicRoute>} />
+        <Route path="/verify-email-change" element={<VerifyEmailChange />} />
       </Routes>
     </BrowserRouter>
   );
