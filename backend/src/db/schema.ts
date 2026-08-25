@@ -1,4 +1,5 @@
 import { pgTable, serial, text, boolean, timestamp, integer, jsonb } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -41,7 +42,22 @@ export const members = pgTable("members", {
   id: serial("id").primaryKey(),
   communityId: integer("community_id").references(() => communities.id, { onDelete: "cascade" }).notNull(),
   name: text("name").notNull(),
-  grade: text("grade").notNull(), // e.g., 'A2', 'B1', 'B2', 'C1'
-  gender: text("gender").notNull(), // 'M' or 'F'
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  phone: text("phone"),
+  gender: text("gender").default("male"),
+  skillLevel: text("skill_level").default("C1").notNull(),
+  avoidPartners: integer("avoid_partners").array().default([]),
+  avoidOpponents: integer("avoid_opponents").array().default([]),
+  status: text("status").default("active").notNull(),
+  joinedAt: timestamp("joined_at").defaultNow().notNull(),
 });
+
+export const communitiesRelations = relations(communities, ({ many }) => ({
+  members: many(members),
+}));
+
+export const membersRelations = relations(members, ({ one }) => ({
+  community: one(communities, {
+    fields: [members.communityId],
+    references: [communities.id],
+  }),
+}));

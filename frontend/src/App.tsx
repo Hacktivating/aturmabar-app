@@ -10,6 +10,7 @@ import ResetPassword from './pages/ResetPassword';
 import AdminDashboard from './pages/AdminDashboard';
 import VerifyEmailChange from './pages/VerifyEmailChange';
 import { AdminRoute } from './components/AdminRoute';
+import Members from './pages/Members';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
         <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/verify-email-change" element={<VerifyEmailChange />} />
+        <Route path="/members" element={<ProtectedRoute><Members /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   );
