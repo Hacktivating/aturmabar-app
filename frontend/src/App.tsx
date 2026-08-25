@@ -8,6 +8,7 @@ import { PublicRoute } from './components/PublicRoute';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import AdminDashboard from './pages/AdminDashboard';
+import VerifyEmailChange from './pages/VerifyEmailChange';
 import { AdminRoute } from './components/AdminRoute';
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
         <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
         <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/verify-email-change" element={<PublicRoute><VerifyEmailChange /></PublicRoute>} />
       </Routes>
     </BrowserRouter>
   );

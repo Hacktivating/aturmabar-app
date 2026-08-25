@@ -58,3 +58,23 @@ export const sendPasswordResetEmail = async (toEmail: string, token: string) => 
 
   await transporter.sendMail(mailOptions);
 };
+
+export const sendEmailChangeVerification = async (toEmail: string, token: string) => {
+  const verifyUrl = `${process.env.CLIENT_URL}/verify-email-change?token=${token}`;
+  const mailOptions = {
+    from: `"AturMabar" <${process.env.EMAIL_USER}>`,
+    to: toEmail,
+    subject: "Verify Your New Email Address",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+        <h2 style="color: #2563eb;">Email Change Request</h2>
+        <p>Click the button below to confirm this email address for your account:</p>
+        <div style="margin: 25px 0;">
+          <a href="${verifyUrl}" style="background-color: #2563eb; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Verify Email</a>
+        </div>
+        <p style="color: #666; font-size: 14px;">This link expires in 1 hour.</p>
+      </div>
+    `,
+  };
+  await transporter.sendMail(mailOptions);
+};

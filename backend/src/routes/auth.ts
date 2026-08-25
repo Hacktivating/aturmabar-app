@@ -4,63 +4,80 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { eq, and, gt } from "drizzle-orm";
 import { db } from "../db";
-import { users, verificationTokens, passwordResetTokens } from "../db/schema";
+import { users, verificationTokens, passwordResetTokens, communities } from "../db/schema";
 import { sendVerificationEmail, sendPasswordResetEmail } from "../utils/mailer";
+import { Request, Response, NextFunction } from "express";
 
 const router = Router();
+
+export interface AuthRequest extends Request {
+  user?: { userId: number; role?: string };
+}
+
+export const verifyAuth = (req: AuthRequest, res: Response, next: NextFunction): void => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      res.status(401).json({ error: "Access denied. No token provided." });
+      return;
+    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback_secret") as { userId: number, role: string };
+    req.user = decoded;
+    next();
+  } catch (error) {
+    res.status(401).json({ error: "Invalid or expired token." });
+  }
+};
 
 // REGISTER
 router.post("/register", async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { username, email, password, confirmPassword, communityName, socialMedia, logo } = req.body;
 
-    if (!username || !email || !password) {
-      return res.status(400).json({ error: "All fields are required" });
+    if (!username || !email || !password || !confirmPassword || !communityName) {
+      return res.status(400).json({ error: "Required fields are missing." });
     }
 
-    // Check if user exists
+    if (password !== confirmPassword) {
+      return res.status(400).json({ error: "Passwords do not match." });
+    }
+
     const existingUser = await db.query.users.findFirst({
       where: (u, { or, eq }) => or(eq(u.email, email), eq(u.username, username)),
     });
 
     if (existingUser) {
-      return res.status(409).json({ error: "Username or email is already registered" });
+      return res.status(409).json({ error: "Username or email is already registered." });
     }
 
-    // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
     // Insert user
     const [newUser] = await db
       .insert(users)
-      .values({
-        username,
-        email,
-        passwordHash,
-        isVerified: false,
-      })
+      .values({ username, email, passwordHash, isVerified: false })
       .returning();
 
-    // Create verification token (24-hour expiration)
+    // Generate URL-friendly slug
+    const slug = communityName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
+
+    // Insert community
+    await db.insert(communities).values({
+      name: communityName,
+      slug: slug,
+      logo: logo || null,
+      ownerId: newUser.id,
+      socialMedia: Array.isArray(socialMedia) ? socialMedia : [],
+    });
+
     const token = crypto.randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    await db.insert(verificationTokens).values({
-      userId: newUser.id,
-      token,
-      expiresAt,
-    });
+    await db.insert(verificationTokens).values({ userId: newUser.id, token, expiresAt });
+    
+    try { await sendVerificationEmail(email, token); } catch (mailErr) { console.error(mailErr); }
 
-    // Send verification email
-    try {
-      await sendVerificationEmail(email, token);
-    } catch (mailErr) {
-      console.error("Email send error:", mailErr);
-    }
-
-    return res.status(201).json({
-      message: "Registration successful. Please check your email to verify your account.",
-    });
+    return res.status(201).json({ message: "Registration successful. Please verify your email." });
   } catch (error) {
     console.error("Register Error:", error);
     return res.status(500).json({ error: "Internal server error" });
@@ -220,6 +237,30 @@ router.post("/reset-password", async (req, res) => {
   } catch (error) {
     console.error("Reset Password Error:", error);
     return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// VERIFY EMAIL CHANGE
+router.post("/verify-email-change", async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: "Token is required" });
+
+    const record = await db.query.verificationTokens.findFirst({
+      where: and(eq(verificationTokens.token, token), gt(verificationTokens.expiresAt, new Date())),
+    });
+
+    if (!record) return res.status(400).json({ error: "Invalid or expired token" });
+
+    const user = await db.query.users.findFirst({ where: eq(users.id, record.userId) });
+    if (!user || !user.pendingEmail) return res.status(400).json({ error: "No pending email change found" });
+
+    await db.update(users).set({ email: user.pendingEmail, pendingEmail: null }).where(eq(users.id, user.id));
+    await db.delete(verificationTokens).where(eq(verificationTokens.id, record.id));
+
+    return res.status(200).json({ message: "Email successfully updated." });
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
