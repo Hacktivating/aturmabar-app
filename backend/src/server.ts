@@ -5,6 +5,8 @@ import authRoutes from "./routes/auth";
 import adminRoutes from "./routes/admin";
 import userRoutes from "./routes/users";
 import memberRoutes from "./routes/members";
+import sessionRoutes from "./routes/sessions";
+import matchRoutes from "./routes/matches";
 
 dotenv.config();
 
@@ -23,6 +25,10 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/users", userRoutes);
 
 app.use("/api/members", memberRoutes);
+
+app.use("/api/sessions", sessionRoutes);
+
+app.use("/api/matches", matchRoutes);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {

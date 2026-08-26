@@ -193,7 +193,7 @@ export default function Members() {
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0F172A] text-slate-900 dark:text-slate-100 font-sans flex flex-col">
       
       <nav className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-20 shrink-0">
-        <div className="max-w-7xl mx-auto w-full flex justify-between items-center px-4 sm:px-6 py-4">
+        <div className="max-w-7xl mx-auto w-full flex justify-between items-center px-4 sm:px-8  py-4">
           <div className="flex items-center gap-2">
             <div className="bg-blue-600 p-1.5 rounded-md flex items-center justify-center text-white shrink-0">
               <Zap size={18} fill="currentColor" />

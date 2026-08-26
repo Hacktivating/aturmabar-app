@@ -122,7 +122,7 @@ export default function Dashboard() {
 
   const quickActions = [
     { title: t('manage_members'), icon: <Users size={24} />, link: '/members', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-    { title: t('manage_schedule'), icon: <CalendarDays size={24} />, link: '#', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' },
+    { title: t('manage_schedule'), icon: <CalendarDays size={24} />, link: '/sessions', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' },
     { title: t('manage_tournaments'), icon: <Trophy size={24} />, link: '#', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
   ];
 
@@ -138,7 +138,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0F172A] text-slate-900 dark:text-slate-100 transition-colors duration-200">
       
       {/* Top Navigation */}
-      <nav className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 sm:px-6 py-4 flex justify-between items-center sticky top-0 z-20">
+      <nav className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 sm:px-8 py-4 flex justify-between items-center sticky top-0 z-20">
         <div className="flex items-center gap-2">
           <div className="bg-blue-600 p-1.5 rounded-md flex items-center justify-center text-white shrink-0">
             <Zap size={18} fill="currentColor" />

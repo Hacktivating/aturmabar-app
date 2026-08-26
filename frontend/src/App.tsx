@@ -11,6 +11,8 @@ import AdminDashboard from './pages/AdminDashboard';
 import VerifyEmailChange from './pages/VerifyEmailChange';
 import { AdminRoute } from './components/AdminRoute';
 import Members from './pages/Members';
+import Sessions from './pages/Sessions';
+import SessionDetails from './pages/SessionDetails';
 
 function App() {
   return (
@@ -26,6 +28,8 @@ function App() {
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/verify-email-change" element={<VerifyEmailChange />} />
         <Route path="/members" element={<ProtectedRoute><Members /></ProtectedRoute>} />
+        <Route path="/sessions" element={<ProtectedRoute><Sessions /></ProtectedRoute>} />
+        <Route path="/sessions/:id" element={<ProtectedRoute><SessionDetails /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   );
