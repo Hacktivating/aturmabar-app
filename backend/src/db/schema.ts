@@ -73,8 +73,10 @@ export const sessions = pgTable("sessions", {
   customSets: integer("custom_sets"),
   customPoints: integer("custom_points"),
   pairingRule: text("pairing_rule").default("strict").notNull(), // 'very_strict', 'strict', 'moderate', 'randomize'
-  status: text("status").default("scheduled").notNull(), // 'scheduled', 'active', 'ended'
+  status: text("status").default("scheduled").notNull(), // 'scheduled', 'active', 'finished'
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  startedAt: timestamp("started_at"),
+  endedAt: timestamp("ended_at"),
 });
 
 export const sessionCourts = pgTable("session_courts", {

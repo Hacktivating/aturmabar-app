@@ -246,6 +246,11 @@ const resources = {
       "draw": "Draw",
       "partner": "Partner",
       "opponents": "Opponents",
+
+      "end_session": "End Session",
+      "status_finished": "FINISHED",
+      "session_not_started": "Start the session to enable matchmaking.",
+      "session_schedule": "Session & Schedule",
     }
   },
   id: {
@@ -492,6 +497,11 @@ const resources = {
       "draw": "Seri",
       "partner": "Pasangan",
       "opponents": "Lawan",
+
+      "end_session": "Akhiri Sesi",
+      "status_finished": "SELESAI",
+      "session_not_started": "Mulai sesi untuk mengaktifkan fitur pertandingan.",
+      "session_schedule": "Sesi & Jadwal",
     }
   }
 };

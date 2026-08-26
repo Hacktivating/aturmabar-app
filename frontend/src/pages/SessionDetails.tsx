@@ -1,9 +1,9 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { 
   ArrowLeft, Users, SquareStack, Play, History, Clock, Settings as SettingsIcon, 
-  Plus, UserPlus, Check, Pause, X, Edit2, Zap, Globe, Sun, Moon, LogOut, ChevronDown, Search, Trash2, GripVertical, ArrowRightLeft, ListOrdered, AlertCircle, AlertTriangle, Save, ChevronLeft, ChevronRight, FileDown, Info
+  Plus, UserPlus, Check, Pause, X, Edit2, Zap, Globe, Sun, Moon, LogOut, ChevronDown, Search, Trash2, GripVertical, ArrowRightLeft, ListOrdered, AlertCircle, AlertTriangle, Save, ChevronLeft, ChevronRight, FileDown, Info, Square
 } from 'lucide-react';
 import api from '../api/axios';
 import jsPDF from 'jspdf';
@@ -18,18 +18,61 @@ const TABS = [
   { id: 'settings', label: 'settings', icon: <SettingsIcon size={18} /> }
 ];
 
-const MatchTimer = ({ startedAt }: { startedAt: string }) => {
+// Custom Hook to robustly handle missing dates and timezone drifts
+const useSafeTimer = (startedAt: string | null | undefined) => {
   const [elapsed, setElapsed] = useState(0);
+
   useEffect(() => {
-    const start = new Date(startedAt).getTime();
-    const interval = setInterval(() => setElapsed(Math.floor((Date.now() - start) / 1000)), 1000);
+    // Fallback to exactly NOW if startedAt is completely missing from database
+    let validStart = startedAt ? new Date(startedAt).getTime() : Date.now();
+    
+    if (isNaN(validStart)) {
+      validStart = Date.now();
+    }
+    
+    const now = Date.now();
+
+    // Fix: If timestamp parsed into the future by > 1 minute, it's a timezone serialization bug
+    if (validStart > now + 60000 && startedAt) {
+        const stripped = startedAt.endsWith('Z') ? startedAt.slice(0, -1) : startedAt;
+        const strippedTime = new Date(stripped).getTime();
+        if (!isNaN(strippedTime) && strippedTime <= now + 60000) {
+            validStart = strippedTime;
+        } else {
+            validStart = now;
+        }
+    }
+    
+    // Safety clamp: If server clock is still ahead, lock it to component mount time
+    if (validStart > now) validStart = now;
+
+    const tick = () => setElapsed(Math.max(0, Math.floor((Date.now() - validStart) / 1000)));
+    
+    tick(); // Instant first tick
+    const interval = setInterval(tick, 1000);
+    
     return () => clearInterval(interval);
   }, [startedAt]);
 
+  return elapsed;
+};
+
+const MatchTimer = ({ startedAt }: { startedAt: string | null | undefined }) => {
+  const elapsed = useSafeTimer(startedAt);
+  
   const h = Math.floor(elapsed / 3600).toString().padStart(2, '0');
   const m = Math.floor((elapsed % 3600) / 60).toString().padStart(2, '0');
   const s = (elapsed % 60).toString().padStart(2, '0');
   return <span className="text-[#10B981] font-mono font-bold tracking-widest">{h}:{m}:{s}</span>;
+};
+
+const SessionGlobalTimer = ({ startedAt }: { startedAt: string | null | undefined }) => {
+  const elapsed = useSafeTimer(startedAt);
+  
+  const h = Math.floor(elapsed / 3600).toString().padStart(2, '0');
+  const m = Math.floor((elapsed % 3600) / 60).toString().padStart(2, '0');
+  const s = (elapsed % 60).toString().padStart(2, '0');
+  return <span className="text-blue-600 dark:text-blue-400 font-mono font-black text-xl tracking-widest">{h}:{m}:{s}</span>;
 };
 
 const getGradeColor = (levelId: string | undefined | null) => {
@@ -134,6 +177,151 @@ const PlayerSlotSelect = ({ options, value, onChange, placeholder, currentName, 
   );
 };
 
+// ISOLATED MATCH CARD COMPONENT
+const MatchCard = ({ match, court, sessionStatus, maxSets, getMemberData, openEditMatchModal, handleAutoGenerateCourt, setSwapCourtModal, setConfirmDeleteMatchId, handleStartMatch, handleFinishMatch, t }: any) => {
+  const [currentSet, setCurrentSet] = useState(1);
+  const [scores, setScores] = useState({
+    a1: match?.scoreTeamA_set1 || '', b1: match?.scoreTeamB_set1 || '',
+    a2: match?.scoreTeamA_set2 || '', b2: match?.scoreTeamB_set2 || '',
+    a3: match?.scoreTeamA_set3 || '', b3: match?.scoreTeamB_set3 || ''
+  });
+
+  if (!match) {
+    return (
+      <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl overflow-hidden shadow-lg flex flex-col h-full">
+        <div className="p-4 flex justify-between items-center border-b border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0B1120]">
+          <div className="flex items-center gap-2">
+            <GripVertical size={16} className="text-slate-400 dark:text-slate-500" />
+            <h3 className="font-bold text-slate-800 dark:text-white tracking-wide">{court?.name || 'Queued'}</h3>
+          </div>
+          <div className="text-blue-600 dark:text-blue-500 text-xs font-bold tracking-widest uppercase">{t('ready')}</div>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 py-10 px-5">
+          <button disabled={sessionStatus !== 'active'} onClick={() => handleAutoGenerateCourt(court.id)} className="px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-sm transition-colors w-full disabled:opacity-50 disabled:cursor-not-allowed">{t('auto_fill')}</button>
+          <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">OR</span>
+          <button disabled={sessionStatus !== 'active'} onClick={() => openEditMatchModal({ courtId: court.id, matchType: 'MD' })} className="px-6 py-3.5 bg-slate-100 hover:bg-slate-200 dark:bg-[#1E293B] dark:hover:bg-[#334155] text-slate-800 dark:text-slate-200 text-sm font-bold rounded-xl transition-colors w-full disabled:opacity-50 disabled:cursor-not-allowed">{t('manual_match')}</button>
+        </div>
+      </div>
+    );
+  }
+
+  const isActive = match.status === 'on_court';
+  const numA = parseInt(scores[`a${currentSet}` as keyof typeof scores]) || 0;
+  const numB = parseInt(scores[`b${currentSet}` as keyof typeof scores]) || 0;
+
+  return (
+    <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl overflow-hidden shadow-lg flex flex-col h-full">
+      <div className="p-4 flex justify-between items-center border-b border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0B1120]">
+        <div className="flex items-center gap-2">
+          {court && <GripVertical size={16} className="text-slate-400 dark:text-slate-500" />}
+          <h3 className="font-bold text-slate-800 dark:text-white tracking-wide">{court ? court.name : 'Queued'}</h3>
+          {!court && <span className="bg-slate-200 dark:bg-[#1E293B] text-slate-600 dark:text-slate-300 text-xs px-2.5 py-0.5 rounded-full font-bold uppercase">Queue</span>}
+          {court && <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-500 text-[10px] px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800 uppercase tracking-wider font-bold">AUTO</span>}
+        </div>
+        {isActive ? <MatchTimer startedAt={match.startedAt} /> : <div className="text-blue-600 dark:text-blue-500 text-xs font-bold tracking-widest uppercase">{court ? t('ready') : ''}</div>}
+        {!isActive && !court && (
+          <div className="flex items-center gap-2">
+            <button onClick={() => openEditMatchModal(match)} className="p-1.5 text-slate-400 hover:text-blue-500 transition-colors"><SettingsIcon size={14}/></button>
+            <button onClick={() => setConfirmDeleteMatchId(match.id)} className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors"><Trash2 size={14}/></button>
+          </div>
+        )}
+      </div>
+
+      <div className="p-5 flex-1 flex flex-col">
+        {court && (
+          <div className="flex justify-end mb-4">
+            <button onClick={() => openEditMatchModal(match)} className="p-1.5 border border-slate-200 dark:border-[#334155] rounded-md bg-slate-50 dark:bg-[#1E293B]/50 text-slate-500 hover:text-blue-600 dark:hover:text-white transition-colors shadow-sm"><SettingsIcon size={14}/></button>
+          </div>
+        )}
+        
+        <div className="flex flex-col gap-4 mb-4">
+          <div className="relative mt-1">
+            <div className="absolute -top-2.5 left-3 bg-white dark:bg-[#0F172A] px-1.5 text-[10px] text-slate-500 font-bold uppercase z-10">{match.matchType}</div>
+            <div className="flex border border-slate-200 dark:border-[#1E293B] rounded-lg overflow-hidden bg-slate-50 dark:bg-[#0B1120]">
+              <div className="flex-1 p-3.5 flex items-center justify-between border-r border-slate-200 dark:border-[#1E293B]">
+                <span className="font-semibold text-sm truncate dark:text-white">{getMemberData(match.teamA_player1)?.name || 'TBD'}</span>
+                <span className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold ${getGradeColor(getMemberData(match.teamA_player1)?.skillLevel)}`}>{getMemberData(match.teamA_player1)?.skillLevel || '-'}</span>
+              </div>
+              <div className="flex-1 p-3.5 flex items-center justify-between">
+                <span className="font-semibold text-sm truncate dark:text-white">{getMemberData(match.teamA_player2)?.name || 'TBD'}</span>
+                <span className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold ${getGradeColor(getMemberData(match.teamA_player2)?.skillLevel)}`}>{getMemberData(match.teamA_player2)?.skillLevel || '-'}</span>
+              </div>
+            </div>
+          </div>
+          <div className="text-center text-slate-400 dark:text-[#334155] text-[10px] font-bold tracking-widest uppercase">{t('vs')}</div>
+          <div className="relative">
+            <div className="absolute -top-2.5 left-3 bg-white dark:bg-[#0F172A] px-1.5 text-[10px] text-slate-500 font-bold uppercase z-10">{match.matchType}</div>
+            <div className="flex border border-slate-200 dark:border-[#1E293B] rounded-lg overflow-hidden bg-slate-50 dark:bg-[#0B1120]">
+              <div className="flex-1 p-3.5 flex items-center justify-between border-r border-slate-200 dark:border-[#1E293B]">
+                <span className="font-semibold text-sm truncate dark:text-white">{getMemberData(match.teamB_player1)?.name || 'TBD'}</span>
+                <span className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold ${getGradeColor(getMemberData(match.teamB_player1)?.skillLevel)}`}>{getMemberData(match.teamB_player1)?.skillLevel || '-'}</span>
+              </div>
+              <div className="flex-1 p-3.5 flex items-center justify-between">
+                <span className="font-semibold text-sm truncate dark:text-white">{getMemberData(match.teamB_player2)?.name || 'TBD'}</span>
+                <span className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold ${getGradeColor(getMemberData(match.teamB_player2)?.skillLevel)}`}>{getMemberData(match.teamB_player2)?.skillLevel || '-'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-auto flex gap-2">
+          {isActive ? (
+            <form onSubmit={(e) => { e.preventDefault(); handleFinishMatch(match.id, true, scores); }} className="w-full flex flex-col gap-2 mt-auto">
+              <div className="bg-slate-50 dark:bg-[#0B1120] border border-slate-200 dark:border-[#1E293B] p-4 rounded-xl relative">
+                {maxSets > 1 && (
+                  <div className="flex items-center justify-between mb-4 bg-white dark:bg-[#0F172A] rounded-lg p-1 border border-slate-200 dark:border-[#1E293B]">
+                    <button type="button" onClick={() => setCurrentSet(c => c - 1)} disabled={currentSet <= 1} className="p-1.5 text-slate-500 hover:text-blue-500 disabled:opacity-30 transition-colors"><ChevronLeft size={16}/></button>
+                    <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest">Set {currentSet} of {maxSets}</span>
+                    <button type="button" onClick={() => setCurrentSet(c => c + 1)} disabled={currentSet >= maxSets} className="p-1.5 text-slate-500 hover:text-blue-500 disabled:opacity-30 transition-colors"><ChevronRight size={16}/></button>
+                  </div>
+                )}
+                <div className="flex justify-between items-center mb-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">
+                  <span className="truncate max-w-[120px]">{getMemberData(match.teamA_player1)?.name?.split(' ')[0]} & {getMemberData(match.teamA_player2)?.name?.split(' ')[0]}</span>
+                  <span className="truncate max-w-[120px] text-right">{getMemberData(match.teamB_player1)?.name?.split(' ')[0]} & {getMemberData(match.teamB_player2)?.name?.split(' ')[0]}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input 
+                    type="number" placeholder="0" 
+                    value={scores[`a${currentSet}` as keyof typeof scores]} 
+                    onChange={(e) => setScores(p => ({...p, [`a${currentSet}`]: e.target.value}))} 
+                    className={`flex-1 w-full bg-white dark:bg-[#0F172A] border-2 ${numA > numB && numA > 0 ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'border-slate-200 dark:border-[#1E293B] text-slate-900 dark:text-white focus:border-blue-500'} rounded-xl py-6 text-center font-bold text-4xl outline-none transition-colors`} 
+                  />
+                  <span className="text-slate-400 dark:text-[#334155] font-black">-</span>
+                  <input 
+                    type="number" placeholder="0" 
+                    value={scores[`b${currentSet}` as keyof typeof scores]} 
+                    onChange={(e) => setScores(p => ({...p, [`b${currentSet}`]: e.target.value}))} 
+                    className={`flex-1 w-full bg-white dark:bg-[#0F172A] border-2 ${numB > numA && numB > 0 ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'border-slate-200 dark:border-[#1E293B] text-slate-900 dark:text-white focus:border-blue-500'} rounded-xl py-6 text-center font-bold text-4xl outline-none transition-colors`} 
+                  />
+                </div>
+              </div>
+              <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl text-sm font-bold transition-colors shadow-md mt-2">
+                {t('finish_free_court')}
+              </button>
+              <button type="button" onClick={() => setConfirmDeleteMatchId(match.id)} className="w-full bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-500 py-3.5 rounded-xl text-sm font-bold transition-colors mt-2">
+                {t('cancel_match')}
+              </button>
+            </form>
+          ) : court ? (
+            <div className="w-full flex gap-2">
+              <button onClick={() => setSwapCourtModal(match)} className="p-3.5 border border-slate-200 dark:border-[#1E293B] rounded-xl text-slate-400 hover:bg-slate-50 dark:hover:bg-[#1E293B] dark:hover:text-white transition-colors" title="Swap Court"><ArrowRightLeft size={18}/></button>
+              <button onClick={() => setConfirmDeleteMatchId(match.id)} className="p-3.5 border border-slate-200 dark:border-[#1E293B] rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"><Trash2 size={18}/></button>
+              <button onClick={() => handleStartMatch(match.id)} disabled={sessionStatus !== 'active'} className="flex-1 bg-[#10B981] hover:bg-[#059669] text-white py-3.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+                <Play fill="currentColor" size={16}/> {t('start')}
+              </button>
+            </div>
+          ) : (
+            <button disabled={sessionStatus !== 'active'} onClick={() => setSwapCourtModal(match)} className="w-full mt-2 py-3 bg-blue-50 hover:bg-blue-100 dark:bg-[#1E293B] dark:hover:bg-[#334155] text-blue-600 dark:text-white rounded-xl text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              Move to Court
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
 export default function SessionDetails() {
   const { id } = useParams();
   const { t, i18n } = useTranslation();
@@ -151,8 +339,6 @@ export default function SessionDetails() {
   const [allMembers, setMembers] = useState<any[]>([]);
   const [courts, setCourts] = useState<any[]>([]);
   const [matches, setMatches] = useState<any[]>([]);
-  const [localScores, setLocalScores] = useState<Record<number, any>>({});
-  const [activeSetView, setActiveSetView] = useState<Record<number, number>>({});
   
   // Search & Filter
   const [attendanceSearch, setAttendanceSearch] = useState('');
@@ -243,10 +429,169 @@ export default function SessionDetails() {
   };
   const maxSets = getMaxSets();
 
+  // --- MEMOIZED COMPUTATIONS ---
+  const visibleAttendances = useMemo(() => {
+    return attendances
+      .filter(a => a.attendance.status !== 'cancelled')
+      .filter(a => a.member.name.toLowerCase().includes(attendanceSearch.toLowerCase()));
+  }, [attendances, attendanceSearch]);
+
+  const availableMembersModal = useMemo(() => {
+    return allMembers
+      .filter(m => !attendances.some(a => a.member.id === m.id && a.attendance.status !== 'cancelled'))
+      .filter(m => m.name.toLowerCase().includes(modalSearch.toLowerCase()))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [allMembers, attendances, modalSearch]);
+
+  const activeMatches = useMemo(() => matches.filter(m => m.status === 'queued' || m.status === 'on_court'), [matches]);
+  const finishedMatches = useMemo(() => matches.filter(m => m.status === 'finished').sort((a, b) => new Date(b.endedAt).getTime() - new Date(a.endedAt).getTime()), [matches]);
+  const queuedMatchesList = useMemo(() => matches.filter(m => m.courtId === null && m.status === 'queued'), [matches]);
+
+  const busyPlayerIds = useMemo(() => {
+    const ids = new Set<number>();
+    activeMatches.forEach(m => {
+      if (editMatchModal && m.id === editMatchModal.id) return; 
+      if (m.teamA_player1) ids.add(m.teamA_player1);
+      if (m.teamA_player2) ids.add(m.teamA_player2);
+      if (m.teamB_player1) ids.add(m.teamB_player1);
+      if (m.teamB_player2) ids.add(m.teamB_player2);
+    });
+    return ids;
+  }, [activeMatches, editMatchModal]);
+
+  const availableForManualMatch = useMemo(() => {
+    return allMembers
+      .filter(m => {
+        const isAttending = attendances.some(a => a.member.id === m.id && a.attendance.status === 'active');
+        if (!isAttending) return false;
+        const isBusy = busyPlayerIds.has(m.id);
+        const isCurrentlyInThisMatch = editMatchModal && (m.id === editMatchModal.teamA_player1 || m.id === editMatchModal.teamA_player2 || m.id === editMatchModal.teamB_player1 || m.id === editMatchModal.teamB_player2);
+        return !isBusy || isCurrentlyInThisMatch;
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [allMembers, attendances, busyPlayerIds, editMatchModal]);
+
+  const historyPlayerOptions = useMemo(() => [...allMembers].sort((a, b) => a.name.localeCompare(b.name)), [allMembers]);
+
+  const filteredHistory = useMemo(() => {
+    return finishedMatches.filter(match => {
+      const search = historySearch.toLowerCase();
+      if (!search) return true;
+      const pA1 = getMemberData(match.teamA_player1)?.name?.toLowerCase() || '';
+      const pA2 = getMemberData(match.teamA_player2)?.name?.toLowerCase() || '';
+      const pB1 = getMemberData(match.teamB_player1)?.name?.toLowerCase() || '';
+      const pB2 = getMemberData(match.teamB_player2)?.name?.toLowerCase() || '';
+      const court = getInitialCourtName(match.courtId)?.toLowerCase() || '';
+      return pA1.includes(search) || pA2.includes(search) || pB1.includes(search) || pB2.includes(search) || court.includes(search);
+    });
+  }, [finishedMatches, historySearch, allMembers, courts]);
+
+  const calculatePlayerGames = (member: any) => {
+    if (!member) return [];
+    const memberMatches = finishedMatches.filter(m => 
+      m.teamA_player1 === member.id || m.teamA_player2 === member.id || 
+      m.teamB_player1 === member.id || m.teamB_player2 === member.id
+    ).sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
+
+    return memberMatches.map(m => {
+      let isTeamA = (m.teamA_player1 === member.id || m.teamA_player2 === member.id);
+      let partnerId = isTeamA 
+        ? (m.teamA_player1 === member.id ? m.teamA_player2 : m.teamA_player1)
+        : (m.teamB_player1 === member.id ? m.teamB_player2 : m.teamB_player1);
+
+      let opp1 = isTeamA ? m.teamB_player1 : m.teamA_player1;
+      let opp2 = isTeamA ? m.teamB_player2 : m.teamA_player2;
+
+      let partnerGender = getMemberData(partnerId)?.gender;
+      let myGender = member.gender;
+
+      let type = 'MD';
+      if (myGender === 'female' && partnerGender === 'female') type = 'WD';
+      else if ((myGender === 'male' && partnerGender === 'female') || (myGender === 'female' && partnerGender === 'male')) type = 'XD';
+      if (!partnerGender) type = '??';
+
+      const pName = getMemberData(partnerId)?.name || 'None';
+      const o1Name = getMemberData(opp1)?.name || 'TBD';
+      const o2Name = getMemberData(opp2)?.name || 'TBD';
+
+      let myScore = 0, oppScore = 0;
+      let scoreStrings = [];
+      for(let i=1; i<=maxSets; i++) {
+        let sa = m[`scoreTeamA_set${i}`];
+        let sb = m[`scoreTeamB_set${i}`];
+        if (sa > 0 || sb > 0 || i === 1) {
+          if (isTeamA) { myScore += sa; oppScore += sb; scoreStrings.push(`${sa}-${sb}`); }
+          else { myScore += sb; oppScore += sa; scoreStrings.push(`${sb}-${sa}`); }
+        }
+      }
+
+      const result = myScore > oppScore ? 'Won' : myScore < oppScore ? 'Lost' : 'Draw';
+      const scoreString = scoreStrings.join(' / ');
+
+      return { id: m.id, type, partnerName: pName, opp1Name: o1Name, opp2Name: o2Name, myScore, oppScore, result, scoreString };
+    });
+  };
+
+  const playtimeData = useMemo(() => {
+    return attendances
+      .filter(a => a.attendance.status !== 'cancelled')
+      .filter(a => a.member.name.toLowerCase().includes(playtimeSearch.toLowerCase()))
+      .map(({ member, attendance }) => {
+        return { member, attendance, playedGames: calculatePlayerGames(member) };
+      })
+      .sort((a, b) => {
+        if (a.playedGames.length !== b.playedGames.length) return a.playedGames.length - b.playedGames.length; 
+        return a.member.name.localeCompare(b.member.name);
+      });
+  }, [attendances, playtimeSearch, finishedMatches, maxSets, allMembers]);
+
+  // Helpers
+  function getMemberData(memberId: number) { return allMembers.find(m => m.id === memberId); }
+  function getInitialCourtName(cId: number) { return courts.find(c => c.id === cId)?.name; }
+
+  const getOptionsFor = (currentKey: 'ta1'|'ta2'|'tb1'|'tb2') => {
+    const selectedIds = Object.entries(manualPlayers).filter(([k]) => k !== currentKey).map(([k, v]) => v);
+    return availableForManualMatch.filter(m => !selectedIds.includes(m.id));
+  };
+
+  const getSwapListFor = (currentKey: 'ta1'|'ta2'|'tb1'|'tb2') => {
+    return Object.entries(manualPlayers)
+      .filter(([k, v]) => k !== currentKey && v !== 0)
+      .map(([k, v]) => ({ id: v, name: getMemberData(v)?.name || '' }));
+  };
+
+  const getHistorySwapListFor = (currentKey: 'ta1'|'ta2'|'tb1'|'tb2') => {
+    return Object.entries(historyForm).filter(([k]) => k.startsWith('t'))
+      .filter(([k, v]) => k !== currentKey && v !== 0)
+      .map(([k, v]) => ({ id: v, name: getMemberData(v as number)?.name || '' }));
+  };
+
+  // Player Detail Variables
+  const selectedDetailPlayer = playerDetailModal ? getMemberData(playerDetailModal) : null;
+  const selectedDetailGames = playerDetailModal ? calculatePlayerGames(selectedDetailPlayer) : [];
+
+  // --- SESSION CONTROLS ---
+  const handleStartSession = async () => {
+    try {
+      await api.put(`/sessions/${id}/start`);
+      fetchSessionData();
+      addToast("Session started successfully");
+    } catch(err) { addToast("Error starting session", "error"); }
+  };
+
+  const handleEndSession = async () => {
+    if(!window.confirm("Are you sure you want to end this session? All ongoing matches will need to be finished manually.")) return;
+    try {
+      await api.put(`/sessions/${id}/finish`);
+      fetchSessionData();
+      addToast("Session ended successfully");
+    } catch(err) { addToast("Error ending session", "error"); }
+  };
+
   // --- PDF EXPORT LOGIC ---
   const applyPDFHeaderFooter = (doc: any, title: string, subtitle: string) => {
     let yPos = 20;
-    
+
     if (communityData?.logo?.startsWith('data:image')) {
       try {
         doc.addImage(communityData.logo, 14, 12, 10, 10);
@@ -268,7 +613,7 @@ export default function SessionDetails() {
     doc.setFontSize(10);
     doc.setTextColor(100, 116, 139); 
     doc.text(subtitle, 14, yPos + 6);
-    
+
     const pageCount = doc.internal.getNumberOfPages();
     for(let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
@@ -283,7 +628,7 @@ export default function SessionDetails() {
   const exportSessionPDF = () => {
     const doc = new jsPDF();
     const tableStartY = applyPDFHeaderFooter(doc, `Session Report: ${session?.name}`, `Date: ${new Date(session?.date).toLocaleString(i18n.language)}`);
-    
+
     const tableData = finishedMatches.map(m => {
       const teamA = `${getMemberData(m.teamA_player1)?.name || 'TBD'} & ${getMemberData(m.teamA_player2)?.name || 'TBD'}`;
       const teamB = `${getMemberData(m.teamB_player1)?.name || 'TBD'} & ${getMemberData(m.teamB_player2)?.name || 'TBD'}`;
@@ -313,7 +658,7 @@ export default function SessionDetails() {
   const exportPlayerPDF = (memberId: number, memberName: string, playedGames: any[]) => {
     const doc = new jsPDF();
     const tableStartY = applyPDFHeaderFooter(doc, `Player Report: ${memberName}`, `Session: ${session?.name} | Date: ${new Date(session?.date).toLocaleString(i18n.language)}`);
-    
+
     const tableData = playedGames.map(g => [
       g.type,
       g.partnerName,
@@ -450,17 +795,16 @@ export default function SessionDetails() {
     catch (err) { addToast("Error starting match", "error"); }
   };
 
-  const handleFinishMatch = async (matchId: number, saveScore: boolean) => {
+  const handleFinishMatch = async (matchId: number, saveScore: boolean, scores?: any) => {
     try {
       const payload: any = {};
-      if (saveScore) {
-        const scores = localScores[matchId];
-        payload.scoreTeamA_set1 = parseInt(scores?.a1) || 0;
-        payload.scoreTeamB_set1 = parseInt(scores?.b1) || 0;
-        payload.scoreTeamA_set2 = parseInt(scores?.a2) || 0;
-        payload.scoreTeamB_set2 = parseInt(scores?.b2) || 0;
-        payload.scoreTeamA_set3 = parseInt(scores?.a3) || 0;
-        payload.scoreTeamB_set3 = parseInt(scores?.b3) || 0;
+      if (saveScore && scores) {
+        payload.scoreTeamA_set1 = parseInt(scores.a1) || 0;
+        payload.scoreTeamB_set1 = parseInt(scores.b1) || 0;
+        payload.scoreTeamA_set2 = parseInt(scores.a2) || 0;
+        payload.scoreTeamB_set2 = parseInt(scores.b2) || 0;
+        payload.scoreTeamA_set3 = parseInt(scores.a3) || 0;
+        payload.scoreTeamB_set3 = parseInt(scores.b3) || 0;
       }
       await api.put(`/matches/${matchId}/finish`, payload);
       fetchSessionData();
@@ -510,7 +854,7 @@ export default function SessionDetails() {
         teamA_player1: manualPlayers.ta1 || null, teamA_player2: manualPlayers.ta2 || null, 
         teamB_player1: manualPlayers.tb1 || null, teamB_player2: manualPlayers.tb2 || null 
       };
-      
+
       if (editMatchModal.id) {
         await api.put(`/matches/${editMatchModal.id}/players`, payload);
         addToast(t('match_updated') || "Players updated successfully");
@@ -518,7 +862,7 @@ export default function SessionDetails() {
         await api.post(`/matches/${id}/manual`, { ...payload, courtId: editMatchModal.courtId });
         addToast("Manual match created successfully");
       }
-      
+
       setEditMatchModal(null);
       fetchSessionData();
     } catch (err) { addToast("Error saving players", "error"); }
@@ -598,131 +942,9 @@ export default function SessionDetails() {
 
   const inputStyles = "w-full px-3 py-2.5 bg-slate-50 dark:bg-[#0F172A] border border-slate-300 dark:border-[#1E293B] rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-900 dark:text-slate-100";
 
-  // Data Selectors
-  const visibleAttendances = attendances.filter(a => a.attendance.status !== 'cancelled').filter(a => a.member.name.toLowerCase().includes(attendanceSearch.toLowerCase()));
-  const availableMembersModal = allMembers.filter(m => !attendances.some(a => a.member.id === m.id && a.attendance.status !== 'cancelled')).filter(m => m.name.toLowerCase().includes(modalSearch.toLowerCase())).sort((a, b) => a.name.localeCompare(b.name));
-  const getMemberData = (memberId: number) => allMembers.find(m => m.id === memberId);
-  const getInitialCourtName = (cId: number) => courts.find(c => c.id === cId)?.name;
-
-  const activeMatches = matches.filter(m => m.status === 'queued' || m.status === 'on_court');
-  const finishedMatches = matches.filter(m => m.status === 'finished').sort((a, b) => new Date(b.endedAt).getTime() - new Date(a.endedAt).getTime());
-  
-  const busyPlayerIds = new Set<number>();
-  activeMatches.forEach(m => {
-    if (editMatchModal && m.id === editMatchModal.id) return; 
-    if (m.teamA_player1) busyPlayerIds.add(m.teamA_player1);
-    if (m.teamA_player2) busyPlayerIds.add(m.teamA_player2);
-    if (m.teamB_player1) busyPlayerIds.add(m.teamB_player1);
-    if (m.teamB_player2) busyPlayerIds.add(m.teamB_player2);
-  });
-
-  const availableForManualMatch = allMembers
-    .filter(m => {
-      const isAttending = attendances.some(a => a.member.id === m.id && a.attendance.status === 'active');
-      if (!isAttending) return false;
-      const isBusy = busyPlayerIds.has(m.id);
-      const isCurrentlyInThisMatch = editMatchModal && (m.id === editMatchModal.teamA_player1 || m.id === editMatchModal.teamA_player2 || m.id === editMatchModal.teamB_player1 || m.id === editMatchModal.teamB_player2);
-      return !isBusy || isCurrentlyInThisMatch;
-    })
-    .sort((a, b) => a.name.localeCompare(b.name));
-
-  const historyPlayerOptions = [...allMembers].sort((a, b) => a.name.localeCompare(b.name));
-
-  const getOptionsFor = (currentKey: 'ta1'|'ta2'|'tb1'|'tb2') => {
-    const selectedIds = Object.entries(manualPlayers).filter(([k]) => k !== currentKey).map(([k, v]) => v);
-    return availableForManualMatch.filter(m => !selectedIds.includes(m.id));
-  };
-
-  const getSwapListFor = (currentKey: 'ta1'|'ta2'|'tb1'|'tb2') => {
-    return Object.entries(manualPlayers)
-      .filter(([k, v]) => k !== currentKey && v !== 0)
-      .map(([k, v]) => ({ id: v, name: getMemberData(v)?.name || '' }));
-  };
-
-  const getHistorySwapListFor = (currentKey: 'ta1'|'ta2'|'tb1'|'tb2') => {
-    return Object.entries(historyForm).filter(([k]) => k.startsWith('t'))
-      .filter(([k, v]) => k !== currentKey && v !== 0)
-      .map(([k, v]) => ({ id: v, name: getMemberData(v as number)?.name || '' }));
-  };
-
-  const queuedMatchesList = matches.filter(m => m.courtId === null && m.status === 'queued');
-
-  // History Filtering
-  const filteredHistory = finishedMatches.filter(match => {
-    const search = historySearch.toLowerCase();
-    if (!search) return true;
-    const pA1 = getMemberData(match.teamA_player1)?.name?.toLowerCase() || '';
-    const pA2 = getMemberData(match.teamA_player2)?.name?.toLowerCase() || '';
-    const pB1 = getMemberData(match.teamB_player1)?.name?.toLowerCase() || '';
-    const pB2 = getMemberData(match.teamB_player2)?.name?.toLowerCase() || '';
-    const court = getInitialCourtName(match.courtId)?.toLowerCase() || '';
-    return pA1.includes(search) || pA2.includes(search) || pB1.includes(search) || pB2.includes(search) || court.includes(search);
-  });
-
-  // Playtime Mapping & Calculation
-  const calculatePlayerGames = (member: any) => {
-    const memberMatches = finishedMatches.filter(m => 
-      m.teamA_player1 === member.id || m.teamA_player2 === member.id || 
-      m.teamB_player1 === member.id || m.teamB_player2 === member.id
-    ).sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
-
-    return memberMatches.map(m => {
-      let isTeamA = (m.teamA_player1 === member.id || m.teamA_player2 === member.id);
-      let partnerId = isTeamA 
-        ? (m.teamA_player1 === member.id ? m.teamA_player2 : m.teamA_player1)
-        : (m.teamB_player1 === member.id ? m.teamB_player2 : m.teamB_player1);
-      
-      let opp1 = isTeamA ? m.teamB_player1 : m.teamA_player1;
-      let opp2 = isTeamA ? m.teamB_player2 : m.teamA_player2;
-      
-      let partnerGender = getMemberData(partnerId)?.gender;
-      let myGender = member.gender;
-      
-      let type = 'MD';
-      if (myGender === 'female' && partnerGender === 'female') type = 'WD';
-      else if ((myGender === 'male' && partnerGender === 'female') || (myGender === 'female' && partnerGender === 'male')) type = 'XD';
-      if (!partnerGender) type = '??';
-
-      const pName = getMemberData(partnerId)?.name || 'None';
-      const o1Name = getMemberData(opp1)?.name || 'TBD';
-      const o2Name = getMemberData(opp2)?.name || 'TBD';
-      
-      let myScore = 0, oppScore = 0;
-      let scoreStrings = [];
-      for(let i=1; i<=maxSets; i++) {
-        let sa = m[`scoreTeamA_set${i}`];
-        let sb = m[`scoreTeamB_set${i}`];
-        if (sa > 0 || sb > 0 || i === 1) {
-          if (isTeamA) { myScore += sa; oppScore += sb; scoreStrings.push(`${sa}-${sb}`); }
-          else { myScore += sb; oppScore += sa; scoreStrings.push(`${sb}-${sa}`); }
-        }
-      }
-      
-      const result = myScore > oppScore ? 'Won' : myScore < oppScore ? 'Lost' : 'Draw';
-      const scoreString = scoreStrings.join(' / ');
-      
-      return { id: m.id, type, partnerName: pName, opp1Name: o1Name, opp2Name: o2Name, myScore, oppScore, result, scoreString };
-    });
-  };
-
-  const playtimeData = attendances
-    .filter(a => a.attendance.status !== 'cancelled')
-    .filter(a => a.member.name.toLowerCase().includes(playtimeSearch.toLowerCase()))
-    .map(({ member, attendance }) => {
-      return { member, attendance, playedGames: calculatePlayerGames(member) };
-    })
-    .sort((a, b) => {
-      if (a.playedGames.length !== b.playedGames.length) return a.playedGames.length - b.playedGames.length; 
-      return a.member.name.localeCompare(b.member.name);
-    });
-
-  // Player Detail Helper
-  const selectedDetailPlayer = playerDetailModal ? getMemberData(playerDetailModal) : null;
-  const selectedDetailGames = playerDetailModal ? calculatePlayerGames(selectedDetailPlayer) : [];
-
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0B1120] text-slate-900 dark:text-slate-100 font-sans flex flex-col">
-      
+
       {/* Top Notification Toasts */}
       <div className="fixed top-20 right-4 z-[100] flex flex-col gap-3 pointer-events-none">
         {toasts.map(t => (
@@ -743,7 +965,7 @@ export default function SessionDetails() {
             </div>
             <span className="text-lg sm:text-xl font-bold tracking-tight hidden sm:block">AturMabar</span>
           </div>
-          
+
           <div className="flex items-center gap-2 sm:gap-4">
             <div className="flex items-center gap-2 pr-2 sm:pr-4 border-r border-slate-200 dark:border-[#1E293B] max-w-[140px] sm:max-w-xs">
               <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] flex items-center justify-center text-sm shrink-0 overflow-hidden">
@@ -769,7 +991,7 @@ export default function SessionDetails() {
 
       {/* Session Header Info */}
       <div className="bg-white dark:bg-[#0F172A] border-b border-slate-200 dark:border-[#1E293B] shrink-0">
-        <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 sm:py-6 flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 sm:py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <Link to="/sessions" className="p-2 sm:p-2.5 bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] rounded-xl hover:bg-slate-100 dark:hover:bg-[#334155]/80 transition-colors shrink-0">
               <ArrowLeft size={20} />
@@ -779,9 +1001,29 @@ export default function SessionDetails() {
               <div className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">{session && new Date(session.date).toLocaleString(i18n.language, { dateStyle: 'medium', timeStyle: 'short' })}</div>
             </div>
           </div>
-          <button onClick={exportSessionPDF} className="flex items-center gap-2 bg-blue-50 dark:bg-[#1E293B] hover:bg-blue-100 dark:hover:bg-[#334155] text-blue-600 dark:text-blue-400 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm shrink-0 border border-transparent dark:border-[#334155]">
-            <FileDown size={18}/> <span className="hidden sm:block">{t('export_pdf')}</span>
-          </button>
+          
+          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0 justify-end">
+            {/* Allow starting if scheduled OR finished */}
+            {(!session?.status || session?.status === 'scheduled' || session?.status === 'finished') && (
+              <button onClick={handleStartSession} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-colors shadow-sm">
+                <Play size={16} fill="currentColor"/> 
+                {session?.status === 'finished' ? t('restart_session', 'Restart Session') : t('start_session', 'Start Session')}
+              </button>
+            )}
+            
+            {session?.status === 'active' && (
+              <>
+                <SessionGlobalTimer startedAt={session.startedAt} />
+                <button onClick={handleEndSession} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-colors shadow-sm">
+                  <Square size={16} fill="currentColor"/> {t('end_session', 'End Session')}
+                </button>
+              </>
+            )}
+
+            <button onClick={exportSessionPDF} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-blue-50 dark:bg-[#1E293B] hover:bg-blue-100 dark:hover:bg-[#334155] text-blue-600 dark:text-blue-400 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors border border-transparent dark:border-[#334155] shadow-sm">
+              <FileDown size={18}/> <span className="hidden sm:block">{t('export_pdf', 'Export PDF')}</span>
+            </button>
+          </div>
         </div>
         <div className="hidden sm:flex max-w-7xl mx-auto px-8 overflow-x-auto scrollbar-hide">
           {TABS.map(tab => (
@@ -968,13 +1210,19 @@ export default function SessionDetails() {
         {/* MATCHES TAB */}
         {activeTab === 'matches' && (
           <div className="animate-in fade-in duration-200">
+            {session?.status !== 'active' && (
+              <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/50 text-amber-700 dark:text-amber-500 p-4 rounded-xl mb-6 font-bold flex items-center justify-center shadow-sm">
+                <AlertTriangle size={18} className="mr-2" /> {t('session_not_started', 'Start the session to enable matchmaking.')}
+              </div>
+            )}
+            
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
               <h2 className="text-lg font-bold">{t('matches')}</h2>
               <div className="flex gap-2 w-full sm:w-auto">
-                <button onClick={handleQueueMatch} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-slate-200 dark:bg-[#1E293B] hover:bg-slate-300 dark:hover:bg-[#334155] text-slate-800 dark:text-slate-200 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                <button disabled={session?.status !== 'active'} onClick={handleQueueMatch} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-slate-200 dark:bg-[#1E293B] hover:bg-slate-300 dark:hover:bg-[#334155] text-slate-800 dark:text-slate-200 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                   <ListOrdered size={16}/> {t('queue_match')}
                 </button>
-                <button onClick={handleAutoFillAllCourts} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                <button disabled={session?.status !== 'active'} onClick={handleAutoFillAllCourts} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                   <Zap size={16}/> {t('auto_fill')}
                 </button>
               </div>
@@ -982,185 +1230,36 @@ export default function SessionDetails() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-start">
               {courts.filter(c => c.isActive).map(court => {
-                const activeMatch = matches.find(m => m.courtId === court.id && m.status === 'on_court');
-                const queuedMatch = matches.find(m => m.courtId === court.id && m.status === 'queued');
+                const activeMatch = activeMatches.find(m => m.courtId === court.id);
+                const queuedMatch = queuedMatchesList.find(m => m.courtId === court.id);
                 const displayMatch = activeMatch || queuedMatch;
                 
-                const currentSet = activeSetView[displayMatch?.id] || 1;
-                
-                const currentSa = localScores[displayMatch?.id]?.[`a${currentSet}`] !== undefined ? localScores[displayMatch?.id][`a${currentSet}`] : (displayMatch?.[`scoreTeamA_set${currentSet}`] || '');
-                const currentSb = localScores[displayMatch?.id]?.[`b${currentSet}`] !== undefined ? localScores[displayMatch?.id][`b${currentSet}`] : (displayMatch?.[`scoreTeamB_set${currentSet}`] || '');
-                const numA = parseInt(currentSa) || 0;
-                const numB = parseInt(currentSb) || 0;
-
                 return (
-                  <div key={court.id} className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl overflow-hidden shadow-lg flex flex-col h-full">
-                    <div className="p-4 flex justify-between items-center border-b border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0B1120]">
-                      <div className="flex items-center gap-2">
-                        <GripVertical size={16} className="text-slate-400 dark:text-slate-500" />
-                        <h3 className="font-bold text-slate-800 dark:text-white tracking-wide">{court.name}</h3>
-                        {displayMatch && <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-500 text-[10px] px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800 uppercase tracking-wider font-bold">AUTO</span>}
-                      </div>
-                      {activeMatch ? (
-                        <MatchTimer startedAt={activeMatch.startedAt} />
-                      ) : (
-                        <div className="text-blue-600 dark:text-blue-500 text-xs font-bold tracking-widest uppercase">{t('ready')}</div>
-                      )}
-                    </div>
-
-                    <div className="p-5 flex-1 flex flex-col">
-                      {displayMatch ? (
-                        <>
-                          <div className="flex justify-end mb-4">
-                            <button onClick={() => openEditMatchModal(displayMatch)} className="p-1.5 border border-slate-200 dark:border-[#334155] rounded-md bg-slate-50 dark:bg-[#1E293B]/50 text-slate-500 hover:text-blue-600 dark:hover:text-white transition-colors shadow-sm"><SettingsIcon size={14}/></button>
-                          </div>
-                          
-                          <div className="flex flex-col gap-4 mb-4">
-                            {/* Team A */}
-                            <div className="relative">
-                              <div className="absolute -top-2.5 left-3 bg-white dark:bg-[#0F172A] px-1.5 text-[10px] text-slate-500 font-bold uppercase z-10">{displayMatch.matchType}</div>
-                              <div className="flex border border-slate-200 dark:border-[#1E293B] rounded-lg overflow-hidden bg-slate-50 dark:bg-[#0B1120]">
-                                <div className="flex-1 p-3.5 flex items-center justify-between border-r border-slate-200 dark:border-[#1E293B]">
-                                  <span className="font-semibold text-sm truncate dark:text-white">{getMemberData(displayMatch.teamA_player1)?.name || 'TBD'}</span>
-                                  <span className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold ${getGradeColor(getMemberData(displayMatch.teamA_player1)?.skillLevel)}`}>{getMemberData(displayMatch.teamA_player1)?.skillLevel || '-'}</span>
-                                </div>
-                                <div className="flex-1 p-3.5 flex items-center justify-between">
-                                  <span className="font-semibold text-sm truncate dark:text-white">{getMemberData(displayMatch.teamA_player2)?.name || 'TBD'}</span>
-                                  <span className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold ${getGradeColor(getMemberData(displayMatch.teamA_player2)?.skillLevel)}`}>{getMemberData(displayMatch.teamA_player2)?.skillLevel || '-'}</span>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="text-center text-slate-400 dark:text-[#334155] text-[10px] font-bold tracking-widest uppercase">{t('vs')}</div>
-
-                            {/* Team B */}
-                            <div className="relative">
-                              <div className="absolute -top-2.5 left-3 bg-white dark:bg-[#0F172A] px-1.5 text-[10px] text-slate-500 font-bold uppercase z-10">{displayMatch.matchType}</div>
-                              <div className="flex border border-slate-200 dark:border-[#1E293B] rounded-lg overflow-hidden bg-slate-50 dark:bg-[#0B1120]">
-                                <div className="flex-1 p-3.5 flex items-center justify-between border-r border-slate-200 dark:border-[#1E293B]">
-                                  <span className="font-semibold text-sm truncate dark:text-white">{getMemberData(displayMatch.teamB_player1)?.name || 'TBD'}</span>
-                                  <span className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold ${getGradeColor(getMemberData(displayMatch.teamB_player1)?.skillLevel)}`}>{getMemberData(displayMatch.teamB_player1)?.skillLevel || '-'}</span>
-                                </div>
-                                <div className="flex-1 p-3.5 flex items-center justify-between">
-                                  <span className="font-semibold text-sm truncate dark:text-white">{getMemberData(displayMatch.teamB_player2)?.name || 'TBD'}</span>
-                                  <span className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold ${getGradeColor(getMemberData(displayMatch.teamB_player2)?.skillLevel)}`}>{getMemberData(displayMatch.teamB_player2)?.skillLevel || '-'}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="mt-auto flex gap-2">
-                            {activeMatch ? (
-                              <form onSubmit={(e) => { e.preventDefault(); handleFinishMatch(displayMatch.id, true); }} className="w-full flex flex-col gap-2 mt-auto">
-                                <div className="bg-slate-50 dark:bg-[#0B1120] border border-slate-200 dark:border-[#1E293B] p-4 rounded-xl relative">
-                                  
-                                  {maxSets > 1 && (
-                                    <div className="flex items-center justify-between mb-4 bg-white dark:bg-[#0F172A] rounded-lg p-1 border border-slate-200 dark:border-[#1E293B]">
-                                      <button type="button" onClick={() => setActiveSetView(prev => ({...prev, [displayMatch.id]: currentSet - 1}))} disabled={currentSet <= 1} className="p-1.5 text-slate-500 hover:text-blue-500 disabled:opacity-30 transition-colors"><ChevronLeft size={16}/></button>
-                                      <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest">Set {currentSet} of {maxSets}</span>
-                                      <button type="button" onClick={() => setActiveSetView(prev => ({...prev, [displayMatch.id]: currentSet + 1}))} disabled={currentSet >= maxSets} className="p-1.5 text-slate-500 hover:text-blue-500 disabled:opacity-30 transition-colors"><ChevronRight size={16}/></button>
-                                    </div>
-                                  )}
-
-                                  <div className="flex justify-between items-center mb-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">
-                                    <span className="truncate max-w-[120px]">{getMemberData(displayMatch.teamA_player1)?.name?.split(' ')[0]} & {getMemberData(displayMatch.teamA_player2)?.name?.split(' ')[0]}</span>
-                                    <span className="truncate max-w-[120px] text-right">{getMemberData(displayMatch.teamB_player1)?.name?.split(' ')[0]} & {getMemberData(displayMatch.teamB_player2)?.name?.split(' ')[0]}</span>
-                                  </div>
-                                  <div className="flex items-center gap-3">
-                                    <input 
-                                      type="number" placeholder="0" 
-                                      value={currentSa} 
-                                      onChange={(e) => setLocalScores(p => ({...p, [displayMatch.id]: {...(p[displayMatch.id]||{}), [`a${currentSet}`]: e.target.value}}))} 
-                                      className={`flex-1 w-full bg-white dark:bg-[#0F172A] border-2 ${numA > numB && numA > 0 ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'border-slate-200 dark:border-[#1E293B] text-slate-900 dark:text-white focus:border-blue-500'} rounded-xl py-6 text-center font-bold text-4xl outline-none transition-colors`} 
-                                    />
-                                    <span className="text-slate-400 dark:text-[#334155] font-black">-</span>
-                                    <input 
-                                      type="number" placeholder="0" 
-                                      value={currentSb} 
-                                      onChange={(e) => setLocalScores(p => ({...p, [displayMatch.id]: {...(p[displayMatch.id]||{}), [`b${currentSet}`]: e.target.value}}))} 
-                                      className={`flex-1 w-full bg-white dark:bg-[#0F172A] border-2 ${numB > numA && numB > 0 ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'border-slate-200 dark:border-[#1E293B] text-slate-900 dark:text-white focus:border-blue-500'} rounded-xl py-6 text-center font-bold text-4xl outline-none transition-colors`} 
-                                    />
-                                  </div>
-                                </div>
-                                <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl text-sm font-bold transition-colors shadow-md mt-2">
-                                  {t('finish_free_court')}
-                                </button>
-                                <button type="button" onClick={() => setConfirmDeleteMatchId(displayMatch.id)} className="w-full bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-500 py-3.5 rounded-xl text-sm font-bold transition-colors mt-2">
-                                  {t('cancel_match')}
-                                </button>
-                              </form>
-                            ) : (
-                              <div className="w-full flex gap-2">
-                                <button onClick={() => setSwapCourtModal(displayMatch)} className="p-3.5 border border-slate-200 dark:border-[#1E293B] rounded-xl text-slate-400 hover:bg-slate-50 dark:hover:bg-[#1E293B] dark:hover:text-white transition-colors" title="Swap Court"><ArrowRightLeft size={18}/></button>
-                                <button onClick={() => setConfirmDeleteMatchId(displayMatch.id)} className="p-3.5 border border-slate-200 dark:border-[#1E293B] rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"><Trash2 size={18}/></button>
-                                <button onClick={() => handleStartMatch(displayMatch.id)} className="flex-1 bg-[#10B981] hover:bg-[#059669] text-white py-3.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors shadow-md">
-                                  <Play fill="currentColor" size={16}/> {t('start')}
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </>
-                      ) : (
-                        <div className="flex-1 flex flex-col items-center justify-center gap-4 py-10">
-                          <button onClick={() => handleAutoGenerateCourt(court.id)} className="px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-sm transition-colors w-full">{t('auto_fill')}</button>
-                          <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">OR</span>
-                          <button onClick={() => openEditMatchModal({ courtId: court.id, matchType: 'MD' })} className="px-6 py-3.5 bg-slate-100 hover:bg-slate-200 dark:bg-[#1E293B] dark:hover:bg-[#334155] text-slate-800 dark:text-slate-200 text-sm font-bold rounded-xl transition-colors w-full">{t('manual_match')}</button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  <MatchCard 
+                    key={court.id} 
+                    match={displayMatch} 
+                    court={court} 
+                    maxSets={maxSets}
+                    sessionStatus={session?.status}
+                    getMemberData={getMemberData}
+                    openEditMatchModal={openEditMatchModal}
+                    handleFinishMatch={handleFinishMatch}
+                    setConfirmDeleteMatchId={setConfirmDeleteMatchId}
+                    setSwapCourtModal={setSwapCourtModal}
+                    handleStartMatch={handleStartMatch}
+                    handleAutoGenerateCourt={handleAutoGenerateCourt}
+                    t={t}
+                  />
                 );
               })}
             </div>
-
-            {/* QUEUED MATCHES / WAITING LIST */}
+            
             {queuedMatchesList.length > 0 && (
               <div className="mt-10 animate-in fade-in">
-                <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-                  Waiting List 
-                  <span className="bg-slate-200 dark:bg-[#1E293B] text-slate-600 dark:text-slate-300 text-xs px-2.5 py-0.5 rounded-full font-bold">{queuedMatchesList.length}</span>
-                </h3>
+                <h3 className="text-lg font-bold mb-6 flex items-center gap-2">Waiting List <span className="bg-slate-200 dark:bg-[#1E293B] text-slate-600 dark:text-slate-300 text-xs px-2.5 py-0.5 rounded-full font-bold">{queuedMatchesList.length}</span></h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {queuedMatchesList.map(queuedMatch => (
-                    <div key={queuedMatch.id} className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl overflow-hidden shadow-sm flex flex-col">
-                      <div className="p-4 flex justify-between items-center border-b border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0B1120]">
-                        <h3 className="font-bold text-slate-500 uppercase tracking-widest text-xs">Queued</h3>
-                        <div className="flex items-center gap-2">
-                           <button onClick={() => openEditMatchModal(queuedMatch)} className="p-1.5 text-slate-400 hover:text-blue-500 transition-colors"><SettingsIcon size={14}/></button>
-                           <button onClick={() => setConfirmDeleteMatchId(queuedMatch.id)} className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors"><Trash2 size={14}/></button>
-                        </div>
-                      </div>
-                      <div className="p-5 flex flex-col gap-4">
-                        <div className="relative mt-1">
-                          <div className="absolute -top-2.5 left-3 bg-white dark:bg-[#0F172A] px-1.5 text-[10px] text-slate-500 font-bold uppercase z-10">{queuedMatch.matchType}</div>
-                          <div className="flex border border-slate-200 dark:border-[#1E293B] rounded-lg overflow-hidden bg-slate-50 dark:bg-[#0B1120]">
-                            <div className="flex-1 p-3.5 flex items-center justify-between border-r border-slate-200 dark:border-[#1E293B]">
-                              <span className="font-semibold text-sm truncate dark:text-white">{getMemberData(queuedMatch.teamA_player1)?.name || 'TBD'}</span>
-                              <span className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold ${getGradeColor(getMemberData(queuedMatch.teamA_player1)?.skillLevel)}`}>{getMemberData(queuedMatch.teamA_player1)?.skillLevel || '-'}</span>
-                            </div>
-                            <div className="flex-1 p-3.5 flex items-center justify-between">
-                              <span className="font-semibold text-sm truncate dark:text-white">{getMemberData(queuedMatch.teamA_player2)?.name || 'TBD'}</span>
-                              <span className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold ${getGradeColor(getMemberData(queuedMatch.teamA_player2)?.skillLevel)}`}>{getMemberData(queuedMatch.teamA_player2)?.skillLevel || '-'}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-center text-slate-400 dark:text-[#334155] text-[10px] font-bold tracking-widest uppercase">{t('vs')}</div>
-                        <div className="relative">
-                          <div className="absolute -top-2.5 left-3 bg-white dark:bg-[#0F172A] px-1.5 text-[10px] text-slate-500 font-bold uppercase z-10">{queuedMatch.matchType}</div>
-                          <div className="flex border border-slate-200 dark:border-[#1E293B] rounded-lg overflow-hidden bg-slate-50 dark:bg-[#0B1120]">
-                            <div className="flex-1 p-3.5 flex items-center justify-between border-r border-slate-200 dark:border-[#1E293B]">
-                              <span className="font-semibold text-sm truncate dark:text-white">{getMemberData(queuedMatch.teamB_player1)?.name || 'TBD'}</span>
-                              <span className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold ${getGradeColor(getMemberData(queuedMatch.teamB_player1)?.skillLevel)}`}>{getMemberData(queuedMatch.teamB_player1)?.skillLevel || '-'}</span>
-                            </div>
-                            <div className="flex-1 p-3.5 flex items-center justify-between">
-                              <span className="font-semibold text-sm truncate dark:text-white">{getMemberData(queuedMatch.teamB_player2)?.name || 'TBD'}</span>
-                              <span className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold ${getGradeColor(getMemberData(queuedMatch.teamB_player2)?.skillLevel)}`}>{getMemberData(queuedMatch.teamB_player2)?.skillLevel || '-'}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <button onClick={() => setSwapCourtModal(queuedMatch)} className="w-full mt-2 py-3 bg-blue-50 hover:bg-blue-100 dark:bg-[#1E293B] dark:hover:bg-[#334155] text-blue-600 dark:text-white rounded-xl text-sm font-bold transition-colors">Move to Court</button>
-                      </div>
-                    </div>
+                  {queuedMatchesList.map(match => (
+                    <MatchCard key={match.id} match={match} court={null} maxSets={maxSets} sessionStatus={session?.status} getMemberData={getMemberData} openEditMatchModal={openEditMatchModal} handleFinishMatch={handleFinishMatch} setConfirmDeleteMatchId={setConfirmDeleteMatchId} setSwapCourtModal={setSwapCourtModal} handleStartMatch={handleStartMatch} handleAutoGenerateCourt={handleAutoGenerateCourt} t={t} />
                   ))}
                 </div>
               </div>
@@ -1184,7 +1283,7 @@ export default function SessionDetails() {
                 <div className="p-10 text-center text-slate-500 border border-slate-200 dark:border-[#1E293B] rounded-xl bg-white dark:bg-[#0F172A]">{t('no_history')}</div>
               ) : (
                 filteredHistory.map(match => {
-                  const duration = Math.floor((new Date(match.endedAt).getTime() - new Date(match.startedAt).getTime()) / 60000);
+                  const duration = Math.max(0, Math.floor((new Date(match.endedAt).getTime() - new Date(match.startedAt).getTime()) / 60000));
                   
                   let teamAWins = 0, teamBWins = 0;
                   const sets = [];
@@ -1286,6 +1385,7 @@ export default function SessionDetails() {
                               playedGames.map((g, i) => (
                                 <div key={i} className="group relative inline-block">
                                   <span className={`px-2.5 py-1 text-[10px] font-bold rounded border cursor-help transition-colors ${getMatchTypeColor(g.type)} whitespace-nowrap`}>{g.type}</span>
+                                  {/* Rich Card Tooltip */}
                                   <div className="hidden group-hover:flex absolute z-[100] bottom-full left-1/2 -translate-x-1/2 mb-2 w-[340px] bg-white dark:bg-[#0F172A] text-slate-900 dark:text-white p-4 rounded-xl shadow-2xl border border-slate-200 dark:border-[#1E293B] ring-1 ring-black/5 pointer-events-none flex-col gap-3">
                                     <div className="flex justify-between items-center w-full">
                                       <span className="font-bold text-slate-400 uppercase tracking-widest text-[10px] whitespace-nowrap">{g.type} MATCH</span>
@@ -1415,85 +1515,6 @@ export default function SessionDetails() {
         )}
 
       </main>
-
-      {/* Player Detail Modal */}
-      {playerDetailModal && selectedDetailPlayer && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white dark:bg-[#0F172A] w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden border border-slate-200 dark:border-[#1E293B]">
-            <div className="flex justify-between items-center p-5 border-b border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0B1120] shrink-0">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-[#1E293B] flex items-center justify-center text-blue-600 dark:text-slate-300 font-bold">
-                  {selectedDetailPlayer.name.charAt(0)}
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg leading-tight">{selectedDetailPlayer.name}</h3>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold ${getGradeColor(selectedDetailPlayer.skillLevel)}`}>{selectedDetailPlayer.skillLevel}</span>
-                    <span className="text-xs text-slate-500 font-medium capitalize">{selectedDetailPlayer.gender}</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button onClick={() => exportPlayerPDF(selectedDetailPlayer.id, selectedDetailPlayer.name, selectedDetailGames)} className="px-4 py-2 bg-blue-50 dark:bg-[#1E293B] text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-[#334155] rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 border border-transparent dark:border-[#334155]">
-                  <FileDown size={14}/> {t('export_pdf')}
-                </button>
-                <button onClick={() => setPlayerDetailModal(null)} className="p-1.5 text-slate-400 hover:bg-slate-200 dark:hover:bg-[#1E293B] rounded-full transition-colors"><X size={18}/></button>
-              </div>
-            </div>
-            
-            <div className="p-6 overflow-y-auto flex-1">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-                 <div className="bg-slate-50 dark:bg-[#1E293B]/30 border border-slate-200 dark:border-[#1E293B] p-4 rounded-xl text-center">
-                   <div className="text-2xl font-black text-slate-800 dark:text-white">{selectedDetailGames.length}</div>
-                   <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">{t('matches_played')}</div>
-                 </div>
-                 <div className="bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-900/30 p-4 rounded-xl text-center">
-                   <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{selectedDetailGames.filter(g => g.result === 'Won').length}</div>
-                   <div className="text-[10px] font-bold text-emerald-600/70 uppercase tracking-widest mt-1">{t('won')}</div>
-                 </div>
-                 <div className="bg-rose-50 dark:bg-rose-900/10 border border-rose-200 dark:border-rose-900/30 p-4 rounded-xl text-center">
-                   <div className="text-2xl font-black text-rose-600 dark:text-rose-500">{selectedDetailGames.filter(g => g.result === 'Lost').length}</div>
-                   <div className="text-[10px] font-bold text-rose-600/70 uppercase tracking-widest mt-1">{t('lost')}</div>
-                 </div>
-                 <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 p-4 rounded-xl text-center">
-                   <div className="text-2xl font-black text-blue-600 dark:text-blue-400">{selectedDetailGames.length > 0 ? Math.round((selectedDetailGames.filter(g => g.result === 'Won').length / selectedDetailGames.length) * 100) : 0}%</div>
-                   <div className="text-[10px] font-bold text-blue-600/70 uppercase tracking-widest mt-1">{t('win_rate')}</div>
-                 </div>
-              </div>
-
-              <h4 className="font-bold mb-4">{t('history')}</h4>
-              <div className="flex flex-col gap-3">
-                {selectedDetailGames.length === 0 ? <div className="p-8 text-center text-slate-500 border border-slate-200 dark:border-[#1E293B] rounded-xl">{t('no_history')}</div> : 
-                 selectedDetailGames.map((g, i) => (
-                   <div key={i} className="flex flex-col sm:flex-row items-stretch sm:items-center bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl overflow-hidden shadow-sm">
-                     <div className="p-4 flex-1 flex items-center justify-between">
-                       <div className="flex flex-col gap-1 w-1/3">
-                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('partner')}</span>
-                         <span className="font-bold text-sm truncate">{g.partnerName}</span>
-                       </div>
-                       <div className="flex flex-col items-center justify-center px-4 w-1/3 border-x border-slate-100 dark:border-[#1E293B]">
-                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold mb-1 border ${getMatchTypeColor(g.type)} whitespace-nowrap`}>{g.type}</span>
-                         <span className="font-black text-lg text-slate-900 dark:text-white text-center whitespace-nowrap">
-                            {g.scoreString || `${g.myScore} - ${g.oppScore}`}
-                         </span>
-                       </div>
-                       <div className="flex flex-col gap-1 w-1/3 text-right">
-                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('opponents')}</span>
-                         <span className="font-bold text-sm truncate">{g.opp1Name}</span>
-                         <span className="font-bold text-sm truncate">{g.opp2Name}</span>
-                       </div>
-                     </div>
-                     <div className={`p-4 sm:w-24 shrink-0 flex items-center justify-center font-bold text-sm uppercase tracking-widest ${g.result === 'Won' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20' : g.result === 'Lost' ? 'bg-rose-50 text-rose-600 dark:bg-rose-900/20' : 'bg-slate-50 text-slate-500 dark:bg-[#1E293B]'}`}>
-                       {t(g.result.toLowerCase())}
-                     </div>
-                   </div>
-                 ))
-                }
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Manual Match Edit Modal */}
       {editMatchModal && (
@@ -1785,6 +1806,86 @@ export default function SessionDetails() {
           </div>
         </div>
       )}
+
+      {/* Player Detail Modal */}
+      {playerDetailModal && selectedDetailPlayer && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-[#0F172A] w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden border border-slate-200 dark:border-[#1E293B]">
+            <div className="flex justify-between items-center p-5 border-b border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0B1120] shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-[#1E293B] flex items-center justify-center text-blue-600 dark:text-slate-300 font-bold">
+                  {selectedDetailPlayer?.name?.charAt(0) || '?'}
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg leading-tight">{selectedDetailPlayer?.name}</h3>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold ${getGradeColor(selectedDetailPlayer?.skillLevel)}`}>{selectedDetailPlayer?.skillLevel}</span>
+                    <span className="text-xs text-slate-500 font-medium capitalize">{selectedDetailPlayer?.gender}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => exportPlayerPDF(selectedDetailPlayer?.id, selectedDetailPlayer?.name, selectedDetailGames)} className="px-4 py-2 bg-blue-50 dark:bg-[#1E293B] text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-[#334155] rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 border border-transparent dark:border-[#334155]">
+                  <FileDown size={14}/> {t('export_pdf', 'Export PDF')}
+                </button>
+                <button onClick={() => setPlayerDetailModal(null)} className="p-1.5 text-slate-400 hover:bg-slate-200 dark:hover:bg-[#1E293B] rounded-full transition-colors"><X size={18}/></button>
+              </div>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+                 <div className="bg-slate-50 dark:bg-[#1E293B]/30 border border-slate-200 dark:border-[#1E293B] p-4 rounded-xl text-center">
+                   <div className="text-2xl font-black text-slate-800 dark:text-white">{selectedDetailGames.length}</div>
+                   <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">{t('matches_played', 'MATCHES PLAYED')}</div>
+                 </div>
+                 <div className="bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-900/30 p-4 rounded-xl text-center">
+                   <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{selectedDetailGames.filter(g => g.result === 'Won').length}</div>
+                   <div className="text-[10px] font-bold text-emerald-600/70 uppercase tracking-widest mt-1">{t('won', 'WON')}</div>
+                 </div>
+                 <div className="bg-rose-50 dark:bg-rose-900/10 border border-rose-200 dark:border-rose-900/30 p-4 rounded-xl text-center">
+                   <div className="text-2xl font-black text-rose-600 dark:text-rose-500">{selectedDetailGames.filter(g => g.result === 'Lost').length}</div>
+                   <div className="text-[10px] font-bold text-rose-600/70 uppercase tracking-widest mt-1">{t('lost', 'LOST')}</div>
+                 </div>
+                 <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 p-4 rounded-xl text-center">
+                   <div className="text-2xl font-black text-blue-600 dark:text-blue-400">{selectedDetailGames.length > 0 ? Math.round((selectedDetailGames.filter(g => g.result === 'Won').length / selectedDetailGames.length) * 100) : 0}%</div>
+                   <div className="text-[10px] font-bold text-blue-600/70 uppercase tracking-widest mt-1">{t('win_rate', 'WIN RATE')}</div>
+                 </div>
+              </div>
+
+              <h4 className="font-bold mb-4">{t('history', 'History')}</h4>
+              <div className="flex flex-col gap-3">
+                {selectedDetailGames.length === 0 ? <div className="p-8 text-center text-slate-500 border border-slate-200 dark:border-[#1E293B] rounded-xl">{t('no_history', 'No history found')}</div> : 
+                 selectedDetailGames.map((g, i) => (
+                   <div key={i} className="flex flex-col sm:flex-row items-stretch sm:items-center bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl overflow-hidden shadow-sm">
+                     <div className="p-4 flex-1 flex items-center justify-between">
+                       <div className="flex flex-col gap-1 w-1/3">
+                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('partner', 'PARTNER')}</span>
+                         <span className="font-bold text-sm truncate">{g.partnerName}</span>
+                       </div>
+                       <div className="flex flex-col items-center justify-center px-4 w-1/3 border-x border-slate-100 dark:border-[#1E293B]">
+                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold mb-1 border ${getMatchTypeColor(g.type)} whitespace-nowrap`}>{g.type}</span>
+                         <span className="font-black text-lg text-slate-900 dark:text-white text-center whitespace-nowrap">
+                            {g.scoreString || `${g.myScore} - ${g.oppScore}`}
+                         </span>
+                       </div>
+                       <div className="flex flex-col gap-1 w-1/3 text-right">
+                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('opponents', 'OPPONENTS')}</span>
+                         <span className="font-bold text-sm truncate">{g.opp1Name}</span>
+                         <span className="font-bold text-sm truncate">{g.opp2Name}</span>
+                       </div>
+                     </div>
+                     <div className={`p-4 sm:w-24 shrink-0 flex items-center justify-center font-bold text-sm uppercase tracking-widest ${g.result === 'Won' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20' : g.result === 'Lost' ? 'bg-rose-50 text-rose-600 dark:bg-rose-900/20' : 'bg-slate-50 text-slate-500 dark:bg-[#1E293B]'}`}>
+                       {t(g.result.toLowerCase(), g.result)}
+                     </div>
+                   </div>
+                 ))
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

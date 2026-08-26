@@ -291,4 +291,26 @@ router.put("/:id/members/:memberId/grade", async (req: AuthRequest, res) => {
   }
 });
 
+// PUT: Start a session
+router.put("/:id/start", async (req: AuthRequest, res) => {
+  try {
+    const sessionId = parseInt(String(req.params.id), 10);
+    await db.update(sessions).set({ status: 'active', startedAt: new Date() }).where(eq(sessions.id, sessionId));
+    res.status(200).json({ message: "Session started." });
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+// PUT: End a session
+router.put("/:id/finish", async (req: AuthRequest, res) => {
+  try {
+    const sessionId = parseInt(String(req.params.id), 10);
+    await db.update(sessions).set({ status: 'finished', endedAt: new Date() }).where(eq(sessions.id, sessionId));
+    res.status(200).json({ message: "Session ended." });
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
+
 export default router;
