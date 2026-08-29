@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, X, Search, Calendar, Trash2, ChevronLeft, ChevronRight, Zap, Globe, Sun, Moon, Settings, LogOut, ArrowLeft, ArrowRight, PlayCircle, CalendarDays, Play } from 'lucide-react';
+import { Plus, X, Search, Calendar, Trash2, ChevronLeft, ChevronRight, Zap, Globe, Sun, Moon, Settings, LogOut, ArrowLeft, PlayCircle, CalendarDays } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../api/axios';
 
@@ -11,6 +11,7 @@ interface Session {
   scoringSystem: string;
   pairingRule: string;
   status: string;
+  matchLimit: number;
   createdAt: string;
 }
 
@@ -42,7 +43,8 @@ export default function Sessions() {
     scoringSystem: 'BWF 21 Points x 3 Sets', 
     customSets: 3, 
     customPoints: 21, 
-    pairingRule: 'strict'
+    pairingRule: 'strict',
+    matchLimit: 0 
   });
 
   useEffect(() => {
@@ -90,11 +92,9 @@ export default function Sessions() {
   const paginatedSessions = processedSessions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const openCreateModal = () => {
-    // Generate a default future date string (e.g., tomorrow at 18:00)
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(18, 0, 0, 0);
-    // Format to YYYY-MM-DDThh:mm for datetime-local input
     const localDateTime = new Date(tomorrow.getTime() - tomorrow.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
     setFormData({ ...formData, date: localDateTime, name: '' });
@@ -143,11 +143,13 @@ export default function Sessions() {
     return <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-500 px-3 py-1 rounded-md text-[11px] font-bold tracking-widest uppercase">SCHEDULED</span>;
   };
 
-  // Restrict past dates in the datetime-local input
   const currentLocalDateTime = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
   const inputStyles = "w-full px-4 py-3 bg-slate-50 dark:bg-[#0F172A] border border-slate-300 dark:border-[#1E293B] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-900 dark:text-slate-100";
   const labelStyles = "block text-xs font-semibold mb-2 text-slate-700 dark:text-slate-400";
+
+  // Derive dropdown type for modal
+  const formLimitType = formData.matchLimit === 0 ? 'all' : ([1,2,3,4,5].includes(formData.matchLimit) ? String(formData.matchLimit) : 'custom');
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0B1120] text-slate-900 dark:text-slate-100 font-sans flex flex-col">
@@ -266,9 +268,9 @@ export default function Sessions() {
               </div>
 
               {/* Mobile Card View */}
-              <div className="sm:hidden flex flex-col flex-1 divide-y divide-slate-100 dark:divide-slate-800/50 overflow-y-auto">
+              <div className="sm:hidden flex flex-col flex-1 divide-y divide-slate-100 dark:divide-[#1E293B] overflow-y-auto">
                 {paginatedSessions.map((session) => (
-                  <div key={session.id} onClick={() => navigate(`/sessions/${session.id}`)} className="p-4 flex flex-col gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-colors cursor-pointer">
+                  <div key={session.id} onClick={() => navigate(`/sessions/${session.id}`)} className="p-4 flex flex-col gap-3 hover:bg-slate-50 dark:hover:bg-[#1E293B]/30 transition-colors cursor-pointer">
                     <div className="flex justify-between items-start">
                       <div>
                         <div className="font-bold text-base mb-1">{session.name}</div>
@@ -279,7 +281,7 @@ export default function Sessions() {
                       {getStatusBadge(session.status || 'scheduled')}
                     </div>
                     
-                    <div className="flex items-center justify-between mt-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center justify-between mt-2 pt-3 border-t border-slate-100 dark:border-[#1E293B]">
                       <button onClick={(e) => { e.stopPropagation(); handleDelete(session.id); }} className="p-2 text-slate-400 hover:text-rose-600 bg-slate-50 dark:bg-[#1E293B] rounded-lg transition-colors">
                         <Trash2 size={16}/>
                       </button>
@@ -345,10 +347,44 @@ export default function Sessions() {
                   </div>
                 </div>
 
+                {/* LEADERBOARD MATCH LIMIT SETTING */}
+                <div>
+                  <label className={labelStyles}>{t('match_limit', 'Leaderboard Match Limit')}</label>
+                  <div className="flex gap-3">
+                    <select 
+                      value={formLimitType} 
+                      onChange={e => {
+                        const val = e.target.value;
+                        if (val === 'all') setFormData({...formData, matchLimit: 0});
+                        else if (val === 'custom') setFormData({...formData, matchLimit: 6});
+                        else setFormData({...formData, matchLimit: parseInt(val)});
+                      }} 
+                      className={`${inputStyles} font-medium flex-1 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_12px_center] pr-8`}
+                    >
+                      <option value="all">{t('all_games', 'All Games')}</option>
+                      <option value="1">1 Game</option>
+                      <option value="2">2 Games</option>
+                      <option value="3">3 Games</option>
+                      <option value="4">4 Games</option>
+                      <option value="5">5 Games</option>
+                      <option value="custom">{t('custom_amount', 'Custom Amount')}</option>
+                    </select>
+                    {formLimitType === 'custom' && (
+                      <input 
+                        type="number" 
+                        min={1} 
+                        value={formData.matchLimit} 
+                        onChange={e => setFormData({...formData, matchLimit: parseInt(e.target.value) || 0})} 
+                        className={`${inputStyles} w-24 text-center font-bold`} 
+                      />
+                    )}
+                  </div>
+                </div>
+
                 <div className="pt-2 border-t border-slate-100 dark:border-[#1E293B]">
                   <label className={labelStyles}>{t('scoring_system')}</label>
                   <div className="relative">
-                    <select value={formData.scoringSystem} onChange={e => setFormData({...formData, scoringSystem: e.target.value})} className={`${inputStyles} appearance-none pr-8 font-medium`}>
+                    <select value={formData.scoringSystem} onChange={e => setFormData({...formData, scoringSystem: e.target.value})} className={`${inputStyles} appearance-none pr-8 font-medium bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_12px_center]`}>
                       <option value="BWF 21 Points x 3 Sets">{t('bwf_21')}</option>
                       <option value="BWF 15 Points x 3 Sets">{t('bwf_15')}</option>
                       <option value="42 Points x 1 Set">{t('pts_42')}</option>
@@ -374,7 +410,7 @@ export default function Sessions() {
                 <div>
                   <label className={labelStyles}>{t('pairing_rule')}</label>
                   <div className="relative">
-                    <select value={formData.pairingRule} onChange={e => setFormData({...formData, pairingRule: e.target.value})} className={`${inputStyles} appearance-none pr-8 font-medium`}>
+                    <select value={formData.pairingRule} onChange={e => setFormData({...formData, pairingRule: e.target.value})} className={`${inputStyles} appearance-none pr-8 font-medium bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_12px_center]`}>
                       <option value="very_strict">{t('very_strict')}</option>
                       <option value="strict">{t('strict')}</option>
                       <option value="moderate">{t('moderate')}</option>

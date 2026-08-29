@@ -22,7 +22,8 @@
     "drizzle-orm": "^0.45.2",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
-    "nodemailer": "^9.0.5"
+    "nodemailer": "^9.0.5",
+    "postgres": "^3.4.9"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

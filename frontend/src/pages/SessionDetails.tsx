@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { 
   ArrowLeft, Users, SquareStack, Play, History, Clock, Settings as SettingsIcon, 
-  Plus, UserPlus, Check, Pause, X, Edit2, Zap, Globe, Sun, Moon, LogOut, ChevronDown, Search, Trash2, GripVertical, ArrowRightLeft, ListOrdered, AlertCircle, AlertTriangle, Save, ChevronLeft, ChevronRight, FileDown, Info, Square
+  Plus, UserPlus, Check, Pause, X, Edit2, Zap, Globe, Sun, Moon, LogOut, ChevronDown, Search, Trash2, GripVertical, ArrowRightLeft, ListOrdered, AlertCircle, AlertTriangle, Save, ChevronLeft, ChevronRight, FileDown, Info, Square, Trophy, Medal, ChevronUp
 } from 'lucide-react';
 import api from '../api/axios';
 import jsPDF from 'jspdf';
@@ -14,6 +14,7 @@ const TABS = [
   { id: 'courts', label: 'courts', icon: <SquareStack size={18} /> },
   { id: 'matches', label: 'matches', icon: <Play size={18} /> },
   { id: 'history', label: 'history', icon: <History size={18} /> },
+  { id: 'leaderboard', label: 'leaderboard', icon: <Trophy size={18} /> },
   { id: 'playtime', label: 'playtime', icon: <Clock size={18} /> },
   { id: 'settings', label: 'settings', icon: <SettingsIcon size={18} /> }
 ];
@@ -23,7 +24,6 @@ const useSafeTimer = (startedAt: string | null | undefined) => {
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
-    // Fallback to exactly NOW if startedAt is completely missing from database
     let validStart = startedAt ? new Date(startedAt).getTime() : Date.now();
     
     if (isNaN(validStart)) {
@@ -32,7 +32,6 @@ const useSafeTimer = (startedAt: string | null | undefined) => {
     
     const now = Date.now();
 
-    // Fix: If timestamp parsed into the future by > 1 minute, it's a timezone serialization bug
     if (validStart > now + 60000 && startedAt) {
         const stripped = startedAt.endsWith('Z') ? startedAt.slice(0, -1) : startedAt;
         const strippedTime = new Date(stripped).getTime();
@@ -43,7 +42,6 @@ const useSafeTimer = (startedAt: string | null | undefined) => {
         }
     }
     
-    // Safety clamp: If server clock is still ahead, lock it to component mount time
     if (validStart > now) validStart = now;
 
     const tick = () => setElapsed(Math.max(0, Math.floor((Date.now() - validStart) / 1000)));
@@ -116,21 +114,21 @@ const PlayerSlotSelect = ({ options, value, onChange, placeholder, currentName, 
     <div className="relative w-full" ref={wrapperRef}>
       <div 
         onClick={() => setIsOpen(!isOpen)} 
-        className={`p-3.5 sm:p-4 rounded-xl border-2 transition-all cursor-pointer flex items-center justify-between ${value === 0 && !currentName ? 'border-dashed border-slate-300 dark:border-[#334155] bg-transparent hover:bg-slate-100 dark:hover:bg-[#1E293B]/50' : 'border-solid border-slate-200 dark:border-[#1E293B] bg-white dark:bg-[#0B1120] shadow-sm hover:border-blue-500 dark:hover:border-blue-500'}`}
+        className={`p-2.5 sm:p-3 rounded-lg border-2 transition-all cursor-pointer flex items-center justify-between ${value === 0 && !currentName ? 'border-dashed border-slate-300 dark:border-[#334155] bg-transparent hover:bg-slate-100 dark:hover:bg-[#1E293B]/50' : 'border-solid border-slate-200 dark:border-[#1E293B] bg-white dark:bg-[#0B1120] shadow-sm hover:border-blue-500 dark:hover:border-blue-500'}`}
       >
         {value === 0 && !currentName ? (
-          <div className="flex items-center gap-3 text-slate-500">
-            <Plus size={18} /> <span className="font-medium text-sm">{placeholder}</span>
+          <div className="flex items-center gap-2 text-slate-500">
+            <Plus size={16} /> <span className="font-medium text-xs">{placeholder}</span>
           </div>
         ) : (
-          <div className="flex items-center gap-3 w-full">
+          <div className="flex items-center gap-2 w-full">
             <div className="flex-1 min-w-0">
-              <div className="font-bold text-sm truncate text-slate-900 dark:text-white">{displayName}</div>
+              <div className="font-bold text-xs truncate text-slate-900 dark:text-white">{displayName}</div>
             </div>
-            <span className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold shrink-0 ${getGradeColor(displayGrade)}`}>
+            <span className={`text-[9px] border px-1.5 py-0.5 rounded font-mono font-bold shrink-0 ${getGradeColor(displayGrade)}`}>
               {displayGrade || '-'}
             </span>
-            <ChevronDown size={16} className="text-slate-400 shrink-0 ml-1" />
+            <ChevronDown size={14} className="text-slate-400 shrink-0 ml-1" />
           </div>
         )}
       </div>
@@ -140,12 +138,12 @@ const PlayerSlotSelect = ({ options, value, onChange, placeholder, currentName, 
           <div className="p-2 border-b border-slate-100 dark:border-[#1E293B] shrink-0 bg-slate-50 dark:bg-[#0B1120]">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-              <input type="text" placeholder={t('search_players_to_select')} value={search} onChange={e => setSearch(e.target.value)} className="w-full bg-white dark:bg-[#0F172A] pl-9 pr-3 py-2.5 text-sm rounded-lg outline-none border border-slate-200 dark:border-[#1E293B] text-slate-900 dark:text-slate-100" autoFocus />
+              <input type="text" placeholder={t('search_players_to_select')} value={search} onChange={e => setSearch(e.target.value)} className="w-full bg-white dark:bg-[#0F172A] pl-9 pr-3 py-2 text-xs rounded-lg outline-none border border-slate-200 dark:border-[#1E293B] text-slate-900 dark:text-slate-100" autoFocus />
             </div>
           </div>
           <div className="p-1 overflow-y-auto flex-1 bg-white dark:bg-[#0F172A] divide-y divide-slate-100 dark:divide-[#1E293B]">
             <div className="py-1">
-              <div onClick={() => { onChange(0); setIsOpen(false); setSearch(''); }} className="px-3 py-2.5 text-sm text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg cursor-pointer font-bold text-center transition-colors">
+              <div onClick={() => { onChange(0); setIsOpen(false); setSearch(''); }} className="px-3 py-2 text-xs text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg cursor-pointer font-bold text-center transition-colors">
                 {t('remove_player')}
               </div>
             </div>
@@ -153,19 +151,19 @@ const PlayerSlotSelect = ({ options, value, onChange, placeholder, currentName, 
             {swaps && swaps.length > 0 && (
               <div className="py-1">
                 {swaps.filter((s: any) => s.id !== 0 && s.id !== value).map((s: any) => (
-                  <div key={`swap-${s.id}`} onClick={() => { onSwap(s.id); setIsOpen(false); }} className="px-3 py-2.5 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg cursor-pointer flex items-center gap-2 font-bold transition-colors">
-                    <ArrowRightLeft size={14} /> {t('swap_with')} {s.name}
+                  <div key={`swap-${s.id}`} onClick={() => { onSwap(s.id); setIsOpen(false); }} className="px-3 py-2 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg cursor-pointer flex items-center gap-2 font-bold transition-colors">
+                    <ArrowRightLeft size={12} /> {t('swap_with')} {s.name}
                   </div>
                 ))}
               </div>
             )}
 
             <div className="py-1">
-              {filtered.length === 0 ? <div className="p-4 text-sm text-slate-500 text-center font-medium">No players found</div> : 
+              {filtered.length === 0 ? <div className="p-3 text-xs text-slate-500 text-center font-medium">No players found</div> : 
                 filtered.map((opt: any) => (
-                  <div key={opt.id} onClick={() => { onChange(opt.id); setIsOpen(false); setSearch(''); }} className="px-3 py-3 text-sm hover:bg-slate-50 dark:hover:bg-[#1E293B]/50 rounded-lg cursor-pointer flex items-center justify-between transition-colors">
+                  <div key={opt.id} onClick={() => { onChange(opt.id); setIsOpen(false); setSearch(''); }} className="px-3 py-2.5 text-xs hover:bg-slate-50 dark:hover:bg-[#1E293B]/50 rounded-lg cursor-pointer flex items-center justify-between transition-colors">
                     <span className="truncate mr-2 text-slate-900 dark:text-slate-100 font-bold">{opt.name}</span>
-                    <span className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold shrink-0 ${getGradeColor(opt.skillLevel)}`}>{opt.skillLevel}</span>
+                    <span className={`text-[9px] border px-1.5 py-0.5 rounded font-mono font-bold shrink-0 ${getGradeColor(opt.skillLevel)}`}>{opt.skillLevel}</span>
                   </div>
                 ))
               }
@@ -177,8 +175,7 @@ const PlayerSlotSelect = ({ options, value, onChange, placeholder, currentName, 
   );
 };
 
-// ISOLATED MATCH CARD COMPONENT
-const MatchCard = ({ match, court, sessionStatus, maxSets, getMemberData, openEditMatchModal, handleAutoGenerateCourt, setSwapCourtModal, setConfirmDeleteMatchId, handleStartMatch, handleFinishMatch, t }: any) => {
+const MatchCard = ({ match, court, sessionStatus, maxSets, isProcessing, getMemberData, openEditMatchModal, handleAutoGenerateCourt, setSwapCourtModal, setConfirmDeleteMatchId, handleStartMatch, handleFinishMatch, handleReorderQueue, queueIndex, totalQueued, t }: any) => {
   const [currentSet, setCurrentSet] = useState(1);
   const [scores, setScores] = useState({
     a1: match?.scoreTeamA_set1 || '', b1: match?.scoreTeamB_set1 || '',
@@ -186,20 +183,28 @@ const MatchCard = ({ match, court, sessionStatus, maxSets, getMemberData, openEd
     a3: match?.scoreTeamA_set3 || '', b3: match?.scoreTeamB_set3 || ''
   });
 
+  useEffect(() => {
+    setCurrentSet(1);
+    setScores({
+      a1: match?.scoreTeamA_set1 || '', b1: match?.scoreTeamB_set1 || '',
+      a2: match?.scoreTeamA_set2 || '', b2: match?.scoreTeamB_set2 || '',
+      a3: match?.scoreTeamA_set3 || '', b3: match?.scoreTeamB_set3 || ''
+    });
+  }, [match?.id]);
+
   if (!match) {
     return (
-      <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl overflow-hidden shadow-lg flex flex-col h-full">
-        <div className="p-4 flex justify-between items-center border-b border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0B1120]">
+      <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl overflow-hidden shadow-sm flex flex-col h-full">
+        <div className="p-3 flex justify-between items-center border-b border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0B1120]">
           <div className="flex items-center gap-2">
-            <GripVertical size={16} className="text-slate-400 dark:text-slate-500" />
-            <h3 className="font-bold text-slate-800 dark:text-white tracking-wide">{court?.name || 'Queued'}</h3>
+            <h3 className="font-bold text-sm text-slate-800 dark:text-white tracking-wide">{court?.name || 'Queued'}</h3>
           </div>
-          <div className="text-blue-600 dark:text-blue-500 text-xs font-bold tracking-widest uppercase">{t('ready')}</div>
+          <div className="text-slate-400 dark:text-slate-500 text-[10px] font-bold tracking-widest uppercase">{t('empty')}</div>
         </div>
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 py-10 px-5">
-          <button disabled={sessionStatus !== 'active'} onClick={() => handleAutoGenerateCourt(court.id)} className="px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-sm transition-colors w-full disabled:opacity-50 disabled:cursor-not-allowed">{t('auto_fill')}</button>
-          <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">OR</span>
-          <button disabled={sessionStatus !== 'active'} onClick={() => openEditMatchModal({ courtId: court.id, matchType: 'MD' })} className="px-6 py-3.5 bg-slate-100 hover:bg-slate-200 dark:bg-[#1E293B] dark:hover:bg-[#334155] text-slate-800 dark:text-slate-200 text-sm font-bold rounded-xl transition-colors w-full disabled:opacity-50 disabled:cursor-not-allowed">{t('manual_match')}</button>
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 py-6 px-4">
+          <button disabled={sessionStatus !== 'active' || isProcessing} onClick={() => handleAutoGenerateCourt(court.id)} className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors w-full disabled:opacity-50 disabled:cursor-not-allowed">{t('auto_fill')}</button>
+          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">OR</span>
+          <button disabled={sessionStatus !== 'active' || isProcessing} onClick={() => openEditMatchModal({ courtId: court.id, matchType: 'MD' })} className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-[#1E293B] dark:hover:bg-[#334155] text-slate-800 dark:text-slate-200 text-xs font-bold rounded-lg transition-colors w-full disabled:opacity-50 disabled:cursor-not-allowed">{t('manual_match')}</button>
         </div>
       </div>
     );
@@ -210,55 +215,64 @@ const MatchCard = ({ match, court, sessionStatus, maxSets, getMemberData, openEd
   const numB = parseInt(scores[`b${currentSet}` as keyof typeof scores]) || 0;
 
   return (
-    <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl overflow-hidden shadow-lg flex flex-col h-full">
-      <div className="p-4 flex justify-between items-center border-b border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0B1120]">
+    <div className={`bg-white dark:bg-[#0F172A] border ${isActive ? 'border-emerald-200 dark:border-emerald-900/50 shadow-md ring-1 ring-emerald-500/20' : 'border-slate-200 dark:border-[#1E293B] shadow-sm'} rounded-xl overflow-hidden flex flex-col h-full transition-all`}>
+      <div className="p-3 flex justify-between items-center border-b border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0B1120]">
         <div className="flex items-center gap-2">
-          {court && <GripVertical size={16} className="text-slate-400 dark:text-slate-500" />}
-          <h3 className="font-bold text-slate-800 dark:text-white tracking-wide">{court ? court.name : 'Queued'}</h3>
-          {!court && <span className="bg-slate-200 dark:bg-[#1E293B] text-slate-600 dark:text-slate-300 text-xs px-2.5 py-0.5 rounded-full font-bold uppercase">Queue</span>}
-          {court && <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-500 text-[10px] px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800 uppercase tracking-wider font-bold">AUTO</span>}
+          <h3 className="font-bold text-sm text-slate-800 dark:text-white tracking-wide">{court ? court.name : 'Queued'}</h3>
+          {!court && <span className="bg-slate-200 dark:bg-[#1E293B] text-slate-600 dark:text-slate-300 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">#{queueIndex + 1}</span>}
+          {court && <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-500 text-[9px] px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800 uppercase tracking-wider font-bold">AUTO</span>}
         </div>
-        {isActive ? <MatchTimer startedAt={match.startedAt} /> : <div className="text-blue-600 dark:text-blue-500 text-xs font-bold tracking-widest uppercase">{court ? t('ready') : ''}</div>}
-        {!isActive && !court && (
-          <div className="flex items-center gap-2">
-            <button onClick={() => openEditMatchModal(match)} className="p-1.5 text-slate-400 hover:text-blue-500 transition-colors"><SettingsIcon size={14}/></button>
-            <button onClick={() => setConfirmDeleteMatchId(match.id)} className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors"><Trash2 size={14}/></button>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {isActive ? <MatchTimer startedAt={match.startedAt} /> : <div className="text-blue-600 dark:text-blue-500 text-[10px] font-bold tracking-widest uppercase">{court ? t('ready') : ''}</div>}
+          
+          {/* Controls for Queue & Unstarted Courts */}
+          {!isActive && (
+            <div className="flex items-center gap-1 border-l border-slate-200 dark:border-slate-700 pl-2 ml-1">
+              {!court && queueIndex > 0 && (
+                <button disabled={isProcessing} onClick={() => handleReorderQueue(queueIndex, 'up')} className="p-1 text-slate-400 hover:text-blue-500 transition-colors disabled:opacity-50"><ChevronUp size={16}/></button>
+              )}
+              {!court && queueIndex < totalQueued - 1 && (
+                <button disabled={isProcessing} onClick={() => handleReorderQueue(queueIndex, 'down')} className="p-1 text-slate-400 hover:text-blue-500 transition-colors disabled:opacity-50"><ChevronDown size={16}/></button>
+              )}
+              <button disabled={isProcessing} onClick={() => openEditMatchModal(match)} className="p-1 text-slate-400 hover:text-blue-500 transition-colors disabled:opacity-50"><SettingsIcon size={14}/></button>
+              <button disabled={isProcessing} onClick={() => setConfirmDeleteMatchId(match.id)} className="p-1 text-slate-400 hover:text-rose-500 transition-colors disabled:opacity-50"><Trash2 size={14}/></button>
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="p-5 flex-1 flex flex-col">
-        {court && (
-          <div className="flex justify-end mb-4">
-            <button onClick={() => openEditMatchModal(match)} className="p-1.5 border border-slate-200 dark:border-[#334155] rounded-md bg-slate-50 dark:bg-[#1E293B]/50 text-slate-500 hover:text-blue-600 dark:hover:text-white transition-colors shadow-sm"><SettingsIcon size={14}/></button>
+      <div className="p-3 sm:p-4 flex-1 flex flex-col">
+        {court && isActive && (
+          <div className="flex justify-end mb-3">
+            <button disabled={isProcessing} onClick={() => openEditMatchModal(match)} className="p-1.5 border border-slate-200 dark:border-[#334155] rounded-md bg-slate-50 dark:bg-[#1E293B]/50 text-slate-500 hover:text-blue-600 dark:hover:text-white transition-colors shadow-sm disabled:opacity-50"><SettingsIcon size={12}/></button>
           </div>
         )}
         
-        <div className="flex flex-col gap-4 mb-4">
+        <div className="flex flex-col gap-3 mb-4">
           <div className="relative mt-1">
-            <div className="absolute -top-2.5 left-3 bg-white dark:bg-[#0F172A] px-1.5 text-[10px] text-slate-500 font-bold uppercase z-10">{match.matchType}</div>
+            <div className="absolute -top-2 left-2 bg-white dark:bg-[#0F172A] px-1 text-[9px] text-slate-500 font-bold uppercase z-10">{match.matchType}</div>
             <div className="flex border border-slate-200 dark:border-[#1E293B] rounded-lg overflow-hidden bg-slate-50 dark:bg-[#0B1120]">
-              <div className="flex-1 p-3.5 flex items-center justify-between border-r border-slate-200 dark:border-[#1E293B]">
-                <span className="font-semibold text-sm truncate dark:text-white">{getMemberData(match.teamA_player1)?.name || 'TBD'}</span>
-                <span className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold ${getGradeColor(getMemberData(match.teamA_player1)?.skillLevel)}`}>{getMemberData(match.teamA_player1)?.skillLevel || '-'}</span>
+              <div className="flex-1 p-2.5 flex items-center justify-between border-r border-slate-200 dark:border-[#1E293B]">
+                <span className="font-semibold text-xs truncate dark:text-white">{getMemberData(match.teamA_player1)?.name || 'TBD'}</span>
+                <span className={`text-[9px] border px-1 py-0.5 rounded font-mono font-bold ${getGradeColor(getMemberData(match.teamA_player1)?.skillLevel)}`}>{getMemberData(match.teamA_player1)?.skillLevel || '-'}</span>
               </div>
-              <div className="flex-1 p-3.5 flex items-center justify-between">
-                <span className="font-semibold text-sm truncate dark:text-white">{getMemberData(match.teamA_player2)?.name || 'TBD'}</span>
-                <span className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold ${getGradeColor(getMemberData(match.teamA_player2)?.skillLevel)}`}>{getMemberData(match.teamA_player2)?.skillLevel || '-'}</span>
+              <div className="flex-1 p-2.5 flex items-center justify-between">
+                <span className="font-semibold text-xs truncate dark:text-white">{getMemberData(match.teamA_player2)?.name || 'TBD'}</span>
+                <span className={`text-[9px] border px-1 py-0.5 rounded font-mono font-bold ${getGradeColor(getMemberData(match.teamA_player2)?.skillLevel)}`}>{getMemberData(match.teamA_player2)?.skillLevel || '-'}</span>
               </div>
             </div>
           </div>
-          <div className="text-center text-slate-400 dark:text-[#334155] text-[10px] font-bold tracking-widest uppercase">{t('vs')}</div>
+          <div className="text-center text-slate-400 dark:text-[#334155] text-[9px] font-bold tracking-widest uppercase -my-1">{t('vs')}</div>
           <div className="relative">
-            <div className="absolute -top-2.5 left-3 bg-white dark:bg-[#0F172A] px-1.5 text-[10px] text-slate-500 font-bold uppercase z-10">{match.matchType}</div>
+            <div className="absolute -top-2 left-2 bg-white dark:bg-[#0F172A] px-1 text-[9px] text-slate-500 font-bold uppercase z-10">{match.matchType}</div>
             <div className="flex border border-slate-200 dark:border-[#1E293B] rounded-lg overflow-hidden bg-slate-50 dark:bg-[#0B1120]">
-              <div className="flex-1 p-3.5 flex items-center justify-between border-r border-slate-200 dark:border-[#1E293B]">
-                <span className="font-semibold text-sm truncate dark:text-white">{getMemberData(match.teamB_player1)?.name || 'TBD'}</span>
-                <span className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold ${getGradeColor(getMemberData(match.teamB_player1)?.skillLevel)}`}>{getMemberData(match.teamB_player1)?.skillLevel || '-'}</span>
+              <div className="flex-1 p-2.5 flex items-center justify-between border-r border-slate-200 dark:border-[#1E293B]">
+                <span className="font-semibold text-xs truncate dark:text-white">{getMemberData(match.teamB_player1)?.name || 'TBD'}</span>
+                <span className={`text-[9px] border px-1 py-0.5 rounded font-mono font-bold ${getGradeColor(getMemberData(match.teamB_player1)?.skillLevel)}`}>{getMemberData(match.teamB_player1)?.skillLevel || '-'}</span>
               </div>
-              <div className="flex-1 p-3.5 flex items-center justify-between">
-                <span className="font-semibold text-sm truncate dark:text-white">{getMemberData(match.teamB_player2)?.name || 'TBD'}</span>
-                <span className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold ${getGradeColor(getMemberData(match.teamB_player2)?.skillLevel)}`}>{getMemberData(match.teamB_player2)?.skillLevel || '-'}</span>
+              <div className="flex-1 p-2.5 flex items-center justify-between">
+                <span className="font-semibold text-xs truncate dark:text-white">{getMemberData(match.teamB_player2)?.name || 'TBD'}</span>
+                <span className={`text-[9px] border px-1 py-0.5 rounded font-mono font-bold ${getGradeColor(getMemberData(match.teamB_player2)?.skillLevel)}`}>{getMemberData(match.teamB_player2)?.skillLevel || '-'}</span>
               </div>
             </div>
           </div>
@@ -266,52 +280,51 @@ const MatchCard = ({ match, court, sessionStatus, maxSets, getMemberData, openEd
 
         <div className="mt-auto flex gap-2">
           {isActive ? (
-            <form onSubmit={(e) => { e.preventDefault(); handleFinishMatch(match.id, true, scores); }} className="w-full flex flex-col gap-2 mt-auto">
-              <div className="bg-slate-50 dark:bg-[#0B1120] border border-slate-200 dark:border-[#1E293B] p-4 rounded-xl relative">
+            <form onSubmit={(e) => { e.preventDefault(); if(!isProcessing) handleFinishMatch(match.id, true, scores); }} className="w-full flex flex-col gap-2 mt-auto">
+              <div className="bg-slate-50 dark:bg-[#0B1120] border border-slate-200 dark:border-[#1E293B] p-3 rounded-xl relative">
                 {maxSets > 1 && (
-                  <div className="flex items-center justify-between mb-4 bg-white dark:bg-[#0F172A] rounded-lg p-1 border border-slate-200 dark:border-[#1E293B]">
-                    <button type="button" onClick={() => setCurrentSet(c => c - 1)} disabled={currentSet <= 1} className="p-1.5 text-slate-500 hover:text-blue-500 disabled:opacity-30 transition-colors"><ChevronLeft size={16}/></button>
-                    <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest">Set {currentSet} of {maxSets}</span>
-                    <button type="button" onClick={() => setCurrentSet(c => c + 1)} disabled={currentSet >= maxSets} className="p-1.5 text-slate-500 hover:text-blue-500 disabled:opacity-30 transition-colors"><ChevronRight size={16}/></button>
+                  <div className="flex items-center justify-between mb-3 bg-white dark:bg-[#0F172A] rounded-md p-1 border border-slate-200 dark:border-[#1E293B]">
+                    <button type="button" onClick={() => setCurrentSet(c => c - 1)} disabled={currentSet <= 1 || isProcessing} className="p-1 text-slate-500 hover:text-blue-500 disabled:opacity-30 transition-colors"><ChevronLeft size={14}/></button>
+                    <span className="text-[9px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest">Set {currentSet} of {maxSets}</span>
+                    <button type="button" onClick={() => setCurrentSet(c => c + 1)} disabled={currentSet >= maxSets || isProcessing} className="p-1 text-slate-500 hover:text-blue-500 disabled:opacity-30 transition-colors"><ChevronRight size={14}/></button>
                   </div>
                 )}
-                <div className="flex justify-between items-center mb-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">
-                  <span className="truncate max-w-[120px]">{getMemberData(match.teamA_player1)?.name?.split(' ')[0]} & {getMemberData(match.teamA_player2)?.name?.split(' ')[0]}</span>
-                  <span className="truncate max-w-[120px] text-right">{getMemberData(match.teamB_player1)?.name?.split(' ')[0]} & {getMemberData(match.teamB_player2)?.name?.split(' ')[0]}</span>
+                <div className="flex justify-between items-center mb-2 text-[9px] font-bold text-slate-400 uppercase tracking-widest px-1">
+                  <span className="truncate max-w-[100px]">{getMemberData(match.teamA_player1)?.name?.split(' ')[0]} & {getMemberData(match.teamA_player2)?.name?.split(' ')[0]}</span>
+                  <span className="truncate max-w-[100px] text-right">{getMemberData(match.teamB_player1)?.name?.split(' ')[0]} & {getMemberData(match.teamB_player2)?.name?.split(' ')[0]}</span>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <input 
-                    type="number" placeholder="0" 
+                    type="number" placeholder="0" disabled={isProcessing}
                     value={scores[`a${currentSet}` as keyof typeof scores]} 
                     onChange={(e) => setScores(p => ({...p, [`a${currentSet}`]: e.target.value}))} 
-                    className={`flex-1 w-full bg-white dark:bg-[#0F172A] border-2 ${numA > numB && numA > 0 ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'border-slate-200 dark:border-[#1E293B] text-slate-900 dark:text-white focus:border-blue-500'} rounded-xl py-6 text-center font-bold text-4xl outline-none transition-colors`} 
+                    className={`flex-1 w-full bg-white dark:bg-[#0F172A] border-2 ${numA > numB && numA > 0 ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'border-slate-200 dark:border-[#1E293B] text-slate-900 dark:text-white focus:border-blue-500'} rounded-lg py-3 text-center font-bold text-2xl outline-none transition-colors disabled:opacity-50`} 
                   />
-                  <span className="text-slate-400 dark:text-[#334155] font-black">-</span>
+                  <span className="text-slate-400 dark:text-[#334155] font-black text-sm">-</span>
                   <input 
-                    type="number" placeholder="0" 
+                    type="number" placeholder="0" disabled={isProcessing}
                     value={scores[`b${currentSet}` as keyof typeof scores]} 
                     onChange={(e) => setScores(p => ({...p, [`b${currentSet}`]: e.target.value}))} 
-                    className={`flex-1 w-full bg-white dark:bg-[#0F172A] border-2 ${numB > numA && numB > 0 ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'border-slate-200 dark:border-[#1E293B] text-slate-900 dark:text-white focus:border-blue-500'} rounded-xl py-6 text-center font-bold text-4xl outline-none transition-colors`} 
+                    className={`flex-1 w-full bg-white dark:bg-[#0F172A] border-2 ${numB > numA && numB > 0 ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'border-slate-200 dark:border-[#1E293B] text-slate-900 dark:text-white focus:border-blue-500'} rounded-lg py-3 text-center font-bold text-2xl outline-none transition-colors disabled:opacity-50`} 
                   />
                 </div>
               </div>
-              <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl text-sm font-bold transition-colors shadow-md mt-2">
+              <button type="submit" disabled={isProcessing} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-xs font-bold transition-colors shadow-sm mt-1 disabled:opacity-50">
                 {t('finish_free_court')}
               </button>
-              <button type="button" onClick={() => setConfirmDeleteMatchId(match.id)} className="w-full bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-500 py-3.5 rounded-xl text-sm font-bold transition-colors mt-2">
+              <button type="button" disabled={isProcessing} onClick={() => setConfirmDeleteMatchId(match.id)} className="w-full bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-500 py-2.5 rounded-lg text-xs font-bold transition-colors mt-1 disabled:opacity-50">
                 {t('cancel_match')}
               </button>
             </form>
           ) : court ? (
-            <div className="w-full flex gap-2">
-              <button onClick={() => setSwapCourtModal(match)} className="p-3.5 border border-slate-200 dark:border-[#1E293B] rounded-xl text-slate-400 hover:bg-slate-50 dark:hover:bg-[#1E293B] dark:hover:text-white transition-colors" title="Swap Court"><ArrowRightLeft size={18}/></button>
-              <button onClick={() => setConfirmDeleteMatchId(match.id)} className="p-3.5 border border-slate-200 dark:border-[#1E293B] rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"><Trash2 size={18}/></button>
-              <button onClick={() => handleStartMatch(match.id)} disabled={sessionStatus !== 'active'} className="flex-1 bg-[#10B981] hover:bg-[#059669] text-white py-3.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
-                <Play fill="currentColor" size={16}/> {t('start')}
+            <div className="w-full flex gap-2 mt-auto">
+              <button disabled={isProcessing} onClick={() => setSwapCourtModal(match)} className="p-2.5 border border-slate-200 dark:border-[#1E293B] rounded-lg text-slate-400 hover:bg-slate-50 dark:hover:bg-[#1E293B] dark:hover:text-white transition-colors disabled:opacity-50" title="Manage Court"><ArrowRightLeft size={16}/></button>
+              <button onClick={() => handleStartMatch(match.id)} disabled={isProcessing || sessionStatus !== 'active'} className="flex-1 bg-[#10B981] hover:bg-[#059669] text-white py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                <Play fill="currentColor" size={14}/> {t('start')}
               </button>
             </div>
           ) : (
-            <button disabled={sessionStatus !== 'active'} onClick={() => setSwapCourtModal(match)} className="w-full mt-2 py-3 bg-blue-50 hover:bg-blue-100 dark:bg-[#1E293B] dark:hover:bg-[#334155] text-blue-600 dark:text-white rounded-xl text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            <button disabled={isProcessing || sessionStatus !== 'active'} onClick={() => setSwapCourtModal(match)} className="w-full mt-auto py-2.5 bg-blue-50 hover:bg-blue-100 dark:bg-[#1E293B] dark:hover:bg-[#334155] text-blue-600 dark:text-white rounded-lg text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
               Move to Court
             </button>
           )}
@@ -320,7 +333,6 @@ const MatchCard = ({ match, court, sessionStatus, maxSets, getMemberData, openEd
     </div>
   );
 };
-
 
 export default function SessionDetails() {
   const { id } = useParams();
@@ -333,6 +345,7 @@ export default function SessionDetails() {
   const [session, setSession] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('matches');
   const [loading, setLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // States
   const [attendances, setAttendances] = useState<any[]>([]);
@@ -343,9 +356,14 @@ export default function SessionDetails() {
   // Search & Filter
   const [attendanceSearch, setAttendanceSearch] = useState('');
   const [historySearch, setHistorySearch] = useState('');
+  const [leaderboardSearch, setLeaderboardSearch] = useState('');
   const [playtimeSearch, setPlaytimeSearch] = useState('');
   const [modalSearch, setModalSearch] = useState('');
   
+  // Leaderboard specific limits
+  const [lbLimitType, setLbLimitType] = useState('all');
+  const [lbCustomLimit, setLbCustomLimit] = useState(6);
+
   // Modals & Forms
   const [isAttendeeModalOpen, setAttendeeModalOpen] = useState(false);
   const [selectedAttendees, setSelectedAttendees] = useState<number[]>([]);
@@ -354,6 +372,7 @@ export default function SessionDetails() {
   const [editCourtId, setEditCourtId] = useState<number | null>(null);
   const [courtName, setCourtName] = useState('');
   const [playerDetailModal, setPlayerDetailModal] = useState<number | null>(null);
+  const [isWaitingListOpen, setIsWaitingListOpen] = useState(false); // Mobile waiting list toggle
 
   // Settings State
   const [settingsForm, setSettingsForm] = useState<any>({});
@@ -411,6 +430,13 @@ export default function SessionDetails() {
       setAttendances(attendancesRes.data);
       setMatches(matchesRes.data);
       setCommunityData(userRes.data.community);
+
+      // Sync leaderboard view filter with DB
+      const ml = sessionRes.data.matchLimit;
+      if (ml === 0) setLbLimitType('all');
+      else if ([1,2,3,4,5].includes(ml)) setLbLimitType(String(ml));
+      else { setLbLimitType('custom'); setLbCustomLimit(ml); }
+
     } catch (err) {
       navigate('/sessions');
     } finally {
@@ -445,7 +471,8 @@ export default function SessionDetails() {
 
   const activeMatches = useMemo(() => matches.filter(m => m.status === 'queued' || m.status === 'on_court'), [matches]);
   const finishedMatches = useMemo(() => matches.filter(m => m.status === 'finished').sort((a, b) => new Date(b.endedAt).getTime() - new Date(a.endedAt).getTime()), [matches]);
-  const queuedMatchesList = useMemo(() => matches.filter(m => m.courtId === null && m.status === 'queued'), [matches]);
+  
+  const queuedMatchesList = useMemo(() => matches.filter(m => m.courtId === null && m.status === 'queued').sort((a,b) => a.id - b.id), [matches]);
 
   const busyPlayerIds = useMemo(() => {
     const ids = new Set<number>();
@@ -486,12 +513,60 @@ export default function SessionDetails() {
     });
   }, [finishedMatches, historySearch, allMembers, courts]);
 
+  const playerMatchCounts = useMemo(() => {
+    const counts: Record<number, { finished: number, ongoing: number, total: number }> = {};
+    allMembers.forEach(m => counts[m.id] = { finished: 0, ongoing: 0, total: 0 });
+    
+    finishedMatches.forEach(m => {
+      if(m.teamA_player1) counts[m.teamA_player1].finished++;
+      if(m.teamA_player2) counts[m.teamA_player2].finished++;
+      if(m.teamB_player1) counts[m.teamB_player1].finished++;
+      if(m.teamB_player2) counts[m.teamB_player2].finished++;
+    });
+    
+    activeMatches.forEach(m => {
+      if (m.status === 'on_court') {
+         if(m.teamA_player1) counts[m.teamA_player1].ongoing++;
+         if(m.teamA_player2) counts[m.teamA_player2].ongoing++;
+         if(m.teamB_player1) counts[m.teamB_player1].ongoing++;
+         if(m.teamB_player2) counts[m.teamB_player2].ongoing++;
+      }
+    });
+
+    Object.keys(counts).forEach(key => {
+      counts[parseInt(key)].total = counts[parseInt(key)].finished + counts[parseInt(key)].ongoing;
+    });
+
+    return counts;
+  }, [finishedMatches, activeMatches, allMembers]);
+
+  const waitingListPlayers = useMemo(() => {
+    return attendances
+      .filter(a => a.attendance.status === 'active' && !busyPlayerIds.has(a.member.id))
+      .map(a => {
+        const stats = playerMatchCounts[a.member.id] || { total: 0, finished: 0, ongoing: 0 };
+        return {
+          ...a.member,
+          attendanceId: a.attendance.id,
+          arrivedAt: a.attendance.arrivedAt,
+          gamesPlayed: stats.total,
+          finishedCount: stats.finished,
+          ongoingCount: stats.ongoing
+        };
+      })
+      .sort((a, b) => {
+        if (a.gamesPlayed !== b.gamesPlayed) return a.gamesPlayed - b.gamesPlayed;
+        return new Date(a.arrivedAt).getTime() - new Date(b.arrivedAt).getTime();
+      });
+  }, [attendances, busyPlayerIds, playerMatchCounts]);
+
   const calculatePlayerGames = (member: any) => {
     if (!member) return [];
-    const memberMatches = finishedMatches.filter(m => 
+    
+    const memberMatches = [...finishedMatches, ...activeMatches.filter(m => m.status === 'on_court')].filter(m => 
       m.teamA_player1 === member.id || m.teamA_player2 === member.id || 
       m.teamB_player1 === member.id || m.teamB_player2 === member.id
-    ).sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
+    ).sort((a, b) => new Date(a.startedAt || 0).getTime() - new Date(b.startedAt || 0).getTime());
 
     return memberMatches.map(m => {
       let isTeamA = (m.teamA_player1 === member.id || m.teamA_player2 === member.id);
@@ -514,6 +589,13 @@ export default function SessionDetails() {
       const o1Name = getMemberData(opp1)?.name || 'TBD';
       const o2Name = getMemberData(opp2)?.name || 'TBD';
 
+      const courtName = getInitialCourtName(m.courtId) || 'Unknown Court';
+      const duration = m.startedAt && m.endedAt ? Math.max(0, Math.floor((new Date(m.endedAt).getTime() - new Date(m.startedAt).getTime()) / 60000)) + ' min' : '-';
+
+      if (m.status === 'on_court') {
+         return { id: m.id, type, courtName, duration, partnerName: pName, opp1Name: o1Name, opp2Name: o2Name, myScore: 0, oppScore: 0, result: 'Ongoing', scoreString: 'Playing...' };
+      }
+
       let myScore = 0, oppScore = 0;
       let scoreStrings = [];
       for(let i=1; i<=maxSets; i++) {
@@ -528,7 +610,7 @@ export default function SessionDetails() {
       const result = myScore > oppScore ? 'Won' : myScore < oppScore ? 'Lost' : 'Draw';
       const scoreString = scoreStrings.join(' / ');
 
-      return { id: m.id, type, partnerName: pName, opp1Name: o1Name, opp2Name: o2Name, myScore, oppScore, result, scoreString };
+      return { id: m.id, type, courtName, duration, partnerName: pName, opp1Name: o1Name, opp2Name: o2Name, myScore, oppScore, result, scoreString };
     });
   };
 
@@ -543,7 +625,103 @@ export default function SessionDetails() {
         if (a.playedGames.length !== b.playedGames.length) return a.playedGames.length - b.playedGames.length; 
         return a.member.name.localeCompare(b.member.name);
       });
-  }, [attendances, playtimeSearch, finishedMatches, maxSets, allMembers]);
+  }, [attendances, playtimeSearch, finishedMatches, activeMatches, maxSets, allMembers]);
+
+  // Session-Local Leaderboard Aggregation
+  const sessionLeaderboardData = useMemo(() => {
+    if (!session || !finishedMatches) return [];
+    
+    // Determine active match limit from local selector state
+    const activeMatchLimit = lbLimitType === 'all' ? 999 : (lbLimitType === 'custom' ? lbCustomLimit : parseInt(lbLimitType));
+    
+    const playerStats: Record<number, any> = {};
+
+    allMembers.forEach(m => {
+      playerStats[m.id] = { id: m.id, name: m.name, grade: m.skillLevel, played: 0, won: 0, lost: 0, netSets: 0, netPoints: 0, totalPoints: 0, lastWinTime: 0 };
+    });
+
+    const playerMatchCount: Record<number, number> = {};
+
+    // Sort oldest first to chronologically cut off after activeMatchLimit is reached
+    const chronologicalMatches = [...finishedMatches].sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
+
+    chronologicalMatches.forEach(match => {
+      const pA1 = match.teamA_player1;
+      const pA2 = match.teamA_player2;
+      const pB1 = match.teamB_player1;
+      const pB2 = match.teamB_player2;
+
+      const isEligible = (pId: number | null) => {
+        if (!pId) return false;
+        if (!playerMatchCount[pId]) playerMatchCount[pId] = 0;
+        if (playerMatchCount[pId] < activeMatchLimit) {
+          playerMatchCount[pId]++;
+          return true;
+        }
+        return false;
+      };
+
+      const eA1 = isEligible(pA1);
+      const eA2 = isEligible(pA2);
+      const eB1 = isEligible(pB1);
+      const eB2 = isEligible(pB2);
+
+      let sa = 0, sb = 0;
+      let setsA = 0, setsB = 0;
+      for (let i=1; i<=maxSets; i++) {
+        const s1 = match[`scoreTeamA_set${i}`] || 0;
+        const s2 = match[`scoreTeamB_set${i}`] || 0;
+        if (s1 > 0 || s2 > 0 || i === 1) {
+          sa += s1; sb += s2;
+          if (s1 > s2) setsA++;
+          else if (s2 > s1) setsB++;
+        }
+      }
+
+      const aWon = sa > sb;
+      const bWon = sb > sa;
+      const endTime = new Date(match.endedAt).getTime();
+
+      const applyStats = (pId: number | null, eligible: boolean, isTeamA: boolean) => {
+        if (!pId || !eligible || !playerStats[pId]) return;
+        const p = playerStats[pId];
+        p.played++;
+        if ((isTeamA && aWon) || (!isTeamA && bWon)) {
+          p.won++;
+          p.lastWinTime = Math.max(p.lastWinTime, endTime);
+        } else if ((isTeamA && bWon) || (!isTeamA && aWon)) {
+          p.lost++;
+        }
+        p.netSets += isTeamA ? (setsA - setsB) : (setsB - setsA);
+        p.netPoints += isTeamA ? (sa - sb) : (sb - sa);
+        p.totalPoints += isTeamA ? sa : sb;
+      };
+
+      applyStats(pA1, eA1, true);
+      applyStats(pA2, eA2, true);
+      applyStats(pB1, eB1, false);
+      applyStats(pB2, eB2, false);
+    });
+
+    const sortedWithRanks = Object.values(playerStats)
+      .filter(p => p.played > 0)
+      .map(p => ({ ...p, winRate: p.played > 0 ? (p.won / p.played) : 0 }))
+      .sort((a, b) => {
+        if (b.winRate !== a.winRate) return b.winRate - a.winRate; // 1. Win Rate %
+        if (b.won !== a.won) return b.won - a.won;                 // 2. Total Wins
+        if (b.netSets !== a.netSets) return b.netSets - a.netSets; // 3. Net Sets
+        if (b.netPoints !== a.netPoints) return b.netPoints - a.netPoints; // 4. Net Points
+        if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints; // 5. Total Offense
+        return a.lastWinTime - b.lastWinTime; // 6. Chronological
+      })
+      .map((p, index) => ({ ...p, rank: index + 1 })); // Calculate Rank before search filter
+      
+    if (leaderboardSearch) {
+       return sortedWithRanks.filter((p: any) => p.name.toLowerCase().includes(leaderboardSearch.toLowerCase()));
+    }
+    return sortedWithRanks;
+
+  }, [finishedMatches, allMembers, session, maxSets, leaderboardSearch, lbLimitType, lbCustomLimit]);
 
   // Helpers
   function getMemberData(memberId: number) { return allMembers.find(m => m.id === memberId); }
@@ -570,50 +748,77 @@ export default function SessionDetails() {
   const selectedDetailPlayer = playerDetailModal ? getMemberData(playerDetailModal) : null;
   const selectedDetailGames = playerDetailModal ? calculatePlayerGames(selectedDetailPlayer) : [];
 
-  // --- SESSION CONTROLS ---
+  // --- SESSION CONTROLS WITH DOUBLE-CLICK PREVENTION ---
   const handleStartSession = async () => {
+    if(isProcessing) return; setIsProcessing(true);
     try {
       await api.put(`/sessions/${id}/start`);
-      fetchSessionData();
+      await fetchSessionData();
       addToast("Session started successfully");
     } catch(err) { addToast("Error starting session", "error"); }
+    finally { setIsProcessing(false); }
   };
 
   const handleEndSession = async () => {
-    if(!window.confirm("Are you sure you want to end this session? All ongoing matches will need to be finished manually.")) return;
+    if(isProcessing || !window.confirm("Are you sure you want to end this session? All ongoing matches will need to be finished manually.")) return;
+    setIsProcessing(true);
     try {
       await api.put(`/sessions/${id}/finish`);
-      fetchSessionData();
+      await fetchSessionData();
       addToast("Session ended successfully");
     } catch(err) { addToast("Error ending session", "error"); }
+    finally { setIsProcessing(false); }
   };
 
   // --- PDF EXPORT LOGIC ---
   const applyPDFHeaderFooter = (doc: any, title: string, subtitle: string) => {
     let yPos = 20;
 
+    // Stylish dark header background spanning the whole top
+    doc.setFillColor(15, 23, 42); // slate-900
+    doc.rect(0, 0, doc.internal.pageSize.width, 40, 'F');
+
+    // Branding / Logo rendering
     if (communityData?.logo?.startsWith('data:image')) {
       try {
-        doc.addImage(communityData.logo, 14, 12, 10, 10);
-        doc.setFontSize(14);
-        doc.setTextColor(15, 23, 42); 
-        doc.text(communityData.name || 'Community', 28, 19);
-        yPos = 34;
+        doc.addImage(communityData.logo, 14, 10, 16, 16);
+        doc.setFontSize(16);
+        doc.setTextColor(255, 255, 255); 
+        doc.setFont("helvetica", "bold");
+        doc.text(communityData.name || 'Community', 35, 18);
+        
+        doc.setFontSize(10);
+        doc.setTextColor(148, 163, 184); // slate-400
+        doc.setFont("helvetica", "normal");
+        doc.text("Generated by AturMabar", 35, 24);
       } catch(e) { console.warn('PDF Logo parsing error'); }
     } else {
-      doc.setFontSize(14);
-      doc.setTextColor(15, 23, 42);
-      doc.text(communityData?.name || 'Community', 14, 19);
-      yPos = 34;
+      doc.setFontSize(18);
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.text(communityData?.name || 'Community', 14, 20);
+      
+      doc.setFontSize(10);
+      doc.setTextColor(148, 163, 184); // slate-400
+      doc.setFont("helvetica", "normal");
+      doc.text("Generated by AturMabar", 14, 26);
     }
 
-    doc.setFontSize(16);
-    doc.setTextColor(15, 23, 42);
+    // Title Section
+    yPos = 55;
+    doc.setFontSize(18);
+    doc.setTextColor(15, 23, 42); // slate-900
+    doc.setFont("helvetica", "bold");
     doc.text(title, 14, yPos);
-    doc.setFontSize(10);
-    doc.setTextColor(100, 116, 139); 
-    doc.text(subtitle, 14, yPos + 6);
+    
+    // Subtitle Section
+    yPos += 8;
+    doc.setFontSize(11);
+    doc.setTextColor(100, 116, 139); // slate-500
+    doc.setFont("helvetica", "normal");
+    doc.text(subtitle, 14, yPos);
 
+    // Dynamic Footer loop across pages
     const pageCount = doc.internal.getNumberOfPages();
     for(let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
@@ -622,7 +827,7 @@ export default function SessionDetails() {
       doc.text('Generated by AturMabar', 14, doc.internal.pageSize.height - 10);
     }
 
-    return yPos + 12; 
+    return yPos + 10; 
   };
 
   const exportSessionPDF = () => {
@@ -632,23 +837,64 @@ export default function SessionDetails() {
     const tableData = finishedMatches.map(m => {
       const teamA = `${getMemberData(m.teamA_player1)?.name || 'TBD'} & ${getMemberData(m.teamA_player2)?.name || 'TBD'}`;
       const teamB = `${getMemberData(m.teamB_player1)?.name || 'TBD'} & ${getMemberData(m.teamB_player2)?.name || 'TBD'}`;
+      const courtName = getInitialCourtName(m.courtId) || 'Unknown Court';
+      const duration = m.startedAt && m.endedAt ? Math.max(0, Math.floor((new Date(m.endedAt).getTime() - new Date(m.startedAt).getTime()) / 60000)) + ' min' : '-';
+
+      let saTotal = 0, sbTotal = 0;
       let scores = [];
       for(let i=1; i<=maxSets; i++) {
-        const sa = m[`scoreTeamA_set${i}`];
-        const sb = m[`scoreTeamB_set${i}`];
-        if (sa > 0 || sb > 0 || i === 1) scores.push(`${sa}-${sb}`);
+        const sa = m[`scoreTeamA_set${i}`] || 0;
+        const sb = m[`scoreTeamB_set${i}`] || 0;
+        if (sa > 0 || sb > 0 || i === 1) {
+            scores.push(`${sa}-${sb}`);
+            saTotal += sa; sbTotal += sb;
+        }
       }
-      return [m.matchType, teamA, scores.join(' / '), teamB];
+      
+      const winner = saTotal > sbTotal ? 'A' : (sbTotal > saTotal ? 'B' : 'Draw');
+
+      return [
+        m.matchType, 
+        `${courtName}\n${duration}`, 
+        teamA, 
+        scores.join(' / '), 
+        teamB, 
+        winner // Hidden 6th column for styling rules
+      ];
     });
 
     autoTable(doc, {
       startY: tableStartY,
-      head: [['Type', 'Team A', 'Score', 'Team B']],
-      body: tableData,
+      head: [['Type', 'Details', 'Team A', 'Score', 'Team B']],
+      body: tableData.map(row => row.slice(0, 5)), // Exclude the hidden winner column
       theme: 'grid',
       headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' },
-      styles: { font: 'helvetica', fontSize: 9, cellPadding: 4 },
+      styles: { font: 'helvetica', fontSize: 10, cellPadding: 5, lineColor: [226, 232, 240] },
       alternateRowStyles: { fillColor: [248, 250, 252] },
+      didParseCell: function (data) {
+        if (data.section === 'body') {
+          const winner = tableData[data.row.index][5];
+          
+          // Subtle grey styling for the details column (Court & Time)
+          if (data.column.index === 1) {
+            data.cell.styles.textColor = [100, 116, 139]; // slate-500
+            data.cell.styles.fontSize = 8;
+          }
+
+          // Highlight logic for winners in Emerald Green
+          if (winner === 'A') {
+            if (data.column.index === 2 || data.column.index === 3) {
+              data.cell.styles.textColor = [5, 150, 105]; // emerald-600
+              data.cell.styles.fontStyle = 'bold';
+            }
+          } else if (winner === 'B') {
+            if (data.column.index === 4 || data.column.index === 3) {
+              data.cell.styles.textColor = [5, 150, 105]; // emerald-600
+              data.cell.styles.fontStyle = 'bold';
+            }
+          }
+        }
+      }
     });
 
     doc.save(`Session_${session?.name}_Report.pdf`);
@@ -661,24 +907,49 @@ export default function SessionDetails() {
 
     const tableData = playedGames.map(g => [
       g.type,
+      `${g.courtName}\n${g.duration}`,
       g.partnerName,
-      `${g.opp1Name} & ${g.opp2Name}`,
       g.scoreString,
+      `${g.opp1Name} & ${g.opp2Name}`,
       g.result
     ]);
 
     autoTable(doc, {
       startY: tableStartY,
-      head: [['Type', 'Partner', 'Opponents', 'Score', 'Result']],
+      head: [['Type', 'Details', 'Partner', 'Score', 'Opponents', 'Result']],
       body: tableData,
       theme: 'grid',
       headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' },
-      styles: { font: 'helvetica', fontSize: 9, cellPadding: 4 },
+      styles: { font: 'helvetica', fontSize: 10, cellPadding: 5, lineColor: [226, 232, 240] },
       alternateRowStyles: { fillColor: [248, 250, 252] },
       didParseCell: function (data) {
-        if (data.section === 'body' && data.column.index === 4) {
-           if (data.cell.raw === 'Won') data.cell.styles.textColor = [16, 185, 129];
-           if (data.cell.raw === 'Lost') data.cell.styles.textColor = [225, 29, 72];
+        if (data.section === 'body') {
+          const result = data.row.raw[5];
+          
+          if (data.column.index === 1) {
+            data.cell.styles.textColor = [100, 116, 139]; // slate-500
+            data.cell.styles.fontSize = 8;
+          }
+
+          if (result === 'Won') {
+            if (data.column.index === 2 || data.column.index === 3 || data.column.index === 5) {
+              data.cell.styles.textColor = [5, 150, 105]; // emerald-600
+              data.cell.styles.fontStyle = 'bold';
+            }
+          } else if (result === 'Lost') {
+            if (data.column.index === 4) { // Opponents text highlighted instead
+              data.cell.styles.textColor = [5, 150, 105]; // emerald-600
+              data.cell.styles.fontStyle = 'bold';
+            }
+            if (data.column.index === 5) { // Result text (Lost) in Rose red
+              data.cell.styles.textColor = [225, 29, 72]; // rose-600
+              data.cell.styles.fontStyle = 'bold';
+            }
+          } else if (result === 'Ongoing') {
+             if (data.column.index === 5) {
+               data.cell.styles.textColor = [37, 99, 235]; // blue-600
+             }
+          }
         }
       }
     });
@@ -687,115 +958,140 @@ export default function SessionDetails() {
     addToast("Player PDF Exported successfully!");
   };
 
-  // --- ATTENDANCE ACTIONS ---
+  // --- ATTENDANCE ACTIONS WITH DOUBLE-CLICK PREVENTION ---
   const openAttendeeModal = () => { setSelectedAttendees([]); setModalSearch(''); setAttendeeModalOpen(true); };
   const toggleSelectAttendee = (memberId: number) => setSelectedAttendees(prev => prev.includes(memberId) ? prev.filter(mid => mid !== memberId) : [...prev, memberId]);
 
   const handleAddSelectedAttendees = async () => {
-    if (selectedAttendees.length === 0) return;
+    if (selectedAttendees.length === 0 || isProcessing) return;
+    setIsProcessing(true);
     try {
       await Promise.all(selectedAttendees.map(async (memberId) => {
         const existingRecord = attendances.find(a => a.member.id === memberId);
         if (existingRecord) return api.put(`/sessions/${id}/attendances/${existingRecord.attendance.id}`, { status: 'active' });
         return api.post(`/sessions/${id}/attendances`, { memberId });
       }));
-      fetchSessionData();
+      await fetchSessionData();
       setAttendeeModalOpen(false);
       addToast(t('attendance_added') || "Attendees added successfully");
     } catch (err) { addToast("Error processing attendees.", "error"); }
+    finally { setIsProcessing(false); }
   };
 
   const handleWalkIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    if(isProcessing) return; setIsProcessing(true);
     try {
       await api.post(`/sessions/${id}/walk-in`, walkInForm);
-      fetchSessionData();
+      await fetchSessionData();
       setWalkInModalOpen(false);
       setWalkInForm({ name: '', gender: 'male', skillLevel: 'C1' });
       addToast(t('walk_in_added') || "Walk-in player added successfully");
     } catch (err) { addToast("Error adding walk-in", "error"); }
+    finally { setIsProcessing(false); }
   };
 
   const updateAttendanceStatus = async (attendanceId: number, status: string) => {
+    if (isProcessing) return; setIsProcessing(true);
     try {
       await api.put(`/sessions/${id}/attendances/${attendanceId}`, { status });
-      fetchSessionData();
+      await fetchSessionData();
       addToast(t('status_updated') || "Status updated");
     } catch (err) { addToast("Error updating status", "error"); }
+    finally { setIsProcessing(false); }
   };
 
   const handleUpdateGrade = async (memberId: number, skillLevel: string) => {
+    if (isProcessing) return; setIsProcessing(true);
     try {
       await api.put(`/sessions/${id}/members/${memberId}/grade`, { skillLevel });
-      fetchSessionData();
+      await fetchSessionData();
       addToast("Player grade updated successfully");
     } catch (err) { addToast("Error updating grade", "error"); }
+    finally { setIsProcessing(false); }
   };
 
-  // --- COURTS ACTIONS ---
+  // --- COURTS ACTIONS WITH DOUBLE-CLICK PREVENTION ---
   const handleAddCourt = async () => {
+    if (isProcessing) return; setIsProcessing(true);
     try {
       await api.post(`/sessions/${id}/courts`, { name: `Court ${courts.length + 1}` });
-      fetchSessionData();
+      await fetchSessionData();
       addToast(t('court_added') || "Court added");
     } catch (err) { addToast("Error adding court", "error"); }
+    finally { setIsProcessing(false); }
   };
 
   const handleUpdateCourt = async (courtId: number, isActive: boolean, name?: string) => {
+    if (isProcessing) return; setIsProcessing(true);
     try {
       await api.put(`/sessions/${id}/courts/${courtId}`, { isActive, name: name || courts.find(c => c.id === courtId)?.name });
       setEditCourtId(null);
-      fetchSessionData();
+      await fetchSessionData();
       addToast(t('court_updated') || "Court updated");
     } catch (err) { addToast("Error updating court", "error"); }
+    finally { setIsProcessing(false); }
   };
 
   const handleDeleteCourt = async (courtId: number) => {
-    if (!window.confirm(t('delete_court') + "?")) return;
+    if (isProcessing || !window.confirm(t('delete_court') + "?")) return;
+    setIsProcessing(true);
     try {
       await api.delete(`/sessions/${id}/courts/${courtId}`);
-      fetchSessionData();
+      await fetchSessionData();
       addToast(t('court_deleted') || "Court deleted");
     } catch (err) { addToast("Error deleting court", "error"); }
+    finally { setIsProcessing(false); }
   };
 
-  // --- MATCH ACTIONS ---
+  // --- MATCH ACTIONS WITH DOUBLE-CLICK PREVENTION ---
   const handleAutoGenerateCourt = async (courtId: number) => {
+    if (isProcessing) return; setIsProcessing(true);
     try {
       await api.post(`/matches/${id}/auto-generate`, { courtId });
-      fetchSessionData();
+      await fetchSessionData();
       addToast("Match generated successfully");
-    } catch (err: any) {
-      addToast(err.response?.data?.error || "Error generating match", "error");
-    }
+    } catch (err: any) { addToast(err.response?.data?.error || "Error generating match", "error"); }
+    finally { setIsProcessing(false); }
   };
 
   const handleAutoFillAllCourts = async () => {
-    const emptyCourts = courts.filter(c => c.isActive && !matches.find(m => m.courtId === c.id && (m.status === 'on_court' || m.status === 'queued')));
-    let generated = 0;
-    for (const court of emptyCourts) {
-      try { await api.post(`/matches/${id}/auto-generate`, { courtId: court.id }); generated++; } 
-      catch (err) { break; } 
-    }
-    fetchSessionData();
-    if (generated > 0) addToast(`Successfully filled ${generated} court(s)`);
-    else addToast("Not enough available players", "error");
+    if (isProcessing) return; setIsProcessing(true);
+    try {
+      const emptyCourts = courts.filter(c => c.isActive && !matches.find(m => m.courtId === c.id && (m.status === 'on_court' || m.status === 'queued')));
+      let generated = 0;
+      for (const court of emptyCourts) {
+        try { await api.post(`/matches/${id}/auto-generate`, { courtId: court.id }); generated++; } 
+        catch (err) { break; } 
+      }
+      await fetchSessionData();
+      if (generated > 0) addToast(`Successfully filled ${generated} court(s)`);
+      else addToast("Not enough available players", "error");
+    } finally { setIsProcessing(false); }
   };
 
   const handleQueueMatch = async () => {
+    if (isProcessing) return; setIsProcessing(true);
     try {
       await api.post(`/matches/${id}/auto-generate`, { courtId: null });
-      fetchSessionData();
+      await fetchSessionData();
       addToast(t('match_queued') || "Match added to queue");
     } catch (err: any) { addToast(err.response?.data?.error || "Error generating match", "error"); }
+    finally { setIsProcessing(false); }
   };
 
   const handleStartMatch = async (matchId: number) => {
-    try { await api.put(`/matches/${matchId}/start`); fetchSessionData(); addToast(t('match_started') || "Match started"); } 
-    catch (err) { addToast("Error starting match", "error"); }
+    if (isProcessing) return; setIsProcessing(true);
+    try { 
+      await api.put(`/matches/${matchId}/start`); 
+      await fetchSessionData(); 
+      addToast(t('match_started') || "Match started"); 
+    } catch (err) { addToast("Error starting match", "error"); }
+    finally { setIsProcessing(false); }
   };
 
   const handleFinishMatch = async (matchId: number, saveScore: boolean, scores?: any) => {
+    if (isProcessing) return; setIsProcessing(true);
     try {
       const payload: any = {};
       if (saveScore && scores) {
@@ -807,29 +1103,60 @@ export default function SessionDetails() {
         payload.scoreTeamB_set3 = parseInt(scores.b3) || 0;
       }
       await api.put(`/matches/${matchId}/finish`, payload);
-      fetchSessionData();
+      await fetchSessionData();
       addToast(t('match_finished') || "Match finished");
     } catch (err) { addToast("Error finishing match", "error"); }
+    finally { setIsProcessing(false); }
   };
 
   const handleConfirmDeleteMatch = async () => {
-    if (!confirmDeleteMatchId) return;
+    if (!confirmDeleteMatchId || isProcessing) return;
+    setIsProcessing(true);
     try { 
       await api.delete(`/matches/${confirmDeleteMatchId}`); 
-      fetchSessionData(); 
+      await fetchSessionData(); 
       addToast(t('match_cancelled') || "Match cancelled successfully."); 
-    } 
-    catch (err) { addToast("Error canceling match", "error"); }
-    finally { setConfirmDeleteMatchId(null); }
+    } catch (err) { addToast("Error canceling match", "error"); }
+    finally { setConfirmDeleteMatchId(null); setIsProcessing(false); }
   };
 
-  const handleSwapCourt = async (matchId: number, targetCourtId: number) => {
+  const handleSwapCourt = async (matchId: number, targetCourtId: number | null) => {
+    if (isProcessing) return; setIsProcessing(true);
     try {
       await api.put(`/matches/${matchId}/swap-court`, { targetCourtId });
       setSwapCourtModal(null);
-      fetchSessionData();
+      await fetchSessionData();
       addToast(t('court_swapped') || "Court swapped successfully");
     } catch (err) { addToast("Error swapping courts", "error"); }
+    finally { setIsProcessing(false); }
+  };
+
+  const handleReorderQueue = async (currentIndex: number, direction: 'up'|'down') => {
+    if (isProcessing) return;
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= queuedMatchesList.length) return;
+    
+    setIsProcessing(true);
+    try {
+      const m1 = queuedMatchesList[currentIndex];
+      const m2 = queuedMatchesList[targetIndex];
+      
+      await Promise.all([
+        api.put(`/matches/${m1.id}/players`, {
+          teamA_player1: m2.teamA_player1, teamA_player2: m2.teamA_player2,
+          teamB_player1: m2.teamB_player1, teamB_player2: m2.teamB_player2
+        }),
+        api.put(`/matches/${m2.id}/players`, {
+          teamA_player1: m1.teamA_player1, teamA_player2: m1.teamA_player2,
+          teamB_player1: m1.teamB_player1, teamB_player2: m1.teamB_player2
+        })
+      ]);
+      await fetchSessionData();
+    } catch(e) {
+      addToast("Failed to reorder queue", "error");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const openEditMatchModal = (match: any) => {
@@ -849,6 +1176,7 @@ export default function SessionDetails() {
   };
 
   const saveManualMatch = async () => {
+    if (isProcessing) return; setIsProcessing(true);
     try {
       const payload = { 
         teamA_player1: manualPlayers.ta1 || null, teamA_player2: manualPlayers.ta2 || null, 
@@ -864,11 +1192,12 @@ export default function SessionDetails() {
       }
 
       setEditMatchModal(null);
-      fetchSessionData();
+      await fetchSessionData();
     } catch (err) { addToast("Error saving players", "error"); }
+    finally { setIsProcessing(false); }
   };
 
-  // --- HISTORY ACTIONS ---
+  // --- HISTORY ACTIONS WITH DOUBLE-CLICK PREVENTION ---
   const openEditHistoryModal = (match: any) => {
     setHistorySetView(1);
     setHistoryForm({
@@ -900,6 +1229,7 @@ export default function SessionDetails() {
   };
 
   const saveHistoryMatch = async () => {
+    if (isProcessing) return; setIsProcessing(true);
     try {
       await api.put(`/matches/${editHistoryModal.id}/history`, {
         courtId: historyForm.courtId || null,
@@ -915,32 +1245,80 @@ export default function SessionDetails() {
         scoreTeamB_set3: historyForm.sb3 || 0,
       });
       setEditHistoryModal(null);
-      fetchSessionData();
+      await fetchSessionData();
       addToast("History updated successfully");
     } catch (err) { addToast("Error updating history", "error"); }
+    finally { setIsProcessing(false); }
   };
 
-  // --- SETTINGS ACTIONS ---
+  // --- SETTINGS ACTIONS WITH DOUBLE-CLICK PREVENTION ---
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isProcessing) return; setIsProcessing(true);
     try {
       await api.put(`/sessions/${id}`, settingsForm);
-      fetchSessionData();
+      await fetchSessionData();
       addToast(t('save_settings') || "Settings saved successfully");
     } catch (err) { addToast("Error saving settings", "error"); }
+    finally { setIsProcessing(false); }
   };
 
   const handleDeleteSession = async () => {
-    if (!window.confirm(t('delete_session_warning') || "Delete session?")) return;
+    if (isProcessing || !window.confirm(t('delete_session_warning') || "Delete session?")) return;
+    setIsProcessing(true);
     try {
       await api.delete(`/sessions/${id}`);
       navigate('/sessions');
-    } catch (err) { addToast("Error deleting session", "error"); }
+    } catch (err) { addToast("Error deleting session", "error"); setIsProcessing(false); }
   };
+
+  // Reusable waiting list render function
+  const renderWaitingListContent = () => (
+    <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
+      {waitingListPlayers.length === 0 ? (
+        <div className="p-8 text-center text-slate-400 text-sm font-medium">No available players waiting.</div>
+      ) : (
+        waitingListPlayers.map(p => (
+          <div key={p.id} className="p-3 bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-[#1E293B] rounded-xl flex justify-between items-center shadow-sm">
+            <div className="flex flex-col min-w-0 pr-3 flex-1">
+              <span className="font-bold text-sm truncate dark:text-white">{p.name}</span>
+              <div className="flex items-center gap-2 mt-1">
+                <span className={`text-[9px] border px-1.5 py-0.5 rounded font-mono font-bold ${getGradeColor(p.skillLevel)}`}>{p.skillLevel}</span>
+                <span className="text-[10px] text-slate-400">{new Date(p.arrivedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="flex flex-col items-center group relative cursor-help px-2 border-x border-slate-100 dark:border-[#1E293B]">
+                <span className="font-black text-xl leading-none text-blue-600 dark:text-blue-400">{p.gamesPlayed}</span>
+                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">{t('played', 'Played')}</span>
+                
+                {/* Hover Tooltip */}
+                <div className="hidden group-hover:block absolute bottom-full mb-2 right-0 bg-slate-800 dark:bg-slate-700 text-white p-2.5 rounded-lg shadow-xl text-xs z-50 whitespace-nowrap border border-slate-700 dark:border-slate-600">
+                  <div className="font-bold mb-1 border-b border-slate-600 pb-1">{p.name}</div>
+                  <div className="flex justify-between gap-4"><span>Finished:</span> <span>{p.finishedCount}</span></div>
+                  <div className="flex justify-between gap-4 text-emerald-400"><span>Ongoing:</span> <span>{p.ongoingCount}</span></div>
+                </div>
+              </div>
+              
+              <button 
+                disabled={isProcessing}
+                onClick={() => updateAttendanceStatus(p.attendanceId, 'resting')}
+                className="w-8 h-8 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-600 hover:bg-amber-100 transition-colors flex items-center justify-center disabled:opacity-50"
+                title={t('set_resting', 'Set to Resting')}
+              >
+                <Pause size={14} fill="currentColor" />
+              </button>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
 
   if (loading) return <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0B1120] flex items-center justify-center text-slate-500">{t('loading')}</div>;
 
   const inputStyles = "w-full px-3 py-2.5 bg-slate-50 dark:bg-[#0F172A] border border-slate-300 dark:border-[#1E293B] rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-900 dark:text-slate-100";
+  const settingsLimitType = settingsForm.matchLimit === 0 ? 'all' : ([1,2,3,4,5].includes(settingsForm.matchLimit) ? String(settingsForm.matchLimit) : 'custom');
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0B1120] text-slate-900 dark:text-slate-100 font-sans flex flex-col">
@@ -1005,7 +1383,7 @@ export default function SessionDetails() {
           <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0 justify-end">
             {/* Allow starting if scheduled OR finished */}
             {(!session?.status || session?.status === 'scheduled' || session?.status === 'finished') && (
-              <button onClick={handleStartSession} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-colors shadow-sm">
+              <button disabled={isProcessing} onClick={handleStartSession} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-colors shadow-sm disabled:opacity-50">
                 <Play size={16} fill="currentColor"/> 
                 {session?.status === 'finished' ? t('restart_session', 'Restart Session') : t('start_session', 'Start Session')}
               </button>
@@ -1013,14 +1391,20 @@ export default function SessionDetails() {
             
             {session?.status === 'active' && (
               <>
-                <SessionGlobalTimer startedAt={session.startedAt} />
-                <button onClick={handleEndSession} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-colors shadow-sm">
+                <SessionGlobalTimer session={session} />
+                <button disabled={isProcessing} onClick={handleEndSession} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-colors shadow-sm disabled:opacity-50">
                   <Square size={16} fill="currentColor"/> {t('end_session', 'End Session')}
                 </button>
               </>
             )}
 
-            <button onClick={exportSessionPDF} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-blue-50 dark:bg-[#1E293B] hover:bg-blue-100 dark:hover:bg-[#334155] text-blue-600 dark:text-blue-400 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors border border-transparent dark:border-[#334155] shadow-sm">
+            {session?.status === 'finished' && (
+              <span className="bg-slate-100 text-slate-700 dark:bg-[#1E293B] dark:text-slate-400 px-4 py-2.5 rounded-xl text-sm font-bold tracking-widest uppercase">
+                {t('status_finished', 'FINISHED')}
+              </span>
+            )}
+
+            <button disabled={isProcessing} onClick={exportSessionPDF} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-blue-50 dark:bg-[#1E293B] hover:bg-blue-100 dark:hover:bg-[#334155] text-blue-600 dark:text-blue-400 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors border border-transparent dark:border-[#334155] shadow-sm disabled:opacity-50">
               <FileDown size={18}/> <span className="hidden sm:block">{t('export_pdf', 'Export PDF')}</span>
             </button>
           </div>
@@ -1045,7 +1429,7 @@ export default function SessionDetails() {
         </div>
       </div>
 
-      <main className="flex-1 p-4 sm:p-8 max-w-7xl w-full mx-auto">
+      <main className={`flex-1 p-4 sm:p-8 max-w-7xl w-full mx-auto ${activeTab === 'matches' ? 'pb-24 lg:pb-8' : ''}`}>
         
         {/* ATTENDANCE TAB */}
         {activeTab === 'attendance' && (
@@ -1085,8 +1469,9 @@ export default function SessionDetails() {
                         <div className="mt-1.5">
                           <select 
                             value={member.skillLevel} 
+                            disabled={isProcessing}
                             onChange={(e) => handleUpdateGrade(member.id, e.target.value)}
-                            className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold cursor-pointer outline-none appearance-none text-center hover:opacity-80 transition-opacity ${getGradeColor(member.skillLevel)}`}
+                            className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold cursor-pointer outline-none appearance-none text-center hover:opacity-80 transition-opacity disabled:opacity-50 ${getGradeColor(member.skillLevel)}`}
                             title="Click to edit grade"
                           >
                             <option value="A1" className="bg-slate-800 text-white">A1</option>
@@ -1107,11 +1492,11 @@ export default function SessionDetails() {
                       <td className="p-4 text-right">
                         <div className="flex justify-end gap-2">
                           {attendance.status === 'active' ? (
-                            <button onClick={() => updateAttendanceStatus(attendance.id, 'resting')} className="p-2 text-amber-600 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:hover:bg-amber-900/40 rounded-lg transition-colors" title={t('mark_resting')}><Pause size={16}/></button>
+                            <button disabled={isProcessing} onClick={() => updateAttendanceStatus(attendance.id, 'resting')} className="p-2 text-amber-600 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:hover:bg-amber-900/40 rounded-lg transition-colors disabled:opacity-50" title={t('mark_resting')}><Pause size={16}/></button>
                           ) : (
-                            <button onClick={() => updateAttendanceStatus(attendance.id, 'active')} className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:hover:bg-emerald-900/40 rounded-lg transition-colors" title={t('mark_active')}><Check size={16}/></button>
+                            <button disabled={isProcessing} onClick={() => updateAttendanceStatus(attendance.id, 'active')} className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:hover:bg-emerald-900/40 rounded-lg transition-colors disabled:opacity-50" title={t('mark_active')}><Check size={16}/></button>
                           )}
-                          <button onClick={() => updateAttendanceStatus(attendance.id, 'cancelled')} className="p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 dark:bg-rose-900/20 dark:hover:bg-rose-900/40 rounded-lg transition-colors" title={t('cancel_attendance')}><X size={16}/></button>
+                          <button disabled={isProcessing} onClick={() => updateAttendanceStatus(attendance.id, 'cancelled')} className="p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 dark:bg-rose-900/20 dark:hover:bg-rose-900/40 rounded-lg transition-colors disabled:opacity-50" title={t('cancel_attendance')}><X size={16}/></button>
                         </div>
                       </td>
                     </tr>
@@ -1131,8 +1516,9 @@ export default function SessionDetails() {
                     <div className="flex items-center gap-2 mt-1.5">
                       <select 
                         value={member.skillLevel} 
+                        disabled={isProcessing}
                         onChange={(e) => handleUpdateGrade(member.id, e.target.value)}
-                        className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold cursor-pointer outline-none appearance-none text-center hover:opacity-80 transition-opacity ${getGradeColor(member.skillLevel)}`}
+                        className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold cursor-pointer outline-none appearance-none text-center hover:opacity-80 transition-opacity disabled:opacity-50 ${getGradeColor(member.skillLevel)}`}
                       >
                         <option value="A1" className="bg-slate-800 text-white">A1</option>
                         <option value="A2" className="bg-slate-800 text-white">A2</option>
@@ -1150,11 +1536,11 @@ export default function SessionDetails() {
                     </span>
                     <div className="flex gap-1.5">
                       {attendance.status === 'active' ? (
-                        <button onClick={() => updateAttendanceStatus(attendance.id, 'resting')} className="p-1.5 text-amber-600 bg-amber-50 dark:bg-amber-900/20 rounded-md" title={t('mark_resting')}><Pause size={14}/></button>
+                        <button disabled={isProcessing} onClick={() => updateAttendanceStatus(attendance.id, 'resting')} className="p-1.5 text-amber-600 bg-amber-50 dark:bg-amber-900/20 rounded-md disabled:opacity-50" title={t('mark_resting')}><Pause size={14}/></button>
                       ) : (
-                        <button onClick={() => updateAttendanceStatus(attendance.id, 'active')} className="p-1.5 text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 rounded-md" title={t('mark_active')}><Check size={14}/></button>
+                        <button disabled={isProcessing} onClick={() => updateAttendanceStatus(attendance.id, 'active')} className="p-1.5 text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 rounded-md disabled:opacity-50" title={t('mark_active')}><Check size={14}/></button>
                       )}
-                      <button onClick={() => updateAttendanceStatus(attendance.id, 'cancelled')} className="p-1.5 text-rose-600 bg-rose-50 dark:bg-rose-900/20 rounded-md" title={t('cancel_attendance')}><X size={14}/></button>
+                      <button disabled={isProcessing} onClick={() => updateAttendanceStatus(attendance.id, 'cancelled')} className="p-1.5 text-rose-600 bg-rose-50 dark:bg-rose-900/20 rounded-md disabled:opacity-50" title={t('cancel_attendance')}><X size={14}/></button>
                     </div>
                   </div>
                 </div>
@@ -1168,7 +1554,7 @@ export default function SessionDetails() {
           <div className="animate-in fade-in duration-200 max-w-3xl mx-auto">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-lg font-bold">{t('courts')}</h2>
-              <button onClick={handleAddCourt} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
+              <button disabled={isProcessing} onClick={handleAddCourt} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50">
                 <Plus size={16} /> {t('add_court')}
               </button>
             </div>
@@ -1178,9 +1564,9 @@ export default function SessionDetails() {
                 <div key={court.id} className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] p-4 sm:p-5 rounded-xl shadow-sm flex items-center justify-between transition-all">
                   {editCourtId === court.id ? (
                     <div className="flex items-center gap-2 flex-1 mr-4">
-                      <input type="text" value={courtName} onChange={e => setCourtName(e.target.value)} className={inputStyles} autoFocus />
-                      <button onClick={() => handleUpdateCourt(court.id, court.isActive, courtName)} className="p-2.5 bg-blue-600 text-white rounded-lg"><Check size={18}/></button>
-                      <button onClick={() => setEditCourtId(null)} className="p-2.5 bg-slate-200 dark:bg-[#1E293B] rounded-lg"><X size={18}/></button>
+                      <input type="text" value={courtName} onChange={e => setCourtName(e.target.value)} className={inputStyles} autoFocus disabled={isProcessing}/>
+                      <button disabled={isProcessing} onClick={() => handleUpdateCourt(court.id, court.isActive, courtName)} className="p-2.5 bg-blue-600 text-white rounded-lg disabled:opacity-50"><Check size={18}/></button>
+                      <button disabled={isProcessing} onClick={() => setEditCourtId(null)} className="p-2.5 bg-slate-200 dark:bg-[#1E293B] rounded-lg disabled:opacity-50"><X size={18}/></button>
                     </div>
                   ) : (
                     <div className="flex items-center gap-3">
@@ -1192,12 +1578,12 @@ export default function SessionDetails() {
                   {editCourtId !== court.id && (
                     <div className="flex items-center gap-4">
                       <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" className="sr-only peer" checked={court.isActive} onChange={() => handleUpdateCourt(court.id, !court.isActive, court.name)} />
+                        <input disabled={isProcessing} type="checkbox" className="sr-only peer" checked={court.isActive} onChange={() => handleUpdateCourt(court.id, !court.isActive, court.name)} />
                         <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-[#1E293B] peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-emerald-500"></div>
                       </label>
                       <div className="flex items-center gap-1 border-l border-slate-200 dark:border-[#1E293B] pl-4">
-                        <button onClick={() => { setEditCourtId(court.id); setCourtName(court.name); }} className="p-2 text-slate-400 hover:text-blue-600 rounded-lg transition-colors"><Edit2 size={16}/></button>
-                        <button onClick={() => handleDeleteCourt(court.id)} className="p-2 text-slate-400 hover:text-rose-600 rounded-lg transition-colors"><Trash2 size={16}/></button>
+                        <button disabled={isProcessing} onClick={() => { setEditCourtId(court.id); setCourtName(court.name); }} className="p-2 text-slate-400 hover:text-blue-600 rounded-lg transition-colors disabled:opacity-50"><Edit2 size={16}/></button>
+                        <button disabled={isProcessing} onClick={() => handleDeleteCourt(court.id)} className="p-2 text-slate-400 hover:text-rose-600 rounded-lg transition-colors disabled:opacity-50"><Trash2 size={16}/></button>
                       </div>
                     </div>
                   )}
@@ -1209,61 +1595,125 @@ export default function SessionDetails() {
 
         {/* MATCHES TAB */}
         {activeTab === 'matches' && (
-          <div className="animate-in fade-in duration-200">
+          <div className="animate-in fade-in duration-200 relative">
             {session?.status !== 'active' && (
               <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/50 text-amber-700 dark:text-amber-500 p-4 rounded-xl mb-6 font-bold flex items-center justify-center shadow-sm">
                 <AlertTriangle size={18} className="mr-2" /> {t('session_not_started', 'Start the session to enable matchmaking.')}
               </div>
             )}
             
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-              <h2 className="text-lg font-bold">{t('matches')}</h2>
-              <div className="flex gap-2 w-full sm:w-auto">
-                <button disabled={session?.status !== 'active'} onClick={handleQueueMatch} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-slate-200 dark:bg-[#1E293B] hover:bg-slate-300 dark:hover:bg-[#334155] text-slate-800 dark:text-slate-200 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                  <ListOrdered size={16}/> {t('queue_match')}
-                </button>
-                <button disabled={session?.status !== 'active'} onClick={handleAutoFillAllCourts} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                  <Zap size={16}/> {t('auto_fill')}
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-start">
-              {courts.filter(c => c.isActive).map(court => {
-                const activeMatch = activeMatches.find(m => m.courtId === court.id);
-                const queuedMatch = queuedMatchesList.find(m => m.courtId === court.id);
-                const displayMatch = activeMatch || queuedMatch;
+            <div className="flex flex-col lg:flex-row gap-6 items-start">
+              
+              {/* LEFT COLUMN: COURTS & QUEUE */}
+              <div className="flex-1 w-full flex flex-col gap-8">
                 
-                return (
-                  <MatchCard 
-                    key={court.id} 
-                    match={displayMatch} 
-                    court={court} 
-                    maxSets={maxSets}
-                    sessionStatus={session?.status}
-                    getMemberData={getMemberData}
-                    openEditMatchModal={openEditMatchModal}
-                    handleFinishMatch={handleFinishMatch}
-                    setConfirmDeleteMatchId={setConfirmDeleteMatchId}
-                    setSwapCourtModal={setSwapCourtModal}
-                    handleStartMatch={handleStartMatch}
-                    handleAutoGenerateCourt={handleAutoGenerateCourt}
-                    t={t}
-                  />
-                );
-              })}
-            </div>
-            
-            {queuedMatchesList.length > 0 && (
-              <div className="mt-10 animate-in fade-in">
-                <h3 className="text-lg font-bold mb-6 flex items-center gap-2">Waiting List <span className="bg-slate-200 dark:bg-[#1E293B] text-slate-600 dark:text-slate-300 text-xs px-2.5 py-0.5 rounded-full font-bold">{queuedMatchesList.length}</span></h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {queuedMatchesList.map(match => (
-                    <MatchCard key={match.id} match={match} court={null} maxSets={maxSets} sessionStatus={session?.status} getMemberData={getMemberData} openEditMatchModal={openEditMatchModal} handleFinishMatch={handleFinishMatch} setConfirmDeleteMatchId={setConfirmDeleteMatchId} setSwapCourtModal={setSwapCourtModal} handleStartMatch={handleStartMatch} handleAutoGenerateCourt={handleAutoGenerateCourt} t={t} />
-                  ))}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <h2 className="text-lg font-bold">{t('matches')}</h2>
+                  <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                    <button disabled={session?.status !== 'active' || isProcessing} onClick={() => openEditMatchModal({ courtId: null, matchType: 'MD' })} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-white dark:bg-[#1E293B] hover:bg-slate-50 dark:hover:bg-[#334155] border border-slate-200 dark:border-[#334155] text-slate-800 dark:text-slate-200 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                      <Plus size={16}/> {t('manual_match', 'Manual Match')}
+                    </button>
+                    <button disabled={session?.status !== 'active' || isProcessing} onClick={handleQueueMatch} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-slate-200 dark:bg-[#1E293B] hover:bg-slate-300 dark:hover:bg-[#334155] text-slate-800 dark:text-slate-200 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                      <ListOrdered size={16}/> {t('queue_match')}
+                    </button>
+                    <button disabled={session?.status !== 'active' || isProcessing} onClick={handleAutoFillAllCourts} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                      <Zap size={16}/> {t('auto_fill')}
+                    </button>
+                  </div>
                 </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                  {courts.filter(c => c.isActive).map(court => {
+                    const activeMatch = activeMatches.find(m => m.courtId === court.id);
+                    const queuedMatch = queuedMatchesList.find(m => m.courtId === court.id);
+                    const displayMatch = activeMatch || queuedMatch;
+                    
+                    return (
+                      <MatchCard 
+                        key={court.id} 
+                        match={displayMatch} 
+                        court={court} 
+                        maxSets={maxSets}
+                        sessionStatus={session?.status}
+                        isProcessing={isProcessing}
+                        getMemberData={getMemberData}
+                        openEditMatchModal={openEditMatchModal}
+                        handleFinishMatch={handleFinishMatch}
+                        setConfirmDeleteMatchId={setConfirmDeleteMatchId}
+                        setSwapCourtModal={setSwapCourtModal}
+                        handleStartMatch={handleStartMatch}
+                        handleAutoGenerateCourt={handleAutoGenerateCourt}
+                        t={t}
+                      />
+                    );
+                  })}
+                </div>
+                
+                {queuedMatchesList.length > 0 && (
+                  <div className="animate-in fade-in">
+                    <h3 className="text-lg font-bold mb-4 flex items-center gap-2">Waiting List <span className="bg-slate-200 dark:bg-[#1E293B] text-slate-600 dark:text-slate-300 text-xs px-2.5 py-0.5 rounded-full font-bold">{queuedMatchesList.length}</span></h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {queuedMatchesList.map((match, index) => (
+                        <MatchCard 
+                          key={match.id} 
+                          match={match} 
+                          court={null} 
+                          maxSets={maxSets} 
+                          sessionStatus={session?.status} 
+                          isProcessing={isProcessing} 
+                          getMemberData={getMemberData} 
+                          openEditMatchModal={openEditMatchModal} 
+                          handleFinishMatch={handleFinishMatch} 
+                          setConfirmDeleteMatchId={setConfirmDeleteMatchId} 
+                          setSwapCourtModal={setSwapCourtModal} 
+                          handleStartMatch={handleStartMatch} 
+                          handleAutoGenerateCourt={handleAutoGenerateCourt} 
+                          handleReorderQueue={handleReorderQueue}
+                          queueIndex={index}
+                          totalQueued={queuedMatchesList.length}
+                          t={t} 
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
+
+              {/* RIGHT COLUMN: WAITING LIST (DESKTOP) */}
+              <div className="hidden lg:flex w-80 shrink-0 bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-2xl shadow-sm flex-col h-[calc(100vh-140px)] sticky top-24 overflow-hidden">
+                <div className="p-4 border-b border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0B1120] flex justify-between items-center shrink-0">
+                  <h3 className="font-bold text-sm tracking-wide text-slate-800 dark:text-white uppercase">{t('available_players', 'Available Players')}</h3>
+                  <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 font-bold px-2 py-0.5 rounded-full text-xs">{waitingListPlayers.length}</span>
+                </div>
+                {renderWaitingListContent()}
+              </div>
+
+              {/* MOBILE BOTTOM PILL: WAITING LIST TRIGGER */}
+              <div className="fixed bottom-6 left-0 right-0 z-40 flex justify-center lg:hidden pointer-events-none">
+                <button 
+                  onClick={() => setIsWaitingListOpen(true)} 
+                  className="pointer-events-auto bg-blue-600 shadow-xl shadow-blue-600/30 text-white px-6 py-3.5 rounded-full font-bold flex items-center gap-3 transition-transform active:scale-95"
+                >
+                  <Users size={18} />
+                  {t('waiting_list', 'Waiting List')}
+                  <span className="bg-white text-blue-600 px-2.5 py-0.5 rounded-full text-xs font-black">{waitingListPlayers.length}</span>
+                </button>
+              </div>
+
+              {/* MOBILE SLIDE-OVER: WAITING LIST */}
+              <div className={`fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${isWaitingListOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsWaitingListOpen(false)} />
+              <div className={`fixed inset-y-0 right-0 z-[110] w-full max-w-[320px] bg-slate-50 dark:bg-[#0F172A] shadow-2xl transform transition-transform duration-300 ease-in-out lg:hidden flex flex-col border-l border-slate-200 dark:border-[#1E293B] ${isWaitingListOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+                 <div className="p-4 border-b border-slate-200 dark:border-[#1E293B] bg-white dark:bg-[#0B1120] flex justify-between items-center shrink-0 mt-safe">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-sm tracking-wide text-slate-800 dark:text-white uppercase">{t('available_players', 'Available')}</h3>
+                      <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 font-bold px-2 py-0.5 rounded-full text-xs">{waitingListPlayers.length}</span>
+                    </div>
+                    <button onClick={() => setIsWaitingListOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 bg-slate-100 dark:bg-[#1E293B] rounded-full"><X size={18}/></button>
+                 </div>
+                 {renderWaitingListContent()}
+              </div>
+
+            </div>
           </div>
         )}
 
@@ -1338,14 +1788,152 @@ export default function SessionDetails() {
                            <span className="font-mono font-bold text-lg dark:text-white">{duration} min</span>
                          </div>
                          <div className="flex gap-2">
-                           <button onClick={() => openEditHistoryModal(match)} className="p-2.5 bg-slate-100 hover:bg-blue-50 dark:bg-[#1E293B] dark:hover:bg-[#334155] text-slate-600 dark:text-slate-300 rounded-lg transition-colors" title={t('edit_history')}><Edit2 size={16}/></button>
-                           <button onClick={() => setConfirmDeleteMatchId(match.id)} className="p-2.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-500 rounded-lg transition-colors" title="Delete Match"><Trash2 size={16}/></button>
+                           <button disabled={isProcessing} onClick={() => openEditHistoryModal(match)} className="p-2.5 bg-slate-100 hover:bg-blue-50 dark:bg-[#1E293B] dark:hover:bg-[#334155] text-slate-600 dark:text-slate-300 rounded-lg transition-colors disabled:opacity-50" title={t('edit_history')}><Edit2 size={16}/></button>
+                           <button disabled={isProcessing} onClick={() => setConfirmDeleteMatchId(match.id)} className="p-2.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-500 rounded-lg transition-colors disabled:opacity-50" title="Delete Match"><Trash2 size={16}/></button>
                          </div>
                       </div>
                     </div>
                   );
                 })
               )}
+            </div>
+          </div>
+        )}
+
+        {/* LEADERBOARD TAB */}
+        {activeTab === 'leaderboard' && (
+          <div className="animate-in fade-in duration-200 max-w-5xl mx-auto">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+              <h2 className="text-lg font-bold">{t('leaderboard', 'Leaderboard')}</h2>
+              
+              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <input type="text" placeholder={t('search_players', 'Search players...')} value={leaderboardSearch} onChange={(e) => setLeaderboardSearch(e.target.value)} className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-lg shadow-sm outline-none focus:ring-2 focus:ring-blue-500 text-sm"/>
+                </div>
+
+                <div className="flex gap-2 w-full sm:w-auto">
+                   <select 
+                     value={lbLimitType} 
+                     onChange={e => setLbLimitType(e.target.value)} 
+                     className="w-full sm:w-auto px-4 py-2.5 bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-lg shadow-sm outline-none focus:ring-2 focus:ring-blue-500 text-sm font-bold appearance-none pr-8 relative bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_10px_center]"
+                   >
+                     <option value="all">All Games</option>
+                     <option value="1">1 Game</option>
+                     <option value="2">2 Games</option>
+                     <option value="3">3 Games</option>
+                     <option value="4">4 Games</option>
+                     <option value="5">5 Games</option>
+                     <option value="custom">Custom Amount</option>
+                   </select>
+                   {lbLimitType === 'custom' && (
+                     <input 
+                       type="number" 
+                       min="1" 
+                       value={lbCustomLimit} 
+                       onChange={e => setLbCustomLimit(parseInt(e.target.value) || 1)} 
+                       className="w-20 px-3 py-2.5 bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-lg shadow-sm outline-none focus:ring-2 focus:ring-blue-500 text-sm text-center font-bold"
+                     />
+                   )}
+                </div>
+              </div>
+            </div>
+
+            <div className="hidden sm:block bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl overflow-hidden shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse min-w-[800px]">
+                  <thead className="bg-slate-50 dark:bg-[#0B1120] border-b border-slate-200 dark:border-[#1E293B] text-xs uppercase text-slate-500 font-bold tracking-widest">
+                    <tr>
+                      <th className="p-5 w-16 text-center">{t('rank', 'Rank')}</th>
+                      <th className="p-5">{t('player', 'Player')}</th>
+                      <th className="p-5 text-center">{t('matches', 'Matches')}</th>
+                      <th className="p-5 text-center">{t('w_l', 'W-L')}</th>
+                      <th className="p-5 text-center">{t('win_rate', 'Win Rate')}</th>
+                      <th className="p-5 text-center">{t('net_sets', 'Net Sets')}</th>
+                      <th className="p-5 text-center">{t('net_pts', 'Net Pts')}</th>
+                      <th className="p-5 text-center">{t('total_pts', 'Total Pts')}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-[#1E293B]">
+                    {sessionLeaderboardData.length === 0 ? (
+                      <tr><td colSpan={8} className="p-10 text-center text-slate-500 font-medium">{t('no_players', 'No players found.')}</td></tr>
+                    ) : (
+                      sessionLeaderboardData.map((player) => {
+                        const rank = player.rank;
+                        let rankBadge = <span className="font-mono font-black text-slate-400">{rank}</span>;
+                        if (rank === 1) rankBadge = <div className="w-8 h-8 mx-auto bg-amber-100 text-amber-600 rounded-full flex items-center justify-center shadow-sm"><Medal size={16}/></div>;
+                        if (rank === 2) rankBadge = <div className="w-8 h-8 mx-auto bg-slate-200 text-slate-600 rounded-full flex items-center justify-center shadow-sm"><Medal size={16}/></div>;
+                        if (rank === 3) rankBadge = <div className="w-8 h-8 mx-auto bg-orange-100 text-orange-700 rounded-full flex items-center justify-center shadow-sm"><Medal size={16}/></div>;
+
+                        return (
+                          <tr key={player.id} className="hover:bg-slate-50 dark:hover:bg-[#1E293B]/30 transition-colors">
+                            <td className="p-5 text-center">{rankBadge}</td>
+                            <td className="p-5">
+                              <div className="font-bold text-base dark:text-white">{player.name}</div>
+                              <span className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold mt-1 inline-block ${getGradeColor(player.grade)}`}>{player.grade}</span>
+                            </td>
+                            <td className="p-5 text-center font-black text-slate-700 dark:text-slate-300">{player.played}</td>
+                            <td className="p-5 text-center font-bold text-sm">
+                              <span className="text-emerald-600">{player.won}</span> - <span className="text-rose-600">{player.lost}</span>
+                            </td>
+                            <td className="p-5 text-center font-black text-blue-600 dark:text-blue-400">{Math.round(player.winRate * 100)}%</td>
+                            <td className="p-5 text-center font-mono font-bold">{player.netSets > 0 ? `+${player.netSets}` : player.netSets}</td>
+                            <td className="p-5 text-center font-mono font-bold">{player.netPoints > 0 ? `+${player.netPoints}` : player.netPoints}</td>
+                            <td className="p-5 text-center font-mono font-bold text-slate-500">{player.totalPoints}</td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="sm:hidden flex flex-col gap-3">
+              {sessionLeaderboardData.map((player) => {
+                const rank = player.rank;
+                let rankBadge = <span className="font-mono font-black text-slate-400 text-lg">{rank}</span>;
+                if (rank === 1) rankBadge = <div className="w-8 h-8 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center shadow-sm"><Medal size={16}/></div>;
+                if (rank === 2) rankBadge = <div className="w-8 h-8 bg-slate-200 text-slate-600 rounded-full flex items-center justify-center shadow-sm"><Medal size={16}/></div>;
+                if (rank === 3) rankBadge = <div className="w-8 h-8 bg-orange-100 text-orange-700 rounded-full flex items-center justify-center shadow-sm"><Medal size={16}/></div>;
+
+                return (
+                  <div key={player.id} className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] p-4 rounded-xl shadow-sm flex flex-col gap-3">
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 flex justify-center shrink-0">{rankBadge}</div>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-sm dark:text-white">{player.name}</span>
+                          <span className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold mt-1 w-max ${getGradeColor(player.grade)}`}>{player.grade}</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="font-black text-lg text-blue-600 dark:text-blue-400 leading-none">{Math.round(player.winRate * 100)}%</span>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{t('win_rate', 'WIN RATE')}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-4 gap-2 pt-3 border-t border-slate-100 dark:border-[#1E293B]">
+                      <div className="flex flex-col items-center">
+                        <span className="font-bold text-sm text-slate-700 dark:text-slate-300">{player.played}</span>
+                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{t('matches', 'Matches')}</span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <span className="font-bold text-sm"><span className="text-emerald-600">{player.won}</span>-<span className="text-rose-600">{player.lost}</span></span>
+                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{t('w_l', 'W-L')}</span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <span className="font-bold text-sm font-mono text-slate-700 dark:text-slate-300">{player.netPoints > 0 ? `+${player.netPoints}` : player.netPoints}</span>
+                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{t('net_pts', 'Net Pts')}</span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <span className="font-bold text-sm font-mono text-slate-700 dark:text-slate-300">{player.netSets > 0 ? `+${player.netSets}` : player.netSets}</span>
+                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{t('net_sets', 'Net Sets')}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -1384,12 +1972,17 @@ export default function SessionDetails() {
                             {playedGames.length === 0 ? <span className="text-xs text-slate-400">No matches yet</span> : 
                               playedGames.map((g, i) => (
                                 <div key={i} className="group relative inline-block">
-                                  <span className={`px-2.5 py-1 text-[10px] font-bold rounded border cursor-help transition-colors ${getMatchTypeColor(g.type)} whitespace-nowrap`}>{g.type}</span>
+                                  <span className={`px-2.5 py-1 text-[10px] font-bold rounded border cursor-help transition-colors ${getMatchTypeColor(g.type)} whitespace-nowrap ${g.result === 'Ongoing' && 'animate-pulse ring-2 ring-blue-400'}`}>{g.type}</span>
                                   {/* Rich Card Tooltip */}
                                   <div className="hidden group-hover:flex absolute z-[100] bottom-full left-1/2 -translate-x-1/2 mb-2 w-[340px] bg-white dark:bg-[#0F172A] text-slate-900 dark:text-white p-4 rounded-xl shadow-2xl border border-slate-200 dark:border-[#1E293B] ring-1 ring-black/5 pointer-events-none flex-col gap-3">
                                     <div className="flex justify-between items-center w-full">
                                       <span className="font-bold text-slate-400 uppercase tracking-widest text-[10px] whitespace-nowrap">{g.type} MATCH</span>
-                                      <span className={`px-2 py-0.5 rounded font-bold text-[10px] uppercase tracking-wider whitespace-nowrap ${g.result === 'Won' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' : g.result === 'Lost' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400' : 'bg-slate-100 text-slate-700 dark:bg-[#1E293B] dark:text-slate-400'}`}>{t(g.result.toLowerCase())}</span>
+                                      <span className={`px-2 py-0.5 rounded font-bold text-[10px] uppercase tracking-wider whitespace-nowrap ${
+                                        g.result === 'Won' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' : 
+                                        g.result === 'Lost' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400' : 
+                                        g.result === 'Ongoing' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400' :
+                                        'bg-slate-100 text-slate-700 dark:bg-[#1E293B] dark:text-slate-400'
+                                      }`}>{t(g.result.toLowerCase(), g.result)}</span>
                                     </div>
                                     <div className="flex items-center justify-between w-full bg-slate-50 dark:bg-[#0B1120] rounded-lg p-3 border border-slate-100 dark:border-[#1E293B]">
                                       <div className="flex flex-col text-center truncate flex-1 px-2">
@@ -1397,9 +1990,15 @@ export default function SessionDetails() {
                                         <div className="text-slate-500 text-[10px] truncate" title={`& ${g.partnerName}`}>& {g.partnerName}</div>
                                       </div>
                                       <div className="font-black text-lg text-slate-700 dark:text-slate-300 whitespace-nowrap flex items-center justify-center gap-1 shrink-0">
-                                        <span className={g.myScore > g.oppScore ? "text-emerald-500" : ""}>{g.myScore}</span>
-                                        <span className="text-slate-300 dark:text-slate-600">-</span>
-                                        <span className={g.oppScore > g.myScore ? "text-emerald-500" : ""}>{g.oppScore}</span>
+                                        {g.result === 'Ongoing' ? (
+                                           <span className="text-blue-500 text-sm">Playing</span>
+                                        ) : (
+                                          <>
+                                            <span className={g.myScore > g.oppScore ? "text-emerald-500" : ""}>{g.myScore}</span>
+                                            <span className="text-slate-300 dark:text-slate-600">-</span>
+                                            <span className={g.oppScore > g.myScore ? "text-emerald-500" : ""}>{g.oppScore}</span>
+                                          </>
+                                        )}
                                       </div>
                                       <div className="flex flex-col text-center truncate flex-1 px-2">
                                         <div className="font-bold text-xs dark:text-white truncate" title={g.opp1Name}>{g.opp1Name}</div>
@@ -1445,7 +2044,7 @@ export default function SessionDetails() {
                   <div className="flex flex-wrap gap-1.5 pt-3 border-t border-slate-100 dark:border-[#1E293B]">
                     {playedGames.length === 0 ? <span className="text-xs text-slate-400">No matches yet</span> : 
                       playedGames.map((g, i) => (
-                        <span key={i} className={`px-2 py-0.5 text-[10px] font-bold rounded border whitespace-nowrap ${getMatchTypeColor(g.type)}`}>{g.type}</span>
+                        <span key={i} className={`px-2 py-0.5 text-[10px] font-bold rounded border whitespace-nowrap ${getMatchTypeColor(g.type)} ${g.result === 'Ongoing' && 'animate-pulse ring-1 ring-blue-400'}`}>{g.type}</span>
                       ))
                     }
                   </div>
@@ -1462,11 +2061,47 @@ export default function SessionDetails() {
             <form onSubmit={handleSaveSettings} className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl shadow-sm p-6 flex flex-col gap-6 mb-8">
               <div>
                 <label className="block text-xs font-semibold mb-1.5 text-slate-700 dark:text-slate-400">Session Name</label>
-                <input type="text" value={settingsForm.name || ''} onChange={e => setSettingsForm({...settingsForm, name: e.target.value})} className={inputStyles} required />
+                <input disabled={isProcessing} type="text" value={settingsForm.name || ''} onChange={e => setSettingsForm({...settingsForm, name: e.target.value})} className={inputStyles} required />
               </div>
+              
+              <div className="pt-4 border-t border-slate-100 dark:border-[#1E293B]">
+                <label className="block text-xs font-semibold mb-1.5 text-slate-700 dark:text-slate-400">{t('match_limit', 'Leaderboard Match Limit')}</label>
+                <div className="flex gap-3">
+                  <select 
+                    disabled={isProcessing} 
+                    value={settingsLimitType} 
+                    onChange={e => {
+                      const val = e.target.value;
+                      if (val === 'all') setSettingsForm({...settingsForm, matchLimit: 0});
+                      else if (val === 'custom') setSettingsForm({...settingsForm, matchLimit: 6});
+                      else setSettingsForm({...settingsForm, matchLimit: parseInt(val)});
+                    }} 
+                    className={`${inputStyles} font-medium flex-1 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_12px_center] pr-8`}
+                  >
+                    <option value="all">{t('all_games', 'All Games')}</option>
+                    <option value="1">1 Game</option>
+                    <option value="2">2 Games</option>
+                    <option value="3">3 Games</option>
+                    <option value="4">4 Games</option>
+                    <option value="5">5 Games</option>
+                    <option value="custom">{t('custom_amount', 'Custom Amount')}</option>
+                  </select>
+                  {settingsLimitType === 'custom' && (
+                    <input 
+                      disabled={isProcessing} 
+                      type="number" 
+                      min="1" 
+                      value={settingsForm.matchLimit} 
+                      onChange={e => setSettingsForm({...settingsForm, matchLimit: parseInt(e.target.value) || 0})} 
+                      className={`${inputStyles} w-24 text-center font-bold`} 
+                    />
+                  )}
+                </div>
+              </div>
+
               <div className="pt-4 border-t border-slate-100 dark:border-[#1E293B]">
                 <label className="block text-xs font-semibold mb-1.5 text-slate-700 dark:text-slate-400">Scoring System</label>
-                <select value={settingsForm.scoringSystem || ''} onChange={e => setSettingsForm({...settingsForm, scoringSystem: e.target.value})} className={`${inputStyles} font-medium`}>
+                <select disabled={isProcessing} value={settingsForm.scoringSystem || ''} onChange={e => setSettingsForm({...settingsForm, scoringSystem: e.target.value})} className={`${inputStyles} font-medium appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_12px_center] pr-8`}>
                   <option value="BWF 21 Points x 3 Sets">BWF 21 Points x 3 Sets</option>
                   <option value="BWF 15 Points x 3 Sets">BWF 15 Points x 3 Sets</option>
                   <option value="42 Points x 1 Set">42 Points x 1 Set</option>
@@ -1478,17 +2113,17 @@ export default function SessionDetails() {
                 <div className="grid grid-cols-2 gap-4 animate-in fade-in">
                   <div>
                     <label className="block text-xs font-semibold mb-1.5 text-slate-700 dark:text-slate-400">Custom Sets</label>
-                    <input type="number" min={1} value={settingsForm.customSets || ''} onChange={e => setSettingsForm({...settingsForm, customSets: parseInt(e.target.value)})} className={inputStyles} />
+                    <input disabled={isProcessing} type="number" min={1} value={settingsForm.customSets || ''} onChange={e => setSettingsForm({...settingsForm, customSets: parseInt(e.target.value)})} className={inputStyles} />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold mb-1.5 text-slate-700 dark:text-slate-400">Points Per Set</label>
-                    <input type="number" min={1} value={settingsForm.customPoints || ''} onChange={e => setSettingsForm({...settingsForm, customPoints: parseInt(e.target.value)})} className={inputStyles} />
+                    <input disabled={isProcessing} type="number" min={1} value={settingsForm.customPoints || ''} onChange={e => setSettingsForm({...settingsForm, customPoints: parseInt(e.target.value)})} className={inputStyles} />
                   </div>
                 </div>
               )}
               <div className="pt-4 border-t border-slate-100 dark:border-[#1E293B]">
                 <label className="block text-xs font-semibold mb-1.5 text-slate-700 dark:text-slate-400">Pairing Strictness</label>
-                <select value={settingsForm.pairingRule || ''} onChange={e => setSettingsForm({...settingsForm, pairingRule: e.target.value})} className={`${inputStyles} font-medium`}>
+                <select disabled={isProcessing} value={settingsForm.pairingRule || ''} onChange={e => setSettingsForm({...settingsForm, pairingRule: e.target.value})} className={`${inputStyles} font-medium appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_12px_center] pr-8`}>
                   <option value="very_strict">Very Strict (Same Grade Only)</option>
                   <option value="strict">Strict (+/- 1 Grade)</option>
                   <option value="moderate">Moderate (+/- 2 Grades)</option>
@@ -1496,7 +2131,7 @@ export default function SessionDetails() {
                 </select>
               </div>
               <div className="flex justify-end pt-4">
-                <button type="submit" className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2">
+                <button disabled={isProcessing} type="submit" className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50">
                   <Save size={16}/> {t('save_settings')}
                 </button>
               </div>
@@ -1507,7 +2142,7 @@ export default function SessionDetails() {
                 <h3 className="font-bold text-rose-700 dark:text-rose-500">{t('danger_zone')}</h3>
                 <p className="text-sm text-rose-600/70 dark:text-rose-400/70 mt-1">{t('delete_session_warning')}</p>
               </div>
-              <button onClick={handleDeleteSession} className="px-6 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold shadow-sm transition-colors shrink-0">
+              <button disabled={isProcessing} onClick={handleDeleteSession} className="px-6 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold shadow-sm transition-colors shrink-0 disabled:opacity-50">
                 Delete Session
               </button>
             </div>
@@ -1522,7 +2157,7 @@ export default function SessionDetails() {
           <div className="bg-white dark:bg-[#0F172A] w-full max-w-4xl rounded-2xl shadow-2xl flex flex-col border border-slate-200 dark:border-[#1E293B]">
             <div className="flex justify-between items-center p-5 border-b border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0B1120] shrink-0 rounded-t-2xl">
               <h3 className="font-bold text-lg">{editMatchModal.id ? 'Edit Match Players' : 'Create Manual Match'}</h3>
-              <button onClick={() => setEditMatchModal(null)} className="p-1.5 text-slate-400 hover:bg-slate-200 dark:hover:bg-[#1E293B] rounded-full transition-colors"><X size={18}/></button>
+              <button disabled={isProcessing} onClick={() => setEditMatchModal(null)} className="p-1.5 text-slate-400 hover:bg-slate-200 dark:hover:bg-[#1E293B] rounded-full transition-colors"><X size={18}/></button>
             </div>
             
             <div className="p-6 md:p-8 flex flex-col md:flex-row gap-6 md:gap-8 relative items-stretch min-h-[400px]">
@@ -1578,8 +2213,8 @@ export default function SessionDetails() {
             </div>
 
             <div className="p-5 border-t border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0B1120] flex justify-end gap-3 shrink-0 rounded-b-2xl">
-              <button onClick={() => setEditMatchModal(null)} className="px-5 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-[#1E293B] rounded-lg transition-colors">Cancel</button>
-              <button onClick={saveManualMatch} className="px-6 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors">Save Players</button>
+              <button disabled={isProcessing} onClick={() => setEditMatchModal(null)} className="px-5 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-[#1E293B] rounded-lg transition-colors disabled:opacity-50">Cancel</button>
+              <button disabled={isProcessing} onClick={saveManualMatch} className="px-6 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors disabled:opacity-50">Save Players</button>
             </div>
           </div>
         </div>
@@ -1591,13 +2226,13 @@ export default function SessionDetails() {
           <div className="bg-white dark:bg-[#0F172A] w-full max-w-4xl rounded-2xl shadow-2xl flex flex-col max-h-[90dvh] border border-slate-200 dark:border-[#1E293B]">
             <div className="flex justify-between items-center p-5 border-b border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0B1120] shrink-0 rounded-t-2xl">
               <h3 className="font-bold text-lg">{t('edit_history')}</h3>
-              <button onClick={() => setEditHistoryModal(null)} className="p-1.5 text-slate-400 hover:bg-slate-200 dark:hover:bg-[#1E293B] rounded-full transition-colors"><X size={18}/></button>
+              <button disabled={isProcessing} onClick={() => setEditHistoryModal(null)} className="p-1.5 text-slate-400 hover:bg-slate-200 dark:hover:bg-[#1E293B] rounded-full transition-colors"><X size={18}/></button>
             </div>
             
             <div className="p-6 md:p-8 flex flex-col gap-6 md:gap-8 overflow-y-auto relative">
               <div className="w-full bg-slate-50 dark:bg-[#1E293B]/30 p-4 rounded-xl border border-slate-200 dark:border-[#1E293B]">
                  <label className="block text-xs font-semibold mb-2 text-slate-700 dark:text-slate-400">Court Played On</label>
-                 <select value={historyForm.courtId} onChange={e => setHistoryForm({...historyForm, courtId: parseInt(e.target.value)})} className={inputStyles}>
+                 <select disabled={isProcessing} value={historyForm.courtId} onChange={e => setHistoryForm({...historyForm, courtId: parseInt(e.target.value)})} className={inputStyles}>
                    <option value={0}>Unknown / Deleted Court</option>
                    {courts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                  </select>
@@ -1625,11 +2260,12 @@ export default function SessionDetails() {
                   </div>
                   <div className="mt-6">
                     <div className="flex items-center justify-between mb-2">
-                      <button type="button" onClick={() => setHistorySetView(v => v - 1)} disabled={historySetView <= 1} className="p-1.5 text-slate-500 hover:text-blue-500 disabled:opacity-30"><ChevronLeft size={16}/></button>
+                      <button type="button" onClick={() => setHistorySetView(v => v - 1)} disabled={historySetView <= 1 || isProcessing} className="p-1.5 text-slate-500 hover:text-blue-500 disabled:opacity-30"><ChevronLeft size={16}/></button>
                       <label className="block text-xs font-semibold text-slate-700 dark:text-slate-400 text-center uppercase tracking-widest">Score (Set {historySetView})</label>
-                      <button type="button" onClick={() => setHistorySetView(v => v + 1)} disabled={historySetView >= maxSets} className="p-1.5 text-slate-500 hover:text-blue-500 disabled:opacity-30"><ChevronRight size={16}/></button>
+                      <button type="button" onClick={() => setHistorySetView(v => v + 1)} disabled={historySetView >= maxSets || isProcessing} className="p-1.5 text-slate-500 hover:text-blue-500 disabled:opacity-30"><ChevronRight size={16}/></button>
                     </div>
                     <input 
+                       disabled={isProcessing}
                        type="number" 
                        value={historyForm[`sa${historySetView}` as keyof typeof historyForm] || ''} placeholder="0" 
                        onChange={e => setHistoryForm({...historyForm, [`sa${historySetView}`]: parseInt(e.target.value) || 0})} 
@@ -1663,11 +2299,12 @@ export default function SessionDetails() {
                   </div>
                   <div className="mt-6">
                     <div className="flex items-center justify-between mb-2">
-                      <button type="button" onClick={() => setHistorySetView(v => v - 1)} disabled={historySetView <= 1} className="p-1.5 text-slate-500 hover:text-blue-500 disabled:opacity-30"><ChevronLeft size={16}/></button>
+                      <button type="button" onClick={() => setHistorySetView(v => v - 1)} disabled={historySetView <= 1 || isProcessing} className="p-1.5 text-slate-500 hover:text-blue-500 disabled:opacity-30"><ChevronLeft size={16}/></button>
                       <label className="block text-xs font-semibold text-slate-700 dark:text-slate-400 text-center uppercase tracking-widest">Score (Set {historySetView})</label>
-                      <button type="button" onClick={() => setHistorySetView(v => v + 1)} disabled={historySetView >= maxSets} className="p-1.5 text-slate-500 hover:text-blue-500 disabled:opacity-30"><ChevronRight size={16}/></button>
+                      <button type="button" onClick={() => setHistorySetView(v => v + 1)} disabled={historySetView >= maxSets || isProcessing} className="p-1.5 text-slate-500 hover:text-blue-500 disabled:opacity-30"><ChevronRight size={16}/></button>
                     </div>
                     <input 
+                       disabled={isProcessing}
                        type="number" 
                        value={historyForm[`sb${historySetView}` as keyof typeof historyForm] || ''} placeholder="0" 
                        onChange={e => setHistoryForm({...historyForm, [`sb${historySetView}`]: parseInt(e.target.value) || 0})} 
@@ -1679,8 +2316,8 @@ export default function SessionDetails() {
             </div>
 
             <div className="p-5 border-t border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0B1120] flex justify-end gap-3 shrink-0 rounded-b-2xl">
-              <button onClick={() => setEditHistoryModal(null)} className="px-5 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-[#1E293B] rounded-lg transition-colors">Cancel</button>
-              <button onClick={saveHistoryMatch} className="px-6 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors">Save Changes</button>
+              <button disabled={isProcessing} onClick={() => setEditHistoryModal(null)} className="px-5 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-[#1E293B] rounded-lg transition-colors disabled:opacity-50">Cancel</button>
+              <button disabled={isProcessing} onClick={saveHistoryMatch} className="px-6 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors disabled:opacity-50">Save Changes</button>
             </div>
           </div>
         </div>
@@ -1696,8 +2333,8 @@ export default function SessionDetails() {
              <h3 className="text-xl font-bold mb-2">{t('confirm_cancel_title')}</h3>
              <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">{t('confirm_cancel_desc')}</p>
              <div className="flex gap-3">
-               <button onClick={() => setConfirmDeleteMatchId(null)} className="flex-1 py-3 bg-slate-100 dark:bg-[#1E293B] hover:bg-slate-200 dark:hover:bg-[#334155] rounded-xl font-bold transition-colors">{t('abort')}</button>
-               <button onClick={handleConfirmDeleteMatch} className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold transition-colors">{t('confirm')}</button>
+               <button disabled={isProcessing} onClick={() => setConfirmDeleteMatchId(null)} className="flex-1 py-3 bg-slate-100 dark:bg-[#1E293B] hover:bg-slate-200 dark:hover:bg-[#334155] rounded-xl font-bold transition-colors disabled:opacity-50">{t('abort')}</button>
+               <button disabled={isProcessing} onClick={handleConfirmDeleteMatch} className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold transition-colors disabled:opacity-50">{t('confirm')}</button>
              </div>
           </div>
         </div>
@@ -1709,14 +2346,23 @@ export default function SessionDetails() {
           <div className="bg-white dark:bg-[#0F172A] w-full max-w-md rounded-2xl shadow-2xl flex flex-col max-h-[85dvh] overflow-hidden border border-slate-200 dark:border-[#1E293B]">
             <div className="flex justify-between items-center p-5 border-b border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0B1120]">
               <h3 className="font-bold text-lg">Move to Court</h3>
-              <button onClick={() => setSwapCourtModal(null)} className="p-1.5 text-slate-400 hover:bg-slate-200 dark:hover:bg-[#1E293B] rounded-full transition-colors"><X size={18}/></button>
+              <button disabled={isProcessing} onClick={() => setSwapCourtModal(null)} className="p-1.5 text-slate-400 hover:bg-slate-200 dark:hover:bg-[#1E293B] rounded-full transition-colors disabled:opacity-50"><X size={18}/></button>
             </div>
             <div className="p-4 overflow-y-auto flex flex-col gap-2">
+              
+              {/* Added Move to Queue Button */}
+              {swapCourtModal.status !== 'on_court' && swapCourtModal.courtId !== null && (
+                <button disabled={isProcessing} onClick={() => handleSwapCourt(swapCourtModal.id, null)} className="w-full text-left p-4 rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-900/10 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors font-bold flex justify-between items-center text-amber-700 dark:text-amber-500 mb-2 disabled:opacity-50">
+                  Move to Queue (Waiting List)
+                  <ListOrdered size={16} />
+                </button>
+              )}
+
               {courts.filter(c => c.isActive && c.id !== swapCourtModal.courtId).length === 0 ? (
                 <div className="text-center text-slate-500 py-4">No other active courts available.</div>
               ) : (
                 courts.filter(c => c.isActive && c.id !== swapCourtModal.courtId).map(c => (
-                  <button key={c.id} onClick={() => handleSwapCourt(swapCourtModal.id, c.id)} className="w-full text-left p-4 rounded-xl border border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0B1120] hover:bg-blue-50 hover:border-blue-300 dark:hover:bg-[#1E293B] dark:hover:border-slate-600 transition-colors font-bold flex justify-between items-center">
+                  <button disabled={isProcessing} key={c.id} onClick={() => handleSwapCourt(swapCourtModal.id, c.id)} className="w-full text-left p-4 rounded-xl border border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0B1120] hover:bg-blue-50 hover:border-blue-300 dark:hover:bg-[#1E293B] dark:hover:border-slate-600 transition-colors font-bold flex justify-between items-center disabled:opacity-50">
                     {c.name}
                     <ArrowRightLeft size={16} className="text-slate-400" />
                   </button>
@@ -1733,20 +2379,20 @@ export default function SessionDetails() {
           <div className="bg-white dark:bg-[#0F172A] w-full max-w-md rounded-2xl shadow-2xl flex flex-col max-h-[85dvh] overflow-hidden border border-slate-200 dark:border-[#1E293B]">
             <div className="flex justify-between items-center p-5 border-b border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0B1120]">
               <h3 className="font-bold text-lg">{t('add_attendee')}</h3>
-              <button onClick={() => setAttendeeModalOpen(false)} className="p-1.5 text-slate-400 hover:bg-slate-200 dark:hover:bg-[#1E293B] rounded-full transition-colors"><X size={18}/></button>
+              <button disabled={isProcessing} onClick={() => setAttendeeModalOpen(false)} className="p-1.5 text-slate-400 hover:bg-slate-200 dark:hover:bg-[#1E293B] rounded-full transition-colors disabled:opacity-50"><X size={18}/></button>
             </div>
             
             <div className="p-4 border-b border-slate-200 dark:border-[#1E293B]">
               <div className="relative w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                <input type="text" placeholder={t('search_players')} value={modalSearch} onChange={(e) => setModalSearch(e.target.value)} className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-[#0B1120] border border-slate-200 dark:border-[#1E293B] rounded-lg shadow-sm outline-none focus:ring-2 focus:ring-blue-500 text-sm" autoFocus />
+                <input disabled={isProcessing} type="text" placeholder={t('search_players')} value={modalSearch} onChange={(e) => setModalSearch(e.target.value)} className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-[#0B1120] border border-slate-200 dark:border-[#1E293B] rounded-lg shadow-sm outline-none focus:ring-2 focus:ring-blue-500 text-sm disabled:opacity-50" autoFocus />
               </div>
             </div>
 
             <div className="p-2 overflow-y-auto flex-1 bg-white dark:bg-[#0F172A]">
               {availableMembersModal.length === 0 ? <div className="p-8 text-center text-slate-500">{t('no_players')}</div> : 
                availableMembersModal.map(member => (
-                <div key={member.id} className="flex items-center p-3 hover:bg-slate-50 dark:hover:bg-[#1E293B]/50 rounded-xl cursor-pointer transition-colors" onClick={() => toggleSelectAttendee(member.id)}>
+                <div key={member.id} className={`flex items-center p-3 hover:bg-slate-50 dark:hover:bg-[#1E293B]/50 rounded-xl cursor-pointer transition-colors ${isProcessing ? 'pointer-events-none opacity-50' : ''}`} onClick={() => toggleSelectAttendee(member.id)}>
                   <div className="flex items-center gap-4 w-full">
                     <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${selectedAttendees.includes(member.id) ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 dark:border-[#334155]'}`}>
                       {selectedAttendees.includes(member.id) && <Check size={14} strokeWidth={3} />}
@@ -1761,7 +2407,7 @@ export default function SessionDetails() {
             </div>
 
             <div className="p-4 border-t border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0B1120]">
-              <button onClick={handleAddSelectedAttendees} disabled={selectedAttendees.length === 0} className="w-full py-3 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              <button onClick={handleAddSelectedAttendees} disabled={selectedAttendees.length === 0 || isProcessing} className="w-full py-3 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                 {t('add_selected').replace('{{count}}', selectedAttendees.length.toString())}
               </button>
             </div>
@@ -1775,23 +2421,23 @@ export default function SessionDetails() {
           <div className="bg-white dark:bg-[#0F172A] w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-[#1E293B]">
             <div className="flex justify-between items-center p-5 border-b border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0B1120]">
               <h3 className="font-bold text-lg">{t('add_walk_in')}</h3>
-              <button onClick={() => setWalkInModalOpen(false)} className="p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-[#1E293B] rounded-full transition-colors"><X size={18}/></button>
+              <button disabled={isProcessing} onClick={() => setWalkInModalOpen(false)} className="p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-[#1E293B] rounded-full transition-colors disabled:opacity-50"><X size={18}/></button>
             </div>
             <form onSubmit={handleWalkIn} className="p-6 flex flex-col gap-4">
               <div>
                 <label className="block text-xs font-semibold mb-1.5 text-slate-700 dark:text-slate-400">Name</label>
-                <input type="text" required placeholder="Walk-in Player Name" value={walkInForm.name} onChange={e => setWalkInForm({...walkInForm, name: e.target.value})} className={inputStyles} autoFocus />
+                <input disabled={isProcessing} type="text" required placeholder="Walk-in Player Name" value={walkInForm.name} onChange={e => setWalkInForm({...walkInForm, name: e.target.value})} className={inputStyles} autoFocus />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold mb-1.5 text-slate-700 dark:text-slate-400">Gender</label>
-                  <select value={walkInForm.gender} onChange={e => setWalkInForm({...walkInForm, gender: e.target.value})} className={`${inputStyles} font-medium`}>
+                  <select disabled={isProcessing} value={walkInForm.gender} onChange={e => setWalkInForm({...walkInForm, gender: e.target.value})} className={`${inputStyles} font-medium`}>
                     <option value="male">♂ Male</option><option value="female">♀ Female</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold mb-1.5 text-slate-700 dark:text-slate-400">Skill Level</label>
-                  <select value={walkInForm.skillLevel} onChange={e => setWalkInForm({...walkInForm, skillLevel: e.target.value})} className={`${inputStyles} font-medium`}>
+                  <select disabled={isProcessing} value={walkInForm.skillLevel} onChange={e => setWalkInForm({...walkInForm, skillLevel: e.target.value})} className={`${inputStyles} font-medium`}>
                     <option value="A1">A1</option><option value="A2">A2</option>
                     <option value="B1">B1</option><option value="B2">B2</option>
                     <option value="C1">C1</option><option value="C2">C2</option>
@@ -1799,8 +2445,8 @@ export default function SessionDetails() {
                 </div>
               </div>
               <div className="flex gap-3 justify-end mt-4">
-                <button type="button" onClick={() => setWalkInModalOpen(false)} className="flex-1 sm:flex-none px-5 py-2.5 text-sm font-medium bg-slate-100 dark:bg-[#1E293B] hover:bg-slate-200 dark:hover:bg-[#334155] rounded-lg transition-colors">Cancel</button>
-                <button type="submit" className="flex-1 sm:flex-none px-6 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors">Add Walk-In</button>
+                <button disabled={isProcessing} type="button" onClick={() => setWalkInModalOpen(false)} className="flex-1 sm:flex-none px-5 py-2.5 text-sm font-medium bg-slate-100 dark:bg-[#1E293B] hover:bg-slate-200 dark:hover:bg-[#334155] rounded-lg transition-colors disabled:opacity-50">Cancel</button>
+                <button disabled={isProcessing} type="submit" className="flex-1 sm:flex-none px-6 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors disabled:opacity-50">Add Walk-In</button>
               </div>
             </form>
           </div>
@@ -1825,10 +2471,10 @@ export default function SessionDetails() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => exportPlayerPDF(selectedDetailPlayer?.id, selectedDetailPlayer?.name, selectedDetailGames)} className="px-4 py-2 bg-blue-50 dark:bg-[#1E293B] text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-[#334155] rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 border border-transparent dark:border-[#334155]">
+                <button disabled={isProcessing} onClick={() => exportPlayerPDF(selectedDetailPlayer?.id || 0, selectedDetailPlayer?.name || 'Unknown', selectedDetailGames)} className="px-4 py-2 bg-blue-50 dark:bg-[#1E293B] text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-[#334155] rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 border border-transparent dark:border-[#334155] disabled:opacity-50">
                   <FileDown size={14}/> {t('export_pdf', 'Export PDF')}
                 </button>
-                <button onClick={() => setPlayerDetailModal(null)} className="p-1.5 text-slate-400 hover:bg-slate-200 dark:hover:bg-[#1E293B] rounded-full transition-colors"><X size={18}/></button>
+                <button disabled={isProcessing} onClick={() => setPlayerDetailModal(null)} className="p-1.5 text-slate-400 hover:bg-slate-200 dark:hover:bg-[#1E293B] rounded-full transition-colors disabled:opacity-50"><X size={18}/></button>
               </div>
             </div>
             
@@ -1847,7 +2493,11 @@ export default function SessionDetails() {
                    <div className="text-[10px] font-bold text-rose-600/70 uppercase tracking-widest mt-1">{t('lost', 'LOST')}</div>
                  </div>
                  <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 p-4 rounded-xl text-center">
-                   <div className="text-2xl font-black text-blue-600 dark:text-blue-400">{selectedDetailGames.length > 0 ? Math.round((selectedDetailGames.filter(g => g.result === 'Won').length / selectedDetailGames.length) * 100) : 0}%</div>
+                   <div className="text-2xl font-black text-blue-600 dark:text-blue-400">
+                     {selectedDetailGames.filter(g => g.result !== 'Ongoing').length > 0 
+                       ? Math.round((selectedDetailGames.filter(g => g.result === 'Won').length / selectedDetailGames.filter(g => g.result !== 'Ongoing').length) * 100) 
+                       : 0}%
+                   </div>
                    <div className="text-[10px] font-bold text-blue-600/70 uppercase tracking-widest mt-1">{t('win_rate', 'WIN RATE')}</div>
                  </div>
               </div>
@@ -1865,7 +2515,11 @@ export default function SessionDetails() {
                        <div className="flex flex-col items-center justify-center px-4 w-1/3 border-x border-slate-100 dark:border-[#1E293B]">
                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold mb-1 border ${getMatchTypeColor(g.type)} whitespace-nowrap`}>{g.type}</span>
                          <span className="font-black text-lg text-slate-900 dark:text-white text-center whitespace-nowrap">
-                            {g.scoreString || `${g.myScore} - ${g.oppScore}`}
+                            {g.result === 'Ongoing' ? (
+                               <span className="text-blue-500 text-sm">Playing...</span>
+                            ) : (
+                               g.scoreString || `${g.myScore} - ${g.oppScore}`
+                            )}
                          </span>
                        </div>
                        <div className="flex flex-col gap-1 w-1/3 text-right">
@@ -1874,7 +2528,12 @@ export default function SessionDetails() {
                          <span className="font-bold text-sm truncate">{g.opp2Name}</span>
                        </div>
                      </div>
-                     <div className={`p-4 sm:w-24 shrink-0 flex items-center justify-center font-bold text-sm uppercase tracking-widest ${g.result === 'Won' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20' : g.result === 'Lost' ? 'bg-rose-50 text-rose-600 dark:bg-rose-900/20' : 'bg-slate-50 text-slate-500 dark:bg-[#1E293B]'}`}>
+                     <div className={`p-4 sm:w-24 shrink-0 flex items-center justify-center font-bold text-sm uppercase tracking-widest ${
+                        g.result === 'Won' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20' : 
+                        g.result === 'Lost' ? 'bg-rose-50 text-rose-600 dark:bg-rose-900/20' : 
+                        g.result === 'Ongoing' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 animate-pulse' :
+                        'bg-slate-50 text-slate-500 dark:bg-[#1E293B]'
+                     }`}>
                        {t(g.result.toLowerCase(), g.result)}
                      </div>
                    </div>

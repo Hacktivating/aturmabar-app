@@ -251,6 +251,18 @@ const resources = {
       "status_finished": "FINISHED",
       "session_not_started": "Start the session to enable matchmaking.",
       "session_schedule": "Session & Schedule",
+
+      "leaderboard": "Leaderboard",
+      "by_month": "By Month",
+      "by_session": "By Session",
+      "select_month": "Select Month",
+      "select_session": "Select Session",
+      "rank": "Rank",
+      "player": "Player",
+      "w_l": "W-L",
+      "net_sets": "Net Sets",
+      "net_pts": "Net Pts",
+      "total_pts": "Total Pts",
     }
   },
   id: {
@@ -502,6 +514,18 @@ const resources = {
       "status_finished": "SELESAI",
       "session_not_started": "Mulai sesi untuk mengaktifkan fitur pertandingan.",
       "session_schedule": "Sesi & Jadwal",
+
+      "leaderboard": "Papan Peringkat",
+      "by_month": "Per Bulan",
+      "by_session": "Per Sesi",
+      "select_month": "Pilih Bulan",
+      "select_session": "Pilih Sesi",
+      "rank": "Peringkat",
+      "player": "Pemain",
+      "w_l": "M-K",
+      "net_sets": "Selisih Set",
+      "net_pts": "Selisih Poin",
+      "total_pts": "Total Poin",
     }
   }
 };

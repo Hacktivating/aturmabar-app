@@ -127,11 +127,13 @@ router.post("/:sessionId/auto-generate", async (req: AuthRequest, res) => {
       const teamBWeight = pc.weight + pd.weight;
       if (Math.abs(teamAWeight - teamBWeight) > m) return false;
 
-      const oppCheck = (p1: any, p2: any) => p1.avoidOpponents?.includes(p2.id) || p2.avoidOpponents?.includes(p1.id);
-      if (pa.avoidPartners?.includes(pb.id) || pb.avoidPartners?.includes(pa.id)) return false;
-      if (pc.avoidPartners?.includes(pd.id) || pd.avoidPartners?.includes(pc.id)) return false;
+      // EXPLICIT RESTRICTIONS ENFORCEMENT
+      const oppCheck = (p1: any, p2: any) => p1.avoidOpponentIds?.includes(p2.id) || p2.avoidOpponentIds?.includes(p1.id);
+      if (pa.avoidPartnerIds?.includes(pb.id) || pb.avoidPartnerIds?.includes(pa.id)) return false;
+      if (pc.avoidPartnerIds?.includes(pd.id) || pd.avoidPartnerIds?.includes(pc.id)) return false;
       if (oppCheck(pa, pc) || oppCheck(pa, pd) || oppCheck(pb, pc) || oppCheck(pb, pd)) return false;
 
+      // DYNAMIC HISTORY ENFORCEMENT
       if (!checkHistory(pa, pb, 'partner', histLevel)) return false;
       if (!checkHistory(pc, pd, 'partner', histLevel)) return false;
       if (!checkHistory(pa, pc, 'opponent', histLevel) || !checkHistory(pa, pd, 'opponent', histLevel)) return false;
@@ -248,7 +250,6 @@ router.put("/:matchId/score", async (req: AuthRequest, res) => {
   }
 });
 
-// PUT: Finish and clear match from active court tracking
 // PUT: Finish and clear match from active court tracking
 router.put("/:matchId/finish", async (req: AuthRequest, res) => {
   try {

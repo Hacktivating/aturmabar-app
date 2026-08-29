@@ -5,7 +5,7 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   email: text("email").notNull().unique(),
-  pendingEmail: text("pending_email"), // Added for email change flow
+  pendingEmail: text("pending_email"),
   passwordHash: text("password_hash").notNull(),
   isVerified: boolean("is_verified").default(false).notNull(),
   role: text("role").default("community").notNull(),
@@ -33,7 +33,7 @@ export const communities = pgTable("communities", {
   logo: text("logo"),
   ownerId: integer("owner_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   subscriptionStatus: text("subscription_status").default("inactive").notNull(), // 'active', 'inactive', 'lifetime'
-  subscriptionEndsAt: timestamp("subscription_ends_at"), // NEW COLUMN
+  subscriptionEndsAt: timestamp("subscription_ends_at"),
   socialMedia: jsonb("social_media").$type<{ platform: string; url: string }[]>().default([]).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -43,40 +43,28 @@ export const members = pgTable("members", {
   communityId: integer("community_id").references(() => communities.id, { onDelete: "cascade" }).notNull(),
   name: text("name").notNull(),
   phone: text("phone"),
-  gender: text("gender").default("male"),
+  gender: text("gender").default("male").notNull(),
   skillLevel: text("skill_level").default("C1").notNull(),
-  avoidPartners: integer("avoid_partners").array().default([]),
-  avoidOpponents: integer("avoid_opponents").array().default([]),
+  avoidPartnerIds: integer("avoid_partner_ids").array().default([]),
+  avoidOpponentIds: integer("avoid_opponent_ids").array().default([]),
   status: text("status").default("active").notNull(),
   joinedAt: timestamp("joined_at").defaultNow().notNull(),
 });
-
-export const communitiesRelations = relations(communities, ({ many }) => ({
-  members: many(members),
-  sessions: many(sessions),
-}));
-
-export const membersRelations = relations(members, ({ one, many }) => ({
-  community: one(communities, {
-    fields: [members.communityId],
-    references: [communities.id],
-  }),
-  attendances: many(sessionAttendances),
-}));
 
 export const sessions = pgTable("sessions", {
   id: serial("id").primaryKey(),
   communityId: integer("community_id").references(() => communities.id, { onDelete: "cascade" }).notNull(),
   name: text("name").notNull(),
   date: timestamp("date").notNull(),
-  scoringSystem: text("scoring_system").default("BWF 21 Points x 3 Sets").notNull(), // e.g., 'BWF 21 Points x 3 Sets', 'Custom'
+  scoringSystem: text("scoring_system").default("BWF 21 Points x 3 Sets").notNull(),
   customSets: integer("custom_sets"),
   customPoints: integer("custom_points"),
   pairingRule: text("pairing_rule").default("strict").notNull(), // 'very_strict', 'strict', 'moderate', 'randomize'
   status: text("status").default("scheduled").notNull(), // 'scheduled', 'active', 'finished'
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  matchLimit: integer("match_limit").default(0), // 0 indicates infinite matches
   startedAt: timestamp("started_at"),
   endedAt: timestamp("ended_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const sessionCourts = pgTable("session_courts", {
@@ -98,7 +86,7 @@ export const sessionAttendances = pgTable("session_attendances", {
 export const matches = pgTable("matches", {
   id: serial("id").primaryKey(),
   sessionId: integer("session_id").references(() => sessions.id, { onDelete: "cascade" }).notNull(),
-  courtId: integer("court_id").references(() => sessionCourts.id, { onDelete: "set null" }), // Nullable for queued matches
+  courtId: integer("court_id").references(() => sessionCourts.id, { onDelete: "set null" }),
   teamA_player1: integer("team_a_p1").references(() => members.id),
   teamA_player2: integer("team_a_p2").references(() => members.id),
   teamB_player1: integer("team_b_p1").references(() => members.id),
@@ -117,6 +105,20 @@ export const matches = pgTable("matches", {
   startedAt: timestamp("started_at"),
   endedAt: timestamp("ended_at"),
 });
+
+// Relations
+export const communitiesRelations = relations(communities, ({ many }) => ({
+  members: many(members),
+  sessions: many(sessions),
+}));
+
+export const membersRelations = relations(members, ({ one, many }) => ({
+  community: one(communities, {
+    fields: [members.communityId],
+    references: [communities.id],
+  }),
+  attendances: many(sessionAttendances),
+}));
 
 export const sessionsRelations = relations(sessions, ({ one, many }) => ({
   community: one(communities, {

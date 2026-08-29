@@ -10,8 +10,8 @@ interface Member {
   phone: string;
   gender: string;
   skillLevel: string;
-  avoidPartners: number[];
-  avoidOpponents: number[];
+  avoidPartnerIds: number[]; // FIXED: Removed extra 's'
+  avoidOpponentIds: number[]; // FIXED: Removed extra 's'
   status: string;
 }
 
@@ -92,7 +92,8 @@ export default function Members() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [targetId, setTargetId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
-    name: '', phone: '', gender: 'male', skillLevel: 'C1', avoidPartners: [] as number[], avoidOpponents: [] as number[], status: 'active'
+    // FIXED: Matched exact keys from backend
+    name: '', phone: '', gender: 'male', skillLevel: 'C1', avoidPartnerIds: [] as number[], avoidOpponentIds: [] as number[], status: 'active'
   });
 
   useEffect(() => {
@@ -153,7 +154,7 @@ export default function Members() {
 
   const openCreateModal = () => {
     setIsEditMode(false); setTargetId(null);
-    setFormData({ name: '', phone: '', gender: 'male', skillLevel: 'C1', avoidPartners: [], avoidOpponents: [], status: 'active' });
+    setFormData({ name: '', phone: '', gender: 'male', skillLevel: 'C1', avoidPartnerIds: [], avoidOpponentIds: [], status: 'active' });
     setIsModalOpen(true);
     setTimeout(() => {
       nameInputRef.current?.focus();
@@ -162,7 +163,16 @@ export default function Members() {
 
   const openEditModal = (member: Member) => {
     setIsEditMode(true); setTargetId(member.id);
-    setFormData({ name: member.name, phone: member.phone || '', gender: member.gender || 'male', skillLevel: member.skillLevel, avoidPartners: member.avoidPartners || [], avoidOpponents: member.avoidOpponents || [], status: member.status });
+    // FIXED: Now hydrating form with precise keys
+    setFormData({ 
+        name: member.name, 
+        phone: member.phone || '', 
+        gender: member.gender || 'male', 
+        skillLevel: member.skillLevel, 
+        avoidPartnerIds: member.avoidPartnerIds || [], 
+        avoidOpponentIds: member.avoidOpponentIds || [], 
+        status: member.status 
+    });
     setIsModalOpen(true);
   };
 
@@ -408,6 +418,7 @@ export default function Members() {
                   </div>
                 </div>
 
+                {/* PAIRING RESTRICTIONS SECTION */}
                 <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
                   <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">{t('pairing_restrictions')}</h4>
                   <div className="flex flex-col gap-4">
@@ -415,8 +426,8 @@ export default function Members() {
                       <label className={labelStyles}>{t('avoid_partner')}</label>
                       <SearchableMultiSelect 
                         options={members.filter(m => m.id !== targetId)} 
-                        value={formData.avoidPartners} 
-                        onChange={val => setFormData({...formData, avoidPartners: val})} 
+                        value={formData.avoidPartnerIds} 
+                        onChange={val => setFormData({...formData, avoidPartnerIds: val})} 
                         placeholder={t('search_restrict')} 
                       />
                     </div>
@@ -424,8 +435,8 @@ export default function Members() {
                       <label className={labelStyles}>{t('avoid_opponent')}</label>
                       <SearchableMultiSelect 
                         options={members.filter(m => m.id !== targetId)} 
-                        value={formData.avoidOpponents} 
-                        onChange={val => setFormData({...formData, avoidOpponents: val})} 
+                        value={formData.avoidOpponentIds} 
+                        onChange={val => setFormData({...formData, avoidOpponentIds: val})} 
                         placeholder={t('search_restrict')} 
                       />
                     </div>

@@ -35,7 +35,7 @@ router.get("/", async (req: AuthRequest, res) => {
 // POST: Add a new member
 router.post("/", async (req: AuthRequest, res) => {
   try {
-    const { name, phone, gender, skillLevel, avoidPartners, avoidOpponents, status } = req.body;
+    const { name, phone, gender, skillLevel, avoidPartnerIds, avoidOpponentIds, status } = req.body;
     if (!name) return res.status(400).json({ error: "Member name is required." });
 
     const community = await getCommunity(req.user!.userId);
@@ -47,8 +47,8 @@ router.post("/", async (req: AuthRequest, res) => {
         phone: phone || null,
         gender: gender || "male",
         skillLevel: skillLevel || "C1",
-        avoidPartners: avoidPartners || [],
-        avoidOpponents: avoidOpponents || [],
+        avoidPartnerIds: avoidPartnerIds || [],
+        avoidOpponentIds: avoidOpponentIds || [],
         status: status || "active",
     });
 
@@ -63,7 +63,7 @@ router.post("/", async (req: AuthRequest, res) => {
 router.put("/:id", async (req: AuthRequest, res) => {
   try {
     const memberId = parseInt(String(req.params.id), 10);
-    const { name, phone, gender, skillLevel, avoidPartners, avoidOpponents, status } = req.body;
+    const { name, phone, gender, skillLevel, avoidPartnerIds, avoidOpponentIds, status } = req.body;
 
     const community = await getCommunity(req.user!.userId);
     if (!community) return res.status(404).json({ error: "Community not found." });
@@ -77,7 +77,7 @@ router.put("/:id", async (req: AuthRequest, res) => {
     if (!existingMember) return res.status(404).json({ error: "Member not found or unauthorized." });
 
     await db.update(members)
-        .set({ name, phone, gender, skillLevel, avoidPartners, avoidOpponents, status })
+        .set({ name, phone, gender, skillLevel, avoidPartnerIds, avoidOpponentIds, status })
         .where(eq(members.id, memberId));
 
     res.status(200).json({ message: "Member updated successfully." });
