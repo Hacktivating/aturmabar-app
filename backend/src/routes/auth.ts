@@ -52,16 +52,13 @@ router.post("/register", async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Insert user
     const [newUser] = await db
       .insert(users)
       .values({ username, email, passwordHash, isVerified: false })
       .returning();
 
-    // Generate URL-friendly slug
     const slug = communityName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
 
-    // Insert community
     await db.insert(communities).values({
       name: communityName,
       slug: slug,
@@ -75,7 +72,11 @@ router.post("/register", async (req, res) => {
 
     await db.insert(verificationTokens).values({ userId: newUser.id, token, expiresAt });
     
-    try { await sendVerificationEmail(email, token); } catch (mailErr) { console.error(mailErr); }
+    // CAPTURE DYNAMIC ORIGIN (e.g., http://192.168.x.x:5173)
+    const clientUrl = req.headers.origin || process.env.CLIENT_URL || "http://localhost:5173";
+
+    // PASS TO MAILER
+    try { await sendVerificationEmail(email, token, clientUrl); } catch (mailErr) { console.error(mailErr); }
 
     return res.status(201).json({ message: "Registration successful. Please verify your email." });
   } catch (error) {
@@ -183,12 +184,11 @@ router.post("/forgot-password", async (req, res) => {
     });
 
     if (!user) {
-      // Return 200 even if user doesn't exist to prevent email enumeration
       return res.status(200).json({ message: "If an account exists, a reset link has been sent." });
     }
 
     const token = crypto.randomBytes(32).toString("hex");
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour expiration
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); 
 
     await db.insert(passwordResetTokens).values({
       userId: user.id,
@@ -196,7 +196,11 @@ router.post("/forgot-password", async (req, res) => {
       expiresAt,
     });
 
-    await sendPasswordResetEmail(user.email, token);
+    // CAPTURE DYNAMIC ORIGIN
+    const clientUrl = req.headers.origin || process.env.CLIENT_URL || "http://localhost:5173";
+
+    // PASS TO MAILER
+    await sendPasswordResetEmail(user.email, token, clientUrl);
 
     return res.status(200).json({ message: "If an account exists, a reset link has been sent." });
   } catch (error) {

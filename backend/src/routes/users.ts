@@ -76,7 +76,12 @@ router.post("/request-email", async (req: AuthRequest, res) => {
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
     await db.insert(verificationTokens).values({ userId, token, expiresAt });
     
-    await sendEmailChangeVerification(newEmail, token);
+    // Capture the dynamic origin from the device making the request
+    const clientUrl = req.headers.origin || process.env.CLIENT_URL || "http://localhost:5173";
+    
+    // Pass the clientUrl to the mailer function
+    await sendEmailChangeVerification(newEmail, token, clientUrl);
+    
     res.status(200).json({ message: "Verification link sent to new email." });
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });

@@ -728,20 +728,20 @@ export default function SessionDetails() {
   function getInitialCourtName(cId: number) { return courts.find(c => c.id === cId)?.name; }
 
   const getOptionsFor = (currentKey: 'ta1'|'ta2'|'tb1'|'tb2') => {
-    const selectedIds = Object.entries(manualPlayers).filter(([k]) => k !== currentKey).map(([k, v]) => v);
+    const selectedIds = Object.entries(manualPlayers).filter(([k]) => k !== currentKey).map(([, v]) => v);
     return availableForManualMatch.filter(m => !selectedIds.includes(m.id));
   };
 
   const getSwapListFor = (currentKey: 'ta1'|'ta2'|'tb1'|'tb2') => {
     return Object.entries(manualPlayers)
       .filter(([k, v]) => k !== currentKey && v !== 0)
-      .map(([k, v]) => ({ id: v, name: getMemberData(v)?.name || '' }));
+      .map(([, v]) => ({ id: v, name: getMemberData(v)?.name || '' }));
   };
 
   const getHistorySwapListFor = (currentKey: 'ta1'|'ta2'|'tb1'|'tb2') => {
     return Object.entries(historyForm).filter(([k]) => k.startsWith('t'))
       .filter(([k, v]) => k !== currentKey && v !== 0)
-      .map(([k, v]) => ({ id: v, name: getMemberData(v as number)?.name || '' }));
+      .map(([, v]) => ({ id: v, name: getMemberData(v as number)?.name || '' }));
   };
 
   // Player Detail Variables
@@ -901,7 +901,7 @@ export default function SessionDetails() {
     addToast("Session PDF Exported successfully!");
   };
 
-  const exportPlayerPDF = (memberId: number, memberName: string, playedGames: any[]) => {
+  const exportPlayerPDF = (_memberId: number, memberName: string, playedGames: any[]) => {
     const doc = new jsPDF();
     const tableStartY = applyPDFHeaderFooter(doc, `Player Report: ${memberName}`, `Session: ${session?.name} | Date: ${new Date(session?.date).toLocaleString(i18n.language)}`);
 
@@ -924,7 +924,7 @@ export default function SessionDetails() {
       alternateRowStyles: { fillColor: [248, 250, 252] },
       didParseCell: function (data) {
         if (data.section === 'body') {
-          const result = data.row.raw[5];
+          const result = (data.row.raw as any[])[5];
           
           if (data.column.index === 1) {
             data.cell.styles.textColor = [100, 116, 139]; // slate-500
@@ -1391,7 +1391,7 @@ export default function SessionDetails() {
             
             {session?.status === 'active' && (
               <>
-                <SessionGlobalTimer session={session} />
+                <SessionGlobalTimer startedAt={session?.startedAt} />
                 <button disabled={isProcessing} onClick={handleEndSession} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-colors shadow-sm disabled:opacity-50">
                   <Square size={16} fill="currentColor"/> {t('end_session', 'End Session')}
                 </button>
@@ -2028,7 +2028,7 @@ export default function SessionDetails() {
 
             {/* Mobile Playtime Cards */}
             <div className="sm:hidden flex flex-col gap-3">
-              {playtimeData.map(({ member, attendance, playedGames }) => (
+              {playtimeData.map(({ member, playedGames }) => (
                 <div key={member.id} className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] p-4 rounded-xl shadow-sm flex flex-col gap-3">
                   <div className="flex justify-between items-start">
                     <div className="flex flex-col cursor-pointer" onClick={() => setPlayerDetailModal(member.id)}>

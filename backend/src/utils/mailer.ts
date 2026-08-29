@@ -13,8 +13,8 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-export const sendVerificationEmail = async (toEmail: string, token: string) => {
-  const verifyUrl = `${process.env.CLIENT_URL}/verify-email?token=${token}`;
+export const sendVerificationEmail = async (toEmail: string, token: string, clientUrl: string) => {
+  const verifyUrl = `${clientUrl}/verify-email?token=${token}`;
 
   const mailOptions = {
     from: `"AturMabar" <${process.env.EMAIL_USER}>`,
@@ -36,8 +36,8 @@ export const sendVerificationEmail = async (toEmail: string, token: string) => {
   await transporter.sendMail(mailOptions);
 };
 
-export const sendPasswordResetEmail = async (toEmail: string, token: string) => {
-  const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
+export const sendPasswordResetEmail = async (toEmail: string, token: string, clientUrl: string) => {
+  const resetUrl = `${clientUrl}/reset-password?token=${token}`;
 
   const mailOptions = {
     from: `"AturMabar" <${process.env.EMAIL_USER}>`,
@@ -59,8 +59,9 @@ export const sendPasswordResetEmail = async (toEmail: string, token: string) => 
   await transporter.sendMail(mailOptions);
 };
 
-export const sendEmailChangeVerification = async (toEmail: string, token: string) => {
-  const verifyUrl = `${process.env.CLIENT_URL}/verify-email-change?token=${token}`;
+export const sendEmailChangeVerification = async (toEmail: string, token: string, clientUrl: string) => {
+  const verifyUrl = `${clientUrl}/verify-email-change?token=${token}`;
+  
   const mailOptions = {
     from: `"AturMabar" <${process.env.EMAIL_USER}>`,
     to: toEmail,
@@ -76,5 +77,6 @@ export const sendEmailChangeVerification = async (toEmail: string, token: string
       </div>
     `,
   };
+  
   await transporter.sendMail(mailOptions);
 };

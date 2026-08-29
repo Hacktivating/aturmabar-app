@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, Link } from 'react-router-dom';
 import { Trophy, Calendar, SquareStack, ArrowLeft, Zap, Globe, Sun, Moon, Settings as SettingsIcon, LogOut, Medal, ChevronDown } from 'lucide-react';
