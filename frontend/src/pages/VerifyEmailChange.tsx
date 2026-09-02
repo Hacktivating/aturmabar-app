@@ -10,7 +10,7 @@ export default function VerifyEmailChange() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get('token');
-  
+
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
   const hasCalledAPI = useRef(false);
@@ -30,10 +30,10 @@ export default function VerifyEmailChange() {
         const response = await api.post('/auth/verify-email-change', { token });
         setStatus('success');
         setMessage(response.data.message || t('verify_email_success'));
-        
+
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        
+
         setTimeout(() => navigate('/login'), 3000);
       } catch (error: any) {
         setStatus('error');
@@ -45,27 +45,27 @@ export default function VerifyEmailChange() {
   }, [token, navigate, t]);
 
   return (
-    <AuthLayout title={t('verify_title')}>
+    <AuthLayout title={t('verify_email_change_title')}>
       <div className="flex flex-col items-center justify-center py-8 text-center animate-in zoom-in-95 duration-300">
         {status === 'loading' && (
           <>
-            <Loader2 className="animate-spin text-blue-600 mb-4" size={48} />
-            <p className="text-slate-600 dark:text-slate-400">{t('verifying')}</p>
+            <Loader2 className="animate-spin text-ink mb-4" size={48} />
+            <p className="text-muted-ink dark:text-muted-dark">{t('verification_pending')}</p>
           </>
         )}
-        
+
         {status === 'success' && (
           <>
             <CheckCircle className="text-emerald-500 mb-4" size={48} />
-            <p className="text-emerald-700 dark:text-emerald-400 font-semibold">{message}</p>
-            <p className="text-sm text-slate-500 mt-2">{t('redirect_login')}</p>
+            <p className="font-semibold text-primary dark:text-primary-dark">{message}</p>
+            <p className="mt-2 text-sm text-muted-ink dark:text-muted-dark">{t('verification_success_redirect')}</p>
           </>
         )}
 
         {status === 'error' && (
           <>
             <XCircle className="text-rose-500 mb-4" size={48} />
-            <p className="text-rose-700 dark:text-rose-400 font-semibold">{message}</p>
+            <p className="font-semibold text-primary dark:text-primary-dark">{message}</p>
           </>
         )}
       </div>

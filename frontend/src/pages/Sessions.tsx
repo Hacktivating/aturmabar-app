@@ -18,17 +18,17 @@ interface Session {
 export default function Sessions() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  
+
   const [communityData, setCommunityData] = useState<any>(null);
   const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark');
-  
+
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState('');
-  
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -37,14 +37,14 @@ export default function Sessions() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [formData, setFormData] = useState({
-    name: '', 
-    date: '', 
-    courtCount: 3, 
-    scoringSystem: 'BWF 21 Points x 3 Sets', 
-    customSets: 3, 
-    customPoints: 21, 
+    name: '',
+    date: '',
+    courtCount: 3,
+    scoringSystem: 'BWF 21 Points x 3 Sets',
+    customSets: 3,
+    customPoints: 21,
     pairingRule: 'strict',
-    matchLimit: 0 
+    matchLimit: 0
   });
 
   useEffect(() => {
@@ -113,8 +113,8 @@ export default function Sessions() {
       await api.post('/sessions', payload);
       setIsModalOpen(false);
       fetchInitializationData();
-    } catch (err: any) { 
-      alert(err.response?.data?.error || t('op_failed')); 
+    } catch (err: any) {
+      alert(err.response?.data?.error || t('op_failed'));
     } finally {
       setIsProcessing(false);
     }
@@ -122,8 +122,8 @@ export default function Sessions() {
 
   const handleDelete = async (id: number) => {
     if (!window.confirm(t('delete_confirm') || "Delete this session?")) return;
-    try { 
-      await api.delete(`/sessions/${id}`); 
+    try {
+      await api.delete(`/sessions/${id}`);
       fetchInitializationData();
     } catch (err) { alert(t('delete_failed')); }
   };
@@ -139,48 +139,48 @@ export default function Sessions() {
 
   const getStatusBadge = (status: string) => {
     if (status === 'active') return <span className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 px-3 py-1 rounded-md text-[11px] font-bold tracking-widest uppercase">ACTIVE</span>;
-    if (status === 'finished' || status === 'ended') return <span className="bg-slate-100 text-slate-700 dark:bg-[#1E293B] dark:text-slate-400 px-3 py-1 rounded-md text-[11px] font-bold tracking-widest uppercase">FINISHED</span>;
-    return <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-500 px-3 py-1 rounded-md text-[11px] font-bold tracking-widest uppercase">SCHEDULED</span>;
+    if (status === 'finished' || status === 'ended') return <span className="bg-muted text-primary-soft dark:bg-elevated-dark dark:text-faint px-3 py-1 rounded-md text-[11px] font-bold tracking-widest uppercase">FINISHED</span>;
+    return <span className="bg-accent-soft text-ink dark:bg-accent-soft-dark dark:text-ink px-3 py-1 rounded-md text-[11px] font-bold tracking-widest uppercase">SCHEDULED</span>;
   };
 
   const currentLocalDateTime = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
-  const inputStyles = "w-full px-4 py-3 bg-slate-50 dark:bg-[#0F172A] border border-slate-300 dark:border-[#1E293B] rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-900 dark:text-slate-100";
-  const labelStyles = "block text-xs font-semibold mb-2 text-slate-700 dark:text-slate-400";
+  const inputStyles = "w-full px-4 py-3 bg-app dark:bg-surface-dark border border-default dark:border-subtle-dark rounded-xl text-sm outline-none focus:ring-2 focus:ring-ink transition-all text-primary dark:text-primary-dark";
+  const labelStyles = "block text-xs font-semibold mb-2 text-primary-soft dark:text-faint";
 
   // Derive dropdown type for modal
   const formLimitType = formData.matchLimit === 0 ? 'all' : ([1,2,3,4,5].includes(formData.matchLimit) ? String(formData.matchLimit) : 'custom');
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0B1120] text-slate-900 dark:text-slate-100 font-sans flex flex-col">
-      
+    <div className="min-h-screen bg-app dark:bg-app-dark text-primary dark:text-primary-dark font-sans flex flex-col">
+
       {/* Top Navigation */}
-      <nav className="h-16 border-b border-slate-200 dark:border-[#1E293B] bg-white dark:bg-[#0F172A] sticky top-0 z-30 shrink-0">
+      <nav className="h-16 border-b border-subtle dark:border-subtle-dark bg-surface dark:bg-surface-dark sticky top-0 z-30 shrink-0">
         <div className="max-w-7xl mx-auto w-full h-full flex justify-between items-center px-4 sm:px-8">
           <div className="flex items-center gap-2">
-            <div className="bg-blue-600 p-1.5 rounded-md flex items-center justify-center text-white shrink-0">
+            <div className="bg-ink dark:bg-ink-dark p-1.5 rounded-md flex items-center justify-center text-white dark:text-ink shrink-0">
               <Zap size={18} fill="currentColor" />
             </div>
             <span className="text-lg sm:text-xl font-bold tracking-tight hidden sm:block">AturMabar</span>
           </div>
-          
+
           <div className="flex items-center gap-2 sm:gap-4">
-            <div className="flex items-center gap-2 pr-2 sm:pr-4 border-r border-slate-200 dark:border-[#1E293B] max-w-[140px] sm:max-w-xs">
-              <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] flex items-center justify-center text-sm shrink-0 overflow-hidden">
+            <div className="flex items-center gap-2 pr-2 sm:pr-4 border-r border-subtle dark:border-subtle-dark max-w-[140px] sm:max-w-xs">
+              <div className="w-8 h-8 rounded-full bg-muted dark:bg-elevated-dark border border-subtle dark:border-strong-dark flex items-center justify-center text-sm shrink-0 overflow-hidden">
                 {communityData?.logo?.startsWith('data:image') ? <img src={communityData.logo} alt="logo" className="w-full h-full object-cover"/> : communityData?.logo || '🏸'}
               </div>
               <span className="text-sm font-semibold truncate hidden sm:block">{communityData?.name}</span>
             </div>
 
-            <button onClick={toggleLanguage} className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors px-2 py-1.5 rounded-lg">
+            <button onClick={toggleLanguage} className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-muted-ink dark:text-faint hover:text-ink dark:hover:text-ink-dark transition-colors px-2 py-1.5 rounded-lg">
               <Globe size={16} />
               {i18n.language.toUpperCase()}
             </button>
-            <button onClick={() => setIsDark(!isDark)} className="p-1.5 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 rounded-lg transition-colors">
+            <button onClick={() => setIsDark(!isDark)} className="p-1.5 text-muted-ink hover:text-ink dark:text-faint dark:hover:text-ink-dark rounded-lg transition-colors">
               {isDark ? <Sun size={18} /> : <Moon size={18} />}
             </button>
 
-            <button onClick={() => navigate('/dashboard')} className="p-1.5 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 rounded-lg transition-colors shrink-0" title="Settings / Dashboard">
+            <button onClick={() => navigate('/dashboard')} className="p-1.5 text-muted-ink hover:text-ink dark:text-faint dark:hover:text-ink-dark rounded-lg transition-colors shrink-0" title="Settings / Dashboard">
               <Settings size={18} />
             </button>
             <button onClick={handleLogout} className="flex items-center gap-2 text-sm text-rose-600 font-medium hover:bg-rose-50 dark:hover:bg-rose-900/20 px-2 sm:px-3 py-1.5 rounded-lg transition-colors shrink-0">
@@ -192,7 +192,7 @@ export default function Sessions() {
 
       <main className="flex-1 p-4 sm:p-8 max-w-7xl w-full mx-auto flex flex-col relative">
         <div className="flex items-center gap-4 mb-6 sm:mb-8 shrink-0">
-          <Link to="/dashboard" className="p-2 sm:p-2.5 bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] rounded-xl hover:bg-slate-100 dark:hover:bg-[#334155]/80 transition-colors shrink-0">
+          <Link to="/dashboard" className="p-2 sm:p-2.5 bg-app dark:bg-elevated-dark border border-subtle dark:border-strong-dark rounded-xl hover:bg-muted dark:hover:bg-strong-dark/80 transition-colors shrink-0">
             <ArrowLeft size={20} />
           </Link>
           <div>
@@ -203,27 +203,27 @@ export default function Sessions() {
         <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6 shrink-0">
           <div className="flex flex-col sm:flex-row gap-3 w-full sm:max-w-xl">
             <div className="relative w-full">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input type="text" placeholder={t('search_sessions') || "Search session name..."} value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} className="w-full pl-11 pr-4 py-3 bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl shadow-sm outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium"/>
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-faint" size={18} />
+              <input type="text" placeholder={t('search_sessions') || "Search session name..."} value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} className="w-full pl-11 pr-4 py-3 bg-surface dark:bg-surface-dark border border-subtle dark:border-subtle-dark rounded-xl shadow-sm outline-none focus:ring-2 focus:ring-ink text-sm font-medium"/>
             </div>
             <div className="relative w-full sm:w-64">
-              <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input type="date" value={dateFilter} onChange={(e) => { setDateFilter(e.target.value); setCurrentPage(1); }} className={`w-full pl-11 pr-4 py-3 bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl shadow-sm outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium text-slate-500 dark:text-slate-400 [&::-webkit-calendar-picker-indicator]:dark:invert`}/>
+              <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-faint" size={18} />
+              <input type="date" value={dateFilter} onChange={(e) => { setDateFilter(e.target.value); setCurrentPage(1); }} className={`w-full pl-11 pr-4 py-3 bg-surface dark:bg-surface-dark border border-subtle dark:border-subtle-dark rounded-xl shadow-sm outline-none focus:ring-2 focus:ring-ink text-sm font-medium text-muted-ink dark:text-faint [&::-webkit-calendar-picker-indicator]:dark:invert`}/>
             </div>
           </div>
-          <button onClick={openCreateModal} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl text-sm font-bold transition-colors shadow-sm shrink-0">
+          <button onClick={openCreateModal} className="flex items-center justify-center gap-2 bg-ink hover:bg-ink-soft text-white px-6 py-3 rounded-xl text-sm font-bold transition-colors shadow-sm shrink-0">
             <Plus size={18} /> {t('create_session')}
           </button>
         </div>
 
         {/* Data Container */}
-        <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-2xl shadow-sm overflow-hidden flex flex-col flex-1 min-h-[400px]">
-          
+        <div className="bg-surface dark:bg-surface-dark border border-subtle dark:border-subtle-dark rounded-2xl shadow-sm overflow-hidden flex flex-col flex-1 min-h-[400px]">
+
           {loading ? (
-            <div className="flex-1 flex items-center justify-center text-slate-500 p-8">{t('loading')}</div>
+            <div className="flex-1 flex items-center justify-center text-muted-ink p-8">{t('loading')}</div>
           ) : paginatedSessions.length === 0 ? (
-            <div className="flex-1 flex items-center justify-center text-slate-500 p-8 flex-col gap-3">
-              <CalendarDays size={48} className="text-slate-300 dark:text-slate-700" />
+            <div className="flex-1 flex items-center justify-center text-muted-ink p-8 flex-col gap-3">
+              <CalendarDays size={48} className="text-muted-ink dark:text-primary-soft" />
               <span>{t('no_sessions')}</span>
             </div>
           ) : (
@@ -231,8 +231,8 @@ export default function Sessions() {
               {/* Desktop Table View */}
               <div className="hidden sm:block overflow-x-auto flex-1">
                 <table className="w-full text-left border-collapse min-w-[800px]">
-                  <thead className="bg-slate-50 dark:bg-[#0B1120] border-b border-slate-200 dark:border-[#1E293B] sticky top-0 z-10">
-                    <tr className="text-xs uppercase tracking-widest text-slate-500 font-bold">
+                  <thead className="bg-app dark:bg-app-dark border-b border-subtle dark:border-subtle-dark sticky top-0 z-10">
+                    <tr className="text-xs uppercase tracking-widest text-muted-ink font-bold">
                       <th className="p-5 w-1/3">Session Name</th>
                       <th className="p-5 w-1/4">Date & Time</th>
                       <th className="p-5 w-1/6">Status</th>
@@ -241,9 +241,9 @@ export default function Sessions() {
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-[#1E293B]">
                     {paginatedSessions.map((session) => (
-                      <tr key={session.id} onClick={() => navigate(`/sessions/${session.id}`)} className="hover:bg-slate-50 dark:hover:bg-[#1E293B]/30 transition-colors cursor-pointer group">
-                        <td className="p-5 font-bold text-base dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{session.name}</td>
-                        <td className="p-5 text-sm font-medium text-slate-500 dark:text-slate-400">
+                      <tr key={session.id} onClick={() => navigate(`/sessions/${session.id}`)} className="hover:bg-app dark:hover:bg-elevated-dark/30 transition-colors cursor-pointer group">
+                        <td className="p-5 font-bold text-base dark:text-primary-dark group-hover:text-ink dark:group-hover:text-ink-dark transition-colors">{session.name}</td>
+                        <td className="p-5 text-sm font-medium text-muted-ink dark:text-faint">
                           {new Date(session.date).toLocaleString(i18n.language, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
                         </td>
                         <td className="p-5">
@@ -256,7 +256,7 @@ export default function Sessions() {
                                 <PlayCircle size={16} /> {t('start_session')}
                               </button>
                             )}
-                            <button onClick={(e) => { e.stopPropagation(); handleDelete(session.id); }} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors">
+                            <button onClick={(e) => { e.stopPropagation(); handleDelete(session.id); }} className="p-1.5 text-faint hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors">
                               <Trash2 size={18}/>
                             </button>
                           </div>
@@ -270,22 +270,22 @@ export default function Sessions() {
               {/* Mobile Card View */}
               <div className="sm:hidden flex flex-col flex-1 divide-y divide-slate-100 dark:divide-[#1E293B] overflow-y-auto">
                 {paginatedSessions.map((session) => (
-                  <div key={session.id} onClick={() => navigate(`/sessions/${session.id}`)} className="p-4 flex flex-col gap-3 hover:bg-slate-50 dark:hover:bg-[#1E293B]/30 transition-colors cursor-pointer">
+                  <div key={session.id} onClick={() => navigate(`/sessions/${session.id}`)} className="p-4 flex flex-col gap-3 hover:bg-app dark:hover:bg-elevated-dark/30 transition-colors cursor-pointer">
                     <div className="flex justify-between items-start">
                       <div>
                         <div className="font-bold text-base mb-1">{session.name}</div>
-                        <div className="text-xs font-medium text-slate-500">
+                        <div className="text-xs font-medium text-muted-ink">
                           {new Date(session.date).toLocaleString(i18n.language, { dateStyle: 'medium', timeStyle: 'short' })}
                         </div>
                       </div>
                       {getStatusBadge(session.status || 'scheduled')}
                     </div>
-                    
-                    <div className="flex items-center justify-between mt-2 pt-3 border-t border-slate-100 dark:border-[#1E293B]">
-                      <button onClick={(e) => { e.stopPropagation(); handleDelete(session.id); }} className="p-2 text-slate-400 hover:text-rose-600 bg-slate-50 dark:bg-[#1E293B] rounded-lg transition-colors">
+
+                    <div className="flex items-center justify-between mt-2 pt-3 border-t border-subtle dark:border-subtle-dark">
+                      <button onClick={(e) => { e.stopPropagation(); handleDelete(session.id); }} className="p-2 text-faint hover:text-rose-600 bg-app dark:bg-elevated-dark rounded-lg transition-colors">
                         <Trash2 size={16}/>
                       </button>
-                      
+
                       {(!session.status || session.status === 'scheduled') && (
                         <button onClick={(e) => { e.stopPropagation(); handleStartSession(session.id); }} className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2 rounded-lg transition-colors">
                           <PlayCircle size={16} /> {t('start_session')}
@@ -300,13 +300,13 @@ export default function Sessions() {
 
           {/* Pagination UI */}
           {!loading && totalPages > 1 && (
-            <div className="mt-auto p-4 border-t border-slate-200 dark:border-[#1E293B] flex items-center justify-between bg-slate-50 dark:bg-[#0B1120] shrink-0">
-              <span className="text-xs text-slate-500 font-medium">
+            <div className="mt-auto p-4 border-t border-subtle dark:border-subtle-dark flex items-center justify-between bg-app dark:bg-app-dark shrink-0">
+              <span className="text-xs text-muted-ink font-medium">
                 {t('page_of').replace('{{current}}', currentPage.toString()).replace('{{total}}', totalPages.toString())}
               </span>
               <div className="flex gap-2">
-                <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="p-2 border border-slate-200 dark:border-[#1E293B] rounded-lg bg-white dark:bg-[#0F172A] disabled:opacity-50 hover:bg-slate-100 dark:hover:bg-[#1E293B] transition-colors"><ChevronLeft size={16}/></button>
-                <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="p-2 border border-slate-200 dark:border-[#1E293B] rounded-lg bg-white dark:bg-[#0F172A] disabled:opacity-50 hover:bg-slate-100 dark:hover:bg-[#1E293B] transition-colors"><ChevronRight size={16}/></button>
+                <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="p-2 border border-subtle dark:border-subtle-dark rounded-lg bg-surface dark:bg-surface-dark disabled:opacity-50 hover:bg-muted dark:hover:bg-elevated-dark transition-colors"><ChevronLeft size={16}/></button>
+                <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="p-2 border border-subtle dark:border-subtle-dark rounded-lg bg-surface dark:bg-surface-dark disabled:opacity-50 hover:bg-muted dark:hover:bg-elevated-dark transition-colors"><ChevronRight size={16}/></button>
               </div>
             </div>
           )}
@@ -315,30 +315,30 @@ export default function Sessions() {
 
       {/* Create Session Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-[#0F172A] w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90dvh] border border-slate-200 dark:border-[#1E293B]">
-            <div className="flex justify-between items-center p-5 border-b border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0B1120]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-surface dark:bg-surface-dark w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90dvh] border border-subtle dark:border-subtle-dark">
+            <div className="flex justify-between items-center p-5 border-b border-subtle dark:border-subtle-dark bg-app dark:bg-app-dark">
               <h3 className="font-bold text-lg">{t('create_session')}</h3>
-              <button onClick={() => setIsModalOpen(false)} className="p-1.5 text-slate-400 hover:bg-slate-200 dark:hover:bg-[#1E293B] rounded-full transition-colors"><X size={18} /></button>
+              <button onClick={() => setIsModalOpen(false)} className="p-1.5 text-faint hover:bg-muted dark:hover:bg-elevated-dark rounded-full transition-colors"><X size={18} /></button>
             </div>
-            
+
             <div className="p-6 overflow-y-auto">
               <form id="session-form" onSubmit={handleSubmit} className="flex flex-col gap-5">
                 <div>
                   <label className={labelStyles}>{t('session_name')}</label>
                   <input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g., Sunday Morning Sparring" className={inputStyles} />
                 </div>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className={labelStyles}>{t('date_time')}</label>
-                    <input 
-                      type="datetime-local" 
-                      required 
-                      min={currentLocalDateTime} 
-                      value={formData.date} 
-                      onChange={e => setFormData({...formData, date: e.target.value})} 
-                      className={`${inputStyles} [&::-webkit-calendar-picker-indicator]:dark:invert`} 
+                    <input
+                      type="datetime-local"
+                      required
+                      min={currentLocalDateTime}
+                      value={formData.date}
+                      onChange={e => setFormData({...formData, date: e.target.value})}
+                      className={`${inputStyles} [&::-webkit-calendar-picker-indicator]:dark:invert`}
                     />
                   </div>
                   <div>
@@ -351,14 +351,14 @@ export default function Sessions() {
                 <div>
                   <label className={labelStyles}>{t('match_limit', 'Leaderboard Match Limit')}</label>
                   <div className="flex gap-3">
-                    <select 
-                      value={formLimitType} 
+                    <select
+                      value={formLimitType}
                       onChange={e => {
                         const val = e.target.value;
                         if (val === 'all') setFormData({...formData, matchLimit: 0});
                         else if (val === 'custom') setFormData({...formData, matchLimit: 6});
                         else setFormData({...formData, matchLimit: parseInt(val)});
-                      }} 
+                      }}
                       className={`${inputStyles} font-medium flex-1 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_12px_center] pr-8`}
                     >
                       <option value="all">{t('all_games', 'All Games')}</option>
@@ -370,18 +370,18 @@ export default function Sessions() {
                       <option value="custom">{t('custom_amount', 'Custom Amount')}</option>
                     </select>
                     {formLimitType === 'custom' && (
-                      <input 
-                        type="number" 
-                        min={1} 
-                        value={formData.matchLimit} 
-                        onChange={e => setFormData({...formData, matchLimit: parseInt(e.target.value) || 0})} 
-                        className={`${inputStyles} w-24 text-center font-bold`} 
+                      <input
+                        type="number"
+                        min={1}
+                        value={formData.matchLimit}
+                        onChange={e => setFormData({...formData, matchLimit: parseInt(e.target.value) || 0})}
+                        className={`${inputStyles} w-24 text-center font-bold`}
                       />
                     )}
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-slate-100 dark:border-[#1E293B]">
+                <div className="pt-2 border-t border-subtle dark:border-subtle-dark">
                   <label className={labelStyles}>{t('scoring_system')}</label>
                   <div className="relative">
                     <select value={formData.scoringSystem} onChange={e => setFormData({...formData, scoringSystem: e.target.value})} className={`${inputStyles} appearance-none pr-8 font-medium bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_12px_center]`}>
@@ -420,10 +420,10 @@ export default function Sessions() {
                 </div>
               </form>
             </div>
-            
-            <div className="p-5 border-t border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0B1120] flex justify-end gap-3 shrink-0">
-              <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-[#1E293B] rounded-lg transition-colors">{t('cancel')}</button>
-              <button type="submit" form="session-form" disabled={isProcessing} className="px-6 py-2.5 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-colors disabled:opacity-50">{t('create_session')}</button>
+
+            <div className="p-5 border-t border-subtle dark:border-subtle-dark bg-app dark:bg-app-dark flex justify-end gap-3 shrink-0">
+              <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-sm font-medium text-muted-ink dark:text-muted-dark hover:bg-muted dark:hover:bg-elevated-dark rounded-lg transition-colors">{t('cancel')}</button>
+              <button type="submit" form="session-form" disabled={isProcessing} className="px-6 py-2.5 text-sm font-medium bg-ink hover:bg-ink-soft text-white rounded-lg shadow-sm transition-colors disabled:opacity-50">{t('create_session')}</button>
             </div>
           </div>
         </div>

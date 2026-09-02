@@ -42,11 +42,11 @@ export default function ForgotPassword() {
     }
   };
 
-  const inputStyles = 'w-full rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3.5 pl-11 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-950/70 dark:text-white dark:placeholder:text-slate-500';
+  const inputStyles = 'w-full rounded-xl border border-subtle bg-app/80 px-4 py-3.5 pl-11 text-sm font-medium text-primary outline-none transition placeholder:text-faint focus:border-ink focus:ring-4 focus:ring-ink/10 dark:border-default-dark dark:bg-app-dark/70 dark:text-primary-dark dark:placeholder:text-muted-ink';
 
   return (
     <AuthLayout title={t('forgot_password_title')}>
-      <p className="mb-6 text-sm leading-6 text-slate-500 dark:text-slate-400">
+      <p className="mb-6 text-sm leading-6 text-muted-ink dark:text-faint">
         {t('forgot_password_description')}
       </p>
 
@@ -62,11 +62,11 @@ export default function ForgotPassword() {
         )}
 
         <div>
-          <label htmlFor="reset-email" className="mb-2 block text-sm font-bold text-slate-700 dark:text-slate-200">
+          <label htmlFor="reset-email" className="mb-2 block text-sm font-bold text-primary-soft dark:text-primary-dark">
             {t('email')}
           </label>
           <div className="relative">
-            <Mail size={17} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+            <Mail size={17} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-faint" aria-hidden="true" />
             <input
               id="reset-email"
               name="email"
@@ -84,15 +84,15 @@ export default function ForgotPassword() {
         <button
           type="submit"
           disabled={isLoading}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-blue-600/20 transition duration-150 hover:bg-blue-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/30"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-ink px-4 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-blue-600/20 transition duration-150 hover:bg-ink-soft active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/30"
         >
           {isLoading && <Loader2 size={17} className="animate-spin" aria-hidden="true" />}
           {isLoading ? t('processing') : t('send_reset_link')}
         </button>
       </form>
 
-      <div className="mt-6 border-t border-slate-100 pt-5 text-center dark:border-slate-800">
-        <Link to="/login" className="text-sm font-extrabold text-blue-600 transition hover:text-blue-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-400">
+      <div className="mt-6 border-t border-subtle pt-5 text-center dark:border-subtle-dark">
+        <Link to="/login" className="text-sm font-extrabold text-ink transition hover:text-ink hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink dark:text-ink-dark">
           {t('back_to_login')}
         </Link>
       </div>

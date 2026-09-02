@@ -10,17 +10,17 @@ export default function VerifyEmail() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get('token');
-  
+
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
-  
+
   // Prevent React StrictMode from firing the API call twice
   const hasCalledAPI = useRef(false);
 
   useEffect(() => {
     if (!token) {
       setStatus('error');
-      setMessage(t('error_verify'));
+      setMessage(t('verification_failed'));
       return;
     }
 
@@ -31,8 +31,8 @@ export default function VerifyEmail() {
       try {
         const response = await api.post('/auth/verify-email', { token });
         setStatus('success');
-        setMessage(response.data.message || t('success_verify'));
-        
+        setMessage(response.data.message || t('verify_email_title'));
+
         // Redirect to login after 3 seconds
         setTimeout(() => {
           navigate('/login');
@@ -40,7 +40,7 @@ export default function VerifyEmail() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         setStatus('error');
-        setMessage(error.response?.data?.error || t('error_verify'));
+        setMessage(error.response?.data?.error || t('verification_failed'));
       }
     };
 
@@ -48,27 +48,27 @@ export default function VerifyEmail() {
   }, [token, navigate, t]);
 
   return (
-    <AuthLayout title={t('verify_title')}>
+    <AuthLayout title={t('verify_email_title')}>
       <div className="flex flex-col items-center justify-center py-8 text-center">
         {status === 'loading' && (
           <>
-            <Loader2 className="animate-spin text-blue-600 mb-4" size={48} />
-            <p className="text-gray-600 dark:text-gray-400">{t('verify_desc')}</p>
+            <Loader2 className="animate-spin text-ink mb-4" size={48} />
+            <p className="text-muted-ink dark:text-muted-dark">{t('verification_pending')}</p>
           </>
         )}
-        
+
         {status === 'success' && (
           <>
             <CheckCircle className="text-green-500 mb-4" size={48} />
-            <p className="text-green-600 dark:text-green-400 font-medium">{message}</p>
-            <p className="text-sm text-gray-500 mt-2">Redirecting...</p>
+            <p className="text-primary dark:text-primary-dark font-semibold">{message}</p>
+            <p className="mt-2 text-sm text-muted-ink dark:text-muted-dark">{t('verification_success_redirect')}</p>
           </>
         )}
 
         {status === 'error' && (
           <>
             <XCircle className="text-red-500 mb-4" size={48} />
-            <p className="text-red-600 dark:text-red-400 font-medium">{message}</p>
+            <p className="font-semibold text-primary dark:text-primary-dark">{message}</p>
           </>
         )}
       </div>

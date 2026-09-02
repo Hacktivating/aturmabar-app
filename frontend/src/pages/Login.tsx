@@ -67,8 +67,8 @@ export default function Login() {
     }
   };
 
-  const inputStyles = 'w-full rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3.5 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-950/70 dark:text-white dark:placeholder:text-slate-500';
-  const labelStyles = 'mb-2 block text-sm font-bold text-slate-700 dark:text-slate-200';
+  const inputStyles = 'w-full rounded-xl border border-subtle bg-app/80 px-4 py-3.5 text-sm font-medium text-primary outline-none transition placeholder:text-faint focus:border-ink focus:ring-4 focus:ring-ink/10 dark:border-default-dark dark:bg-app-dark/70 dark:text-primary-dark dark:placeholder:text-muted-ink';
+  const labelStyles = 'mb-2 block text-sm font-bold text-primary-soft dark:text-primary-dark';
 
   return (
     <AuthLayout title={t('login')}>
@@ -89,7 +89,7 @@ export default function Login() {
         <div>
           <label htmlFor="identifier" className={labelStyles}>{t('email')} / {t('username')}</label>
           <div className="relative">
-            <Mail size={17} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+            <Mail size={17} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-faint" aria-hidden="true" />
             <input
               id="identifier"
               name="identifier"
@@ -107,12 +107,12 @@ export default function Login() {
         <div>
           <div className="mb-2 flex items-center justify-between gap-3">
             <label htmlFor="password" className={`${labelStyles} mb-0`}>{t('password')}</label>
-            <Link to="/forgot-password" className="text-xs font-bold text-blue-600 transition hover:text-blue-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-400 dark:hover:text-blue-300">
+            <Link to="/forgot-password" className="text-xs font-bold text-ink transition hover:text-ink hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink dark:text-ink-dark dark:hover:text-ink-dark">
               {t('forgot_password')}
             </Link>
           </div>
           <div className="relative">
-            <LockKeyhole size={17} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+            <LockKeyhole size={17} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-faint" aria-hidden="true" />
             <input
               id="password"
               name="password"
@@ -126,7 +126,7 @@ export default function Login() {
             <button
               type="button"
               onClick={() => setShowPassword((current) => !current)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-faint transition hover:bg-muted hover:text-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink dark:hover:bg-elevated dark:hover:text-primary-soft"
               aria-label={showPassword ? t('hide_password') : t('show_password')}
             >
               {showPassword ? <EyeOff size={17} aria-hidden="true" /> : <Eye size={17} aria-hidden="true" />}
@@ -137,15 +137,15 @@ export default function Login() {
         <button
           type="submit"
           disabled={isLoading}
-          className="mt-1 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-blue-600/20 transition duration-150 hover:bg-blue-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/30"
+          className="mt-1 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-ink px-4 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-blue-600/20 transition duration-150 hover:bg-ink-soft active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/30"
         >
           {isLoading && <Loader2 size={17} className="animate-spin" aria-hidden="true" />}
           {isLoading ? t('loading') : t('login')}
         </button>
       </form>
-      <p className="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">
+      <p className="mt-6 text-center text-sm text-muted-ink dark:text-faint">
         {t('no_account')}{' '}
-        <Link to="/register" className="font-extrabold text-blue-600 transition hover:text-blue-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-400">
+        <Link to="/register" className="font-extrabold text-ink transition hover:text-ink hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink dark:text-ink-dark">
           {t('register')}
         </Link>
       </p>

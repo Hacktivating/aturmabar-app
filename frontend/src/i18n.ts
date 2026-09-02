@@ -50,6 +50,11 @@ const resources = {
       "new_password_label": "New password",
       "reset_password": "Reset password",
       "invalid_reset_token": "This reset link is invalid or has expired.",
+      "verify_email_title": "Verify your email",
+      "verify_email_change_title": "Verify email change",
+      "verification_pending": "Verifying your email address...",
+      "verification_success_redirect": "Redirecting you to login...",
+      "verification_failed": "We could not verify this link.",
 
       // Subscription & Access
       "sub_inactive": "Subscription Inactive",
@@ -368,6 +373,11 @@ const resources = {
       "new_password_label": "Kata sandi baru",
       "reset_password": "Atur ulang kata sandi",
       "invalid_reset_token": "Tautan reset ini tidak valid atau sudah kedaluwarsa.",
+      "verify_email_title": "Verifikasi email Anda",
+      "verify_email_change_title": "Verifikasi perubahan email",
+      "verification_pending": "Memverifikasi alamat email Anda...",
+      "verification_success_redirect": "Anda akan diarahkan ke halaman masuk...",
+      "verification_failed": "Kami tidak dapat memverifikasi tautan ini.",
 
       // Subscription & Access
       "sub_inactive": "Langganan Tidak Aktif",
