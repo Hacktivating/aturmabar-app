@@ -4,6 +4,7 @@ import { initReactI18next } from 'react-i18next';
 const resources = {
   en: {
     translation: {
+      // General & Auth
       "login": "Login",
       "register": "Register",
       "email": "Email Address",
@@ -15,13 +16,31 @@ const resources = {
       "logout": "Logout",
       "dashboard_init": "Dashboard functionality initialized.",
       "loading": "Loading...",
+      "continue": "Continue",
+      "edit": "Edit",
+      "cancel": "Cancel",
+      "save": "Save",
+      "create": "Create",
+      "confirm": "Confirm",
+      "abort": "Abort",
+      "other": "Other",
+      "optional": "(Optional)",
+      "processing": "Processing...",
+
+      // Subscription & Access
       "sub_inactive": "Subscription Inactive",
       "sub_desc": "Your community's access has expired or is inactive. Please contact the administrator to renew your subscription.",
       "return_login": "Return to Login",
+
+      // Settings & Profile
       "settings": "Settings",
       "profile": "Profile",
       "account": "Account",
       "general": "General",
+      "appearance": "Appearance",
+      "language": "Language",
+      "light_mode": "Light",
+      "dark_mode": "Dark",
       "community_name": "Community Name",
       "change_logo": "Change Logo",
       "save_changes": "Save Changes",
@@ -32,10 +51,6 @@ const resources = {
       "new_password": "New Password",
       "confirm_password": "Confirm Password",
       "update_password": "Update Password",
-      "appearance": "Appearance",
-      "language": "Language",
-      "light_mode": "Light",
-      "dark_mode": "Dark",
       "public_id_desc": "Manage your community's public identity.",
       "upload_image": "Upload Image",
       "account_desc": "Update your email address and secure your account.",
@@ -56,6 +71,9 @@ const resources = {
       "op_failed": "Operation failed.",
       "invalid_creds": "Invalid credentials.",
       "verify_email_success": "Email successfully updated.",
+      "score_updated": "Score updated successfully.",
+      "match_cancelled": "Match cancelled successfully.",
+      "server_error": "Server error",
       
       // Admin Dashboard
       "sys_admin": "System Admin",
@@ -81,9 +99,6 @@ const resources = {
       "select_initial": "Select Initial Status...",
       "revoke": "Revoke Access (Inactive)",
       "custom_date": "Expiration Date",
-      "cancel": "Cancel",
-      "save": "Save",
-      "create": "Create",
       
       // Verification Page
       "verify_title": "Verify Email Change",
@@ -91,25 +106,35 @@ const resources = {
       "redirect_login": "Redirecting to login...",
       "missing_token": "Missing token in URL parameters.",
 
+      // Registration Details
       "fill_account_details": "Please fill in all account details.",
       "comm_name_req": "Community name is required.",
-      "server_error": "Server error",
       "ph_email": "name@example.com",
       "ph_username": "Choose a username",
-      "continue": "Continue",
       "ph_comm_name": "e.g., Kokobadminton Community",
       "social_links": "Social Links",
-      "optional": "(Optional)",
       "add_link": "Add Link",
-      "other": "Other",
       "no_social_links": "No social links added yet.",
-      "processing": "Processing...",
       "complete_reg": "Complete Registration",
       "select_logo": "Select Community Logo",
       "or_upload": "Or upload custom",
-      "edit": "Edit",
 
+      // Dashboard
+      "dashboard": "Dashboard",
+      "overview": "Overview",
+      "quick_actions": "Quick Actions",
+      "manage_members": "Manage Members",
+      "manage_schedule": "Schedule & Sessions",
+      "manage_tournaments": "Tournaments",
+      "community_overview": "Community Overview",
+      "subscription_status": "Subscription Status",
+      "view_all": "View All",
+      "recent_activity": "Recent Activity",
+      "no_activity": "No recent activity found.",
+
+      // Roster & Members
       "members": "Members",
+      "roster_management": "Roster Management",
       "roster_desc": "Manage your community roster and player levels.",
       "add_member": "Add Member",
       "edit_member": "Edit Member",
@@ -124,20 +149,6 @@ const resources = {
       "del_member_confirm": "Are you sure you want to remove this member?",
       "ph_name": "e.g., John Doe",
       "ph_phone": "e.g., +628123456789",
-
-      "dashboard": "Dashboard",
-      "overview": "Overview",
-      "quick_actions": "Quick Actions",
-      "manage_members": "Manage Members",
-      "manage_schedule": "Schedule & Sessions",
-      "manage_tournaments": "Tournaments",
-      "community_overview": "Community Overview",
-      "subscription_status": "Subscription Status",
-      "view_all": "View All",
-      "recent_activity": "Recent Activity",
-      "no_activity": "No recent activity found.",
-
-      "roster_management": "Roster Management",
       "add_player": "Add Player",
       "gender": "Gender",
       "male": "Male",
@@ -152,6 +163,7 @@ const resources = {
       "no_players": "No players found.",
       "page_of": "Page {{current}} of {{total}}",
 
+      // Sessions
       "sessions": "Sessions",
       "session_mgmt": "Session & Schedule",
       "create_session": "Create Session",
@@ -180,7 +192,16 @@ const resources = {
       "start_session": "Start Session",
       "manage_session": "Manage Session",
       "delete_session": "Delete Session",
+      "end_session": "End Session",
+      "status_finished": "FINISHED",
+      "session_not_started": "Start the session to enable matchmaking.",
+      "session_schedule": "Session & Schedule",
+      "save_settings": "Save Settings",
+      "session_settings": "Session Settings",
+      "danger_zone": "Danger Zone",
+      "delete_session_warning": "Permanently delete this session and all its data.",
 
+      // Matchmaking & Courts
       "attendance": "Attendance",
       "courts": "Courts",
       "matches": "Matches",
@@ -196,10 +217,8 @@ const resources = {
       "active_court": "Active",
       "inactive_court": "Inactive",
       "edit_court": "Edit Court",
-
       "search_players": "Search players...",
       "add_selected": "Add Selected ({{count}})",
-
       "add_court": "Add Court",
       "delete_court": "Delete Court",
       "auto_fill": "Auto-Fill Courts",
@@ -210,7 +229,6 @@ const resources = {
       "start": "Start",
       "finish_free_court": "Finish & Free Court",
       "end_without_score": "End without score",
-
       "search_players_to_select": "Search players to select...",
       "remove_player": "- Remove Player -",
       "swap_with": "Swap with",
@@ -220,24 +238,13 @@ const resources = {
       "confirm_score_desc": "Are you sure you want to save this score?",
       "confirm_cancel_title": "Cancel Match",
       "confirm_cancel_desc": "Are you sure you want to cancel this match? It will not be recorded in playtime history.",
-      "confirm": "Confirm",
-      "abort": "Abort",
-      "score_updated": "Score updated successfully.",
-      "match_cancelled": "Match cancelled successfully.",
-
       "matches_played": "Matches Played",
-      "save_settings": "Save Settings",
-      "session_settings": "Session Settings",
-      "danger_zone": "Danger Zone",
-      "delete_session_warning": "Permanently delete this session and all its data.",
       "no_history": "No matches have been completed yet.",
-
       "edit_history": "Edit History",
       "court_time": "Court & Time",
       "team_a": "Team A",
       "team_b": "Team B",
       "score": "Score",
-
       "export_pdf": "Export PDF",
       "player_details": "Player Details",
       "win_rate": "Win Rate",
@@ -247,11 +254,7 @@ const resources = {
       "partner": "Partner",
       "opponents": "Opponents",
 
-      "end_session": "End Session",
-      "status_finished": "FINISHED",
-      "session_not_started": "Start the session to enable matchmaking.",
-      "session_schedule": "Session & Schedule",
-
+      // Leaderboard
       "leaderboard": "Leaderboard",
       "by_month": "By Month",
       "by_session": "By Session",
@@ -263,10 +266,39 @@ const resources = {
       "net_sets": "Net Sets",
       "net_pts": "Net Pts",
       "total_pts": "Total Pts",
+
+      // 404 & Errors
+      "not_found_title": "Page Not Found",
+      "not_found_desc": "The page you are looking for doesn't exist or has been moved.",
+      "return_home": "Return Home",
+
+      // Session Billing Page
+      "billing": "Billing",
+      "financial_summary": "Financial Summary",
+      "total_income": "Total Income",
+      "total_expense": "Total Expense",
+      "net_balance": "Net Balance",
+      "player_payments": "Player Payments",
+      "expenses": "Expenses",
+      "default_fee": "Default Fee",
+      "set_fee": "Set Fee",
+      "amount": "Amount",
+      "paid": "Paid",
+      "unpaid": "Unpaid",
+      "free": "Free",
+      "add_expense": "Add Expense",
+      "description": "Description",
+      "expense_added": "Expense added",
+      "expense_deleted": "Expense deleted",
+      "fee_updated": "Default fee updated",
+      "member": "Member",
+      "member_fee": "Member Fee",
+      "walk_in_fee": "Walk-in Fee",
     }
   },
   id: {
     translation: {
+      // General & Auth
       "login": "Masuk",
       "register": "Daftar",
       "email": "Alamat Email",
@@ -278,13 +310,31 @@ const resources = {
       "logout": "Keluar",
       "dashboard_init": "Fungsi dasbor telah diinisialisasi.",
       "loading": "Memuat...",
+      "continue": "Lanjutkan",
+      "edit": "Edit",
+      "cancel": "Batal",
+      "save": "Simpan",
+      "create": "Buat",
+      "confirm": "Konfirmasi",
+      "abort": "Batal",
+      "other": "Lainnya",
+      "optional": "(Opsional)",
+      "processing": "Memproses...",
+
+      // Subscription & Access
       "sub_inactive": "Langganan Tidak Aktif",
       "sub_desc": "Akses komunitas Anda telah berakhir atau tidak aktif. Silakan hubungi administrator untuk memperbarui langganan Anda.",
       "return_login": "Kembali ke Masuk",
+
+      // Settings & Profile
       "settings": "Pengaturan",
       "profile": "Profil",
       "account": "Akun",
       "general": "Umum",
+      "appearance": "Tampilan",
+      "language": "Bahasa",
+      "light_mode": "Terang",
+      "dark_mode": "Gelap",
       "community_name": "Nama Komunitas",
       "change_logo": "Ubah Logo",
       "save_changes": "Simpan Perubahan",
@@ -295,10 +345,6 @@ const resources = {
       "new_password": "Kata Sandi Baru",
       "confirm_password": "Konfirmasi Sandi",
       "update_password": "Perbarui Sandi",
-      "appearance": "Tampilan",
-      "language": "Bahasa",
-      "light_mode": "Terang",
-      "dark_mode": "Gelap",
       "public_id_desc": "Kelola identitas publik komunitas Anda.",
       "upload_image": "Unggah Gambar",
       "account_desc": "Perbarui alamat email Anda dan amankan akun Anda.",
@@ -319,6 +365,9 @@ const resources = {
       "op_failed": "Operasi gagal.",
       "invalid_creds": "Kredensial tidak valid.",
       "verify_email_success": "Email berhasil diperbarui.",
+      "score_updated": "Skor berhasil diperbarui.",
+      "match_cancelled": "Pertandingan berhasil dibatalkan.",
+      "server_error": "Kesalahan server",
       
       // Admin Dashboard
       "sys_admin": "Admin Sistem",
@@ -344,9 +393,6 @@ const resources = {
       "select_initial": "Pilih Status Awal...",
       "revoke": "Cabut Akses (Tidak Aktif)",
       "custom_date": "Tanggal Berakhir",
-      "cancel": "Batal",
-      "save": "Simpan",
-      "create": "Buat",
       
       // Verification Page
       "verify_title": "Verifikasi Perubahan Email",
@@ -354,25 +400,35 @@ const resources = {
       "redirect_login": "Mengarahkan ke halaman masuk...",
       "missing_token": "Token tidak ditemukan pada URL.",
 
+      // Registration Details
       "fill_account_details": "Harap lengkapi semua detail akun.",
       "comm_name_req": "Nama komunitas wajib diisi.",
-      "server_error": "Kesalahan server",
       "ph_email": "nama@contoh.com",
       "ph_username": "Pilih nama pengguna",
-      "continue": "Lanjutkan",
       "ph_comm_name": "misal, Komunitas Kokobadminton",
       "social_links": "Tautan Sosial",
-      "optional": "(Opsional)",
       "add_link": "Tambah Tautan",
-      "other": "Lainnya",
       "no_social_links": "Belum ada tautan sosial yang ditambahkan.",
-      "processing": "Memproses...",
       "complete_reg": "Selesaikan Pendaftaran",
       "select_logo": "Pilih Logo Komunitas",
       "or_upload": "Atau unggah khusus",
-      "edit": "Edit",
 
+      // Dashboard
+      "dashboard": "Dasbor",
+      "overview": "Ringkasan",
+      "quick_actions": "Aksi Cepat",
+      "manage_members": "Kelola Anggota",
+      "manage_schedule": "Jadwal & Sesi",
+      "manage_tournaments": "Turnamen",
+      "community_overview": "Ringkasan Komunitas",
+      "subscription_status": "Status Langganan",
+      "view_all": "Lihat Semua",
+      "recent_activity": "Aktivitas Terbaru",
+      "no_activity": "Tidak ada aktivitas terbaru.",
+
+      // Roster & Members
       "members": "Anggota",
+      "roster_management": "Manajemen Pemain",
       "roster_desc": "Kelola daftar anggota komunitas dan tingkat kemampuan pemain.",
       "add_member": "Tambah Anggota",
       "edit_member": "Edit Anggota",
@@ -387,20 +443,6 @@ const resources = {
       "del_member_confirm": "Apakah Anda yakin ingin menghapus anggota ini?",
       "ph_name": "misal, Budi Santoso",
       "ph_phone": "misal, +628123456789",
-
-      "dashboard": "Dasbor",
-      "overview": "Ringkasan",
-      "quick_actions": "Aksi Cepat",
-      "manage_members": "Kelola Anggota",
-      "manage_schedule": "Jadwal & Sesi",
-      "manage_tournaments": "Turnamen",
-      "community_overview": "Ringkasan Komunitas",
-      "subscription_status": "Status Langganan",
-      "view_all": "Lihat Semua",
-      "recent_activity": "Aktivitas Terbaru",
-      "no_activity": "Tidak ada aktivitas terbaru.",
-
-      "roster_management": "Manajemen Pemain",
       "add_player": "Tambah Pemain",
       "gender": "Jenis Kelamin",
       "male": "Laki-laki",
@@ -415,6 +457,7 @@ const resources = {
       "no_players": "Tidak ada pemain ditemukan.",
       "page_of": "Halaman {{current}} dari {{total}}",
 
+      // Sessions
       "sessions": "Sesi",
       "session_mgmt": "Sesi & Jadwal",
       "create_session": "Buat Sesi",
@@ -443,7 +486,16 @@ const resources = {
       "start_session": "Mulai Sesi",
       "manage_session": "Kelola Sesi",
       "delete_session": "Hapus Sesi",
+      "end_session": "Akhiri Sesi",
+      "status_finished": "SELESAI",
+      "session_not_started": "Mulai sesi untuk mengaktifkan fitur pertandingan.",
+      "session_schedule": "Sesi & Jadwal",
+      "save_settings": "Simpan Pengaturan",
+      "session_settings": "Pengaturan Sesi",
+      "danger_zone": "Zona Berbahaya",
+      "delete_session_warning": "Hapus permanen sesi ini beserta semua datanya.",
 
+      // Matchmaking & Courts
       "attendance": "Kehadiran",
       "courts": "Lapangan",
       "matches": "Pertandingan",
@@ -459,10 +511,8 @@ const resources = {
       "active_court": "Aktif",
       "inactive_court": "Tidak Aktif",
       "edit_court": "Edit Lapangan",
-
       "search_players": "Cari pemain...",
       "add_selected": "Tambah Pilihan ({{count}})",
-
       "add_court": "Tambah Lapangan",
       "delete_court": "Hapus Lapangan",
       "auto_fill": "Isi Otomatis",
@@ -473,7 +523,6 @@ const resources = {
       "start": "Mulai",
       "finish_free_court": "Selesai & Kosongkan",
       "end_without_score": "Akhiri tanpa skor",
-
       "search_players_to_select": "Cari pemain untuk dipilih...",
       "remove_player": "- Hapus Pemain -",
       "swap_with": "Tukar dengan",
@@ -483,24 +532,13 @@ const resources = {
       "confirm_score_desc": "Apakah Anda yakin ingin menyimpan skor ini?",
       "confirm_cancel_title": "Batalkan Pertandingan",
       "confirm_cancel_desc": "Apakah Anda yakin ingin membatalkan pertandingan ini? Ini tidak akan dicatat dalam riwayat permainan.",
-      "confirm": "Konfirmasi",
-      "abort": "Batal",
-      "score_updated": "Skor berhasil diperbarui.",
-      "match_cancelled": "Pertandingan berhasil dibatalkan.",
-
       "matches_played": "Main",
-      "save_settings": "Simpan Pengaturan",
-      "session_settings": "Pengaturan Sesi",
-      "danger_zone": "Zona Berbahaya",
-      "delete_session_warning": "Hapus permanen sesi ini beserta semua datanya.",
       "no_history": "Belum ada pertandingan yang selesai.",
-
       "edit_history": "Edit Riwayat",
       "court_time": "Lapangan & Waktu",
       "team_a": "Tim A",
       "team_b": "Tim B",
       "score": "Skor",
-
       "export_pdf": "Ekspor PDF",
       "player_details": "Detail Pemain",
       "win_rate": "Rasio Menang",
@@ -510,11 +548,7 @@ const resources = {
       "partner": "Pasangan",
       "opponents": "Lawan",
 
-      "end_session": "Akhiri Sesi",
-      "status_finished": "SELESAI",
-      "session_not_started": "Mulai sesi untuk mengaktifkan fitur pertandingan.",
-      "session_schedule": "Sesi & Jadwal",
-
+      // Leaderboard
       "leaderboard": "Papan Peringkat",
       "by_month": "Per Bulan",
       "by_session": "Per Sesi",
@@ -526,6 +560,34 @@ const resources = {
       "net_sets": "Selisih Set",
       "net_pts": "Selisih Poin",
       "total_pts": "Total Poin",
+
+      // 404 & Errors
+      "not_found_title": "Halaman Tidak Ditemukan",
+      "not_found_desc": "Halaman yang Anda cari tidak ada atau telah dipindahkan.",
+      "return_home": "Kembali ke Beranda",
+
+      // Session Billing Page
+      "billing": "Billing",
+      "financial_summary": "Financial Summary",
+      "total_income": "Total Income",
+      "total_expense": "Total Expense",
+      "net_balance": "Net Balance",
+      "player_payments": "Player Payments",
+      "expenses": "Expenses",
+      "default_fee": "Default Fee",
+      "set_fee": "Set Fee",
+      "amount": "Amount",
+      "paid": "Paid",
+      "unpaid": "Unpaid",
+      "free": "Free",
+      "add_expense": "Add Expense",
+      "description": "Description",
+      "expense_added": "Expense added",
+      "expense_deleted": "Expense deleted",
+      "fee_updated": "Default fee updated",
+      "member": "Member",
+      "member_fee": "Tarif Member",
+      "walk_in_fee": "Tarif Walk-in",
     }
   }
 };

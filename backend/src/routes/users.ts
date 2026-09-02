@@ -1,11 +1,10 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { db } from "../db";
-import { users, communities } from "../db/schema";
+import { users, communities, sessions, verificationTokens } from "../db/schema"; // Added sessions
 import { verifyAuth, AuthRequest } from "../middleware/auth";
 import crypto from "crypto";
-import { verificationTokens } from "../db/schema";
 import { sendEmailChangeVerification } from "../utils/mailer";
 
 const router = Router();
@@ -19,7 +18,16 @@ router.get("/me", async (req: AuthRequest, res) => {
 
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    res.status(200).json({ user, community });
+    let recentActivities: any[] = [];
+    if (community) {
+      recentActivities = await db.query.sessions.findMany({
+        where: eq(sessions.communityId, community.id),
+        orderBy: [desc(sessions.date)],
+        limit: 5,
+      });
+    }
+
+    res.status(200).json({ user, community, recentActivities });
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
   }
@@ -39,6 +47,7 @@ router.put("/profile", async (req: AuthRequest, res) => {
     }
     res.status(200).json({ message: "Profile updated successfully." });
   } catch (error) {
+    console.error("USERS/ME ERROR:", error); 
     res.status(500).json({ error: "Internal server error" });
   }
 });

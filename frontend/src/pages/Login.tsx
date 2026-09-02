@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AuthLayout } from '../components/AuthLayout';
@@ -15,6 +15,21 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      const userStr = localStorage.getItem('user');
+      let isAdmin = false;
+      if (userStr) {
+        try {
+          const parsedUser = JSON.parse(userStr);
+          isAdmin = parsedUser.role === 'admin';
+        } catch (e) {}
+      }
+      navigate(isAdmin ? '/admin' : '/dashboard', { replace: true });
+    }
+  }, [navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -29,8 +44,11 @@ export default function Login() {
       setSuccess(t('login_success'));
       
       setTimeout(() => {
-        if (response.data.user.role === 'admin') navigate('/admin');
-        else navigate('/dashboard');
+        if (response.data.user.role === 'admin') {
+          navigate('/admin', { replace: true });
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
       }, 1000);
     } catch (err: any) {
       setError(err.response?.data?.error || t('invalid_creds'));

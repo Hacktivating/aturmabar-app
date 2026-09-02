@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { 
   ArrowLeft, Users, SquareStack, Play, History, Clock, Settings as SettingsIcon, 
-  Plus, UserPlus, Check, Pause, X, Edit2, Zap, Globe, Sun, Moon, LogOut, ChevronDown, Search, Trash2, GripVertical, ArrowRightLeft, ListOrdered, AlertCircle, AlertTriangle, Save, ChevronLeft, ChevronRight, FileDown, Info, Square, Trophy, Medal, ChevronUp
+  Plus, UserPlus, Check, Pause, X, Edit2, Zap, Globe, Sun, Moon, LogOut, ChevronDown, Search, Trash2, GripVertical, ArrowRightLeft, ListOrdered, AlertCircle, AlertTriangle, Save, ChevronLeft, ChevronRight, FileDown, Info, Square, Trophy, Medal, ChevronUp, Wallet, TrendingUp, TrendingDown, DollarSign, RotateCcw
 } from 'lucide-react';
 import api from '../api/axios';
 import jsPDF from 'jspdf';
@@ -13,51 +13,36 @@ const TABS = [
   { id: 'attendance', label: 'attendance', icon: <Users size={18} /> },
   { id: 'courts', label: 'courts', icon: <SquareStack size={18} /> },
   { id: 'matches', label: 'matches', icon: <Play size={18} /> },
+  { id: 'billing', label: 'billing', icon: <Wallet size={18} /> },
   { id: 'history', label: 'history', icon: <History size={18} /> },
   { id: 'leaderboard', label: 'leaderboard', icon: <Trophy size={18} /> },
   { id: 'playtime', label: 'playtime', icon: <Clock size={18} /> },
   { id: 'settings', label: 'settings', icon: <SettingsIcon size={18} /> }
 ];
 
-// Custom Hook to robustly handle missing dates and timezone drifts
 const useSafeTimer = (startedAt: string | null | undefined) => {
   const [elapsed, setElapsed] = useState(0);
-
   useEffect(() => {
     let validStart = startedAt ? new Date(startedAt).getTime() : Date.now();
-    
-    if (isNaN(validStart)) {
-      validStart = Date.now();
-    }
-    
+    if (isNaN(validStart)) validStart = Date.now();
     const now = Date.now();
-
     if (validStart > now + 60000 && startedAt) {
         const stripped = startedAt.endsWith('Z') ? startedAt.slice(0, -1) : startedAt;
         const strippedTime = new Date(stripped).getTime();
-        if (!isNaN(strippedTime) && strippedTime <= now + 60000) {
-            validStart = strippedTime;
-        } else {
-            validStart = now;
-        }
+        if (!isNaN(strippedTime) && strippedTime <= now + 60000) validStart = strippedTime;
+        else validStart = now;
     }
-    
     if (validStart > now) validStart = now;
-
     const tick = () => setElapsed(Math.max(0, Math.floor((Date.now() - validStart) / 1000)));
-    
-    tick(); // Instant first tick
+    tick();
     const interval = setInterval(tick, 1000);
-    
     return () => clearInterval(interval);
   }, [startedAt]);
-
   return elapsed;
 };
 
 const MatchTimer = ({ startedAt }: { startedAt: string | null | undefined }) => {
   const elapsed = useSafeTimer(startedAt);
-  
   const h = Math.floor(elapsed / 3600).toString().padStart(2, '0');
   const m = Math.floor((elapsed % 3600) / 60).toString().padStart(2, '0');
   const s = (elapsed % 60).toString().padStart(2, '0');
@@ -66,7 +51,6 @@ const MatchTimer = ({ startedAt }: { startedAt: string | null | undefined }) => 
 
 const SessionGlobalTimer = ({ startedAt }: { startedAt: string | null | undefined }) => {
   const elapsed = useSafeTimer(startedAt);
-  
   const h = Math.floor(elapsed / 3600).toString().padStart(2, '0');
   const m = Math.floor((elapsed % 3600) / 60).toString().padStart(2, '0');
   const s = (elapsed % 60).toString().padStart(2, '0');
@@ -94,6 +78,10 @@ const getMatchTypeColor = (type: string) => {
   }
 };
 
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(value);
+};
+
 const PlayerSlotSelect = ({ options, value, onChange, placeholder, currentName, currentGrade, swaps, onSwap, t }: any) => {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -112,22 +100,13 @@ const PlayerSlotSelect = ({ options, value, onChange, placeholder, currentName, 
 
   return (
     <div className="relative w-full" ref={wrapperRef}>
-      <div 
-        onClick={() => setIsOpen(!isOpen)} 
-        className={`p-2.5 sm:p-3 rounded-lg border-2 transition-all cursor-pointer flex items-center justify-between ${value === 0 && !currentName ? 'border-dashed border-slate-300 dark:border-[#334155] bg-transparent hover:bg-slate-100 dark:hover:bg-[#1E293B]/50' : 'border-solid border-slate-200 dark:border-[#1E293B] bg-white dark:bg-[#0B1120] shadow-sm hover:border-blue-500 dark:hover:border-blue-500'}`}
-      >
+      <div onClick={() => setIsOpen(!isOpen)} className={`p-2.5 sm:p-3 rounded-lg border-2 transition-all cursor-pointer flex items-center justify-between ${value === 0 && !currentName ? 'border-dashed border-slate-300 dark:border-[#334155] bg-transparent hover:bg-slate-100 dark:hover:bg-[#1E293B]/50' : 'border-solid border-slate-200 dark:border-[#1E293B] bg-white dark:bg-[#0B1120] shadow-sm hover:border-blue-500 dark:hover:border-blue-500'}`}>
         {value === 0 && !currentName ? (
-          <div className="flex items-center gap-2 text-slate-500">
-            <Plus size={16} /> <span className="font-medium text-xs">{placeholder}</span>
-          </div>
+          <div className="flex items-center gap-2 text-slate-500"><Plus size={16} /> <span className="font-medium text-xs">{placeholder}</span></div>
         ) : (
           <div className="flex items-center gap-2 w-full">
-            <div className="flex-1 min-w-0">
-              <div className="font-bold text-xs truncate text-slate-900 dark:text-white">{displayName}</div>
-            </div>
-            <span className={`text-[9px] border px-1.5 py-0.5 rounded font-mono font-bold shrink-0 ${getGradeColor(displayGrade)}`}>
-              {displayGrade || '-'}
-            </span>
+            <div className="flex-1 min-w-0"><div className="font-bold text-xs truncate text-slate-900 dark:text-white">{displayName}</div></div>
+            <span className={`text-[9px] border px-1.5 py-0.5 rounded font-mono font-bold shrink-0 ${getGradeColor(displayGrade)}`}>{displayGrade || '-'}</span>
             <ChevronDown size={14} className="text-slate-400 shrink-0 ml-1" />
           </div>
         )}
@@ -138,26 +117,24 @@ const PlayerSlotSelect = ({ options, value, onChange, placeholder, currentName, 
           <div className="p-2 border-b border-slate-100 dark:border-[#1E293B] shrink-0 bg-slate-50 dark:bg-[#0B1120]">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-              <input type="text" placeholder={t('search_players_to_select')} value={search} onChange={e => setSearch(e.target.value)} className="w-full bg-white dark:bg-[#0F172A] pl-9 pr-3 py-2 text-xs rounded-lg outline-none border border-slate-200 dark:border-[#1E293B] text-slate-900 dark:text-slate-100" autoFocus />
+              <input type="text" placeholder={t('search_players_to_select', 'Search players...')} value={search} onChange={e => setSearch(e.target.value)} className="w-full bg-white dark:bg-[#0F172A] pl-9 pr-3 py-2 text-xs rounded-lg outline-none border border-slate-200 dark:border-[#1E293B] text-slate-900 dark:text-slate-100" autoFocus />
             </div>
           </div>
           <div className="p-1 overflow-y-auto flex-1 bg-white dark:bg-[#0F172A] divide-y divide-slate-100 dark:divide-[#1E293B]">
             <div className="py-1">
               <div onClick={() => { onChange(0); setIsOpen(false); setSearch(''); }} className="px-3 py-2 text-xs text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg cursor-pointer font-bold text-center transition-colors">
-                {t('remove_player')}
+                {t('remove_player', '- Remove Player -')}
               </div>
             </div>
-            
             {swaps && swaps.length > 0 && (
               <div className="py-1">
                 {swaps.filter((s: any) => s.id !== 0 && s.id !== value).map((s: any) => (
                   <div key={`swap-${s.id}`} onClick={() => { onSwap(s.id); setIsOpen(false); }} className="px-3 py-2 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg cursor-pointer flex items-center gap-2 font-bold transition-colors">
-                    <ArrowRightLeft size={12} /> {t('swap_with')} {s.name}
+                    <ArrowRightLeft size={12} /> {t('swap_with', 'Swap with')} {s.name}
                   </div>
                 ))}
               </div>
             )}
-
             <div className="py-1">
               {filtered.length === 0 ? <div className="p-3 text-xs text-slate-500 text-center font-medium">No players found</div> : 
                 filtered.map((opt: any) => (
@@ -199,12 +176,12 @@ const MatchCard = ({ match, court, sessionStatus, maxSets, isProcessing, getMemb
           <div className="flex items-center gap-2">
             <h3 className="font-bold text-sm text-slate-800 dark:text-white tracking-wide">{court?.name || 'Queued'}</h3>
           </div>
-          <div className="text-slate-400 dark:text-slate-500 text-[10px] font-bold tracking-widest uppercase">{t('empty')}</div>
+          <div className="text-slate-400 dark:text-slate-500 text-[10px] font-bold tracking-widest uppercase">{t('empty', 'EMPTY')}</div>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center gap-3 py-6 px-4">
-          <button disabled={sessionStatus !== 'active' || isProcessing} onClick={() => handleAutoGenerateCourt(court.id)} className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors w-full disabled:opacity-50 disabled:cursor-not-allowed">{t('auto_fill')}</button>
+          <button disabled={sessionStatus !== 'active' || isProcessing} onClick={() => handleAutoGenerateCourt(court.id)} className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors w-full disabled:opacity-50 disabled:cursor-not-allowed">{t('auto_fill', 'Auto-Fill Courts')}</button>
           <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">OR</span>
-          <button disabled={sessionStatus !== 'active' || isProcessing} onClick={() => openEditMatchModal({ courtId: court.id, matchType: 'MD' })} className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-[#1E293B] dark:hover:bg-[#334155] text-slate-800 dark:text-slate-200 text-xs font-bold rounded-lg transition-colors w-full disabled:opacity-50 disabled:cursor-not-allowed">{t('manual_match')}</button>
+          <button disabled={sessionStatus !== 'active' || isProcessing} onClick={() => openEditMatchModal({ courtId: court.id, matchType: 'MD' })} className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-[#1E293B] dark:hover:bg-[#334155] text-slate-800 dark:text-slate-200 text-xs font-bold rounded-lg transition-colors w-full disabled:opacity-50 disabled:cursor-not-allowed">{t('manual_match', 'Manual Match')}</button>
         </div>
       </div>
     );
@@ -223,9 +200,8 @@ const MatchCard = ({ match, court, sessionStatus, maxSets, isProcessing, getMemb
           {court && <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-500 text-[9px] px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800 uppercase tracking-wider font-bold">AUTO</span>}
         </div>
         <div className="flex items-center gap-3">
-          {isActive ? <MatchTimer startedAt={match.startedAt} /> : <div className="text-blue-600 dark:text-blue-500 text-[10px] font-bold tracking-widest uppercase">{court ? t('ready') : ''}</div>}
+          {isActive ? <MatchTimer startedAt={match.startedAt} /> : <div className="text-blue-600 dark:text-blue-500 text-[10px] font-bold tracking-widest uppercase">{court ? t('ready', 'READY') : ''}</div>}
           
-          {/* Controls for Queue & Unstarted Courts */}
           {!isActive && (
             <div className="flex items-center gap-1 border-l border-slate-200 dark:border-slate-700 pl-2 ml-1">
               {!court && queueIndex > 0 && (
@@ -262,7 +238,7 @@ const MatchCard = ({ match, court, sessionStatus, maxSets, isProcessing, getMemb
               </div>
             </div>
           </div>
-          <div className="text-center text-slate-400 dark:text-[#334155] text-[9px] font-bold tracking-widest uppercase -my-1">{t('vs')}</div>
+          <div className="text-center text-slate-400 dark:text-[#334155] text-[9px] font-bold tracking-widest uppercase -my-1">{t('vs', 'VS')}</div>
           <div className="relative">
             <div className="absolute -top-2 left-2 bg-white dark:bg-[#0F172A] px-1 text-[9px] text-slate-500 font-bold uppercase z-10">{match.matchType}</div>
             <div className="flex border border-slate-200 dark:border-[#1E293B] rounded-lg overflow-hidden bg-slate-50 dark:bg-[#0B1120]">
@@ -310,17 +286,17 @@ const MatchCard = ({ match, court, sessionStatus, maxSets, isProcessing, getMemb
                 </div>
               </div>
               <button type="submit" disabled={isProcessing} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-xs font-bold transition-colors shadow-sm mt-1 disabled:opacity-50">
-                {t('finish_free_court')}
+                {t('finish_free_court', 'Finish & Free Court')}
               </button>
               <button type="button" disabled={isProcessing} onClick={() => setConfirmDeleteMatchId(match.id)} className="w-full bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-500 py-2.5 rounded-lg text-xs font-bold transition-colors mt-1 disabled:opacity-50">
-                {t('cancel_match')}
+                {t('cancel_match', 'Cancel Match')}
               </button>
             </form>
           ) : court ? (
             <div className="w-full flex gap-2 mt-auto">
               <button disabled={isProcessing} onClick={() => setSwapCourtModal(match)} className="p-2.5 border border-slate-200 dark:border-[#1E293B] rounded-lg text-slate-400 hover:bg-slate-50 dark:hover:bg-[#1E293B] dark:hover:text-white transition-colors disabled:opacity-50" title="Manage Court"><ArrowRightLeft size={16}/></button>
               <button onClick={() => handleStartMatch(match.id)} disabled={isProcessing || sessionStatus !== 'active'} className="flex-1 bg-[#10B981] hover:bg-[#059669] text-white py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                <Play fill="currentColor" size={14}/> {t('start')}
+                <Play fill="currentColor" size={14}/> {t('start', 'Start')}
               </button>
             </div>
           ) : (
@@ -347,24 +323,22 @@ export default function SessionDetails() {
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // States
   const [attendances, setAttendances] = useState<any[]>([]);
   const [allMembers, setMembers] = useState<any[]>([]);
   const [courts, setCourts] = useState<any[]>([]);
   const [matches, setMatches] = useState<any[]>([]);
+  const [expenses, setExpenses] = useState<any[]>([]);
   
-  // Search & Filter
   const [attendanceSearch, setAttendanceSearch] = useState('');
   const [historySearch, setHistorySearch] = useState('');
   const [leaderboardSearch, setLeaderboardSearch] = useState('');
   const [playtimeSearch, setPlaytimeSearch] = useState('');
   const [modalSearch, setModalSearch] = useState('');
+  const [billingSearch, setBillingSearch] = useState('');
   
-  // Leaderboard specific limits
   const [lbLimitType, setLbLimitType] = useState('all');
   const [lbCustomLimit, setLbCustomLimit] = useState(6);
 
-  // Modals & Forms
   const [isAttendeeModalOpen, setAttendeeModalOpen] = useState(false);
   const [selectedAttendees, setSelectedAttendees] = useState<number[]>([]);
   const [isWalkInModalOpen, setWalkInModalOpen] = useState(false);
@@ -372,12 +346,20 @@ export default function SessionDetails() {
   const [editCourtId, setEditCourtId] = useState<number | null>(null);
   const [courtName, setCourtName] = useState('');
   const [playerDetailModal, setPlayerDetailModal] = useState<number | null>(null);
-  const [isWaitingListOpen, setIsWaitingListOpen] = useState(false); // Mobile waiting list toggle
+  const [isWaitingListOpen, setIsWaitingListOpen] = useState(false);
 
-  // Settings State
   const [settingsForm, setSettingsForm] = useState<any>({});
+  
+  const [defaultFee, setDefaultFee] = useState<number>(0);
+  const [memberDefaultFee, setMemberDefaultFee] = useState<number>(0);
+  const [expenseForm, setExpenseForm] = useState({ description: '', amount: '' });
+  const [editingPaymentId, setEditingPaymentId] = useState<number | null>(null);
+  const [editPaymentValue, setEditPaymentValue] = useState<number>(0);
 
-  // Match Editing State
+  const [isImportModalOpen, setImportModalOpen] = useState(false);
+  const [membershipPeriods, setMembershipPeriods] = useState<any[]>([]);
+  const [selectedPeriodId, setSelectedPeriodId] = useState<string>('');
+
   const [editMatchModal, setEditMatchModal] = useState<any>(null);
   const [editHistoryModal, setEditHistoryModal] = useState<any>(null);
   const [swapCourtModal, setSwapCourtModal] = useState<any>(null);
@@ -385,10 +367,8 @@ export default function SessionDetails() {
   const [historyForm, setHistoryForm] = useState({ courtId: 0, ta1: 0, ta2: 0, tb1: 0, tb2: 0, sa1: 0, sb1: 0, sa2: 0, sb2: 0, sa3: 0, sb3: 0 });
   const [historySetView, setHistorySetView] = useState(1);
 
-  // Confirmation Modals
   const [confirmDeleteMatchId, setConfirmDeleteMatchId] = useState<number | null>(null);
 
-  // Toast System
   const [toasts, setToasts] = useState<{id: number, message: string, type: 'success'|'error'}[]>([]);
   const addToast = (msg: string, type: 'success'|'error' = 'success') => {
     const message = msg.charAt(0).toUpperCase() + msg.slice(1);
@@ -423,15 +403,18 @@ export default function SessionDetails() {
         api.get(`/matches/${id}`),
         api.get('/users/me')
       ]);
+      
       setSession(sessionRes.data);
       setSettingsForm(sessionRes.data);
-      setCourts(sessionRes.data.courts);
+      setDefaultFee(sessionRes.data.defaultFee || 0);
+      setMemberDefaultFee(sessionRes.data.memberDefaultFee || 0);
+      setCourts(sessionRes.data.courts || []);
+      setExpenses(sessionRes.data.expenses || []);
       setMembers(membersRes.data);
       setAttendances(attendancesRes.data);
       setMatches(matchesRes.data);
       setCommunityData(userRes.data.community);
 
-      // Sync leaderboard view filter with DB
       const ml = sessionRes.data.matchLimit;
       if (ml === 0) setLbLimitType('all');
       else if ([1,2,3,4,5].includes(ml)) setLbLimitType(String(ml));
@@ -455,23 +438,21 @@ export default function SessionDetails() {
   };
   const maxSets = getMaxSets();
 
-  // --- MEMOIZED COMPUTATIONS ---
   const visibleAttendances = useMemo(() => {
     return attendances
-      .filter(a => a.attendance.status !== 'cancelled')
+      .filter(a => a.attendance.status !== 'cancelled' && a.attendance.status !== 'absent')
       .filter(a => a.member.name.toLowerCase().includes(attendanceSearch.toLowerCase()));
   }, [attendances, attendanceSearch]);
 
   const availableMembersModal = useMemo(() => {
     return allMembers
-      .filter(m => !attendances.some(a => a.member.id === m.id && a.attendance.status !== 'cancelled'))
+      .filter(m => !attendances.some(a => a.member.id === m.id && (a.attendance.status === 'active' || a.attendance.status === 'resting')))
       .filter(m => m.name.toLowerCase().includes(modalSearch.toLowerCase()))
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [allMembers, attendances, modalSearch]);
 
   const activeMatches = useMemo(() => matches.filter(m => m.status === 'queued' || m.status === 'on_court'), [matches]);
   const finishedMatches = useMemo(() => matches.filter(m => m.status === 'finished').sort((a, b) => new Date(b.endedAt).getTime() - new Date(a.endedAt).getTime()), [matches]);
-  
   const queuedMatchesList = useMemo(() => matches.filter(m => m.courtId === null && m.status === 'queued').sort((a,b) => a.id - b.id), [matches]);
 
   const busyPlayerIds = useMemo(() => {
@@ -562,7 +543,6 @@ export default function SessionDetails() {
 
   const calculatePlayerGames = (member: any) => {
     if (!member) return [];
-    
     const memberMatches = [...finishedMatches, ...activeMatches.filter(m => m.status === 'on_court')].filter(m => 
       m.teamA_player1 === member.id || m.teamA_player2 === member.id || 
       m.teamB_player1 === member.id || m.teamB_player2 === member.id
@@ -609,14 +589,13 @@ export default function SessionDetails() {
 
       const result = myScore > oppScore ? 'Won' : myScore < oppScore ? 'Lost' : 'Draw';
       const scoreString = scoreStrings.join(' / ');
-
       return { id: m.id, type, courtName, duration, partnerName: pName, opp1Name: o1Name, opp2Name: o2Name, myScore, oppScore, result, scoreString };
     });
   };
 
   const playtimeData = useMemo(() => {
     return attendances
-      .filter(a => a.attendance.status !== 'cancelled')
+      .filter(a => a.attendance.status !== 'cancelled' && a.attendance.status !== 'absent')
       .filter(a => a.member.name.toLowerCase().includes(playtimeSearch.toLowerCase()))
       .map(({ member, attendance }) => {
         return { member, attendance, playedGames: calculatePlayerGames(member) };
@@ -627,13 +606,10 @@ export default function SessionDetails() {
       });
   }, [attendances, playtimeSearch, finishedMatches, activeMatches, maxSets, allMembers]);
 
-  // Session-Local Leaderboard Aggregation
   const sessionLeaderboardData = useMemo(() => {
     if (!session || !finishedMatches) return [];
     
-    // Determine active match limit from local selector state
     const activeMatchLimit = lbLimitType === 'all' ? 999 : (lbLimitType === 'custom' ? lbCustomLimit : parseInt(lbLimitType));
-    
     const playerStats: Record<number, any> = {};
 
     allMembers.forEach(m => {
@@ -641,8 +617,6 @@ export default function SessionDetails() {
     });
 
     const playerMatchCount: Record<number, number> = {};
-
-    // Sort oldest first to chronologically cut off after activeMatchLimit is reached
     const chronologicalMatches = [...finishedMatches].sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
 
     chronologicalMatches.forEach(match => {
@@ -707,23 +681,51 @@ export default function SessionDetails() {
       .filter(p => p.played > 0)
       .map(p => ({ ...p, winRate: p.played > 0 ? (p.won / p.played) : 0 }))
       .sort((a, b) => {
-        if (b.winRate !== a.winRate) return b.winRate - a.winRate; // 1. Win Rate %
-        if (b.won !== a.won) return b.won - a.won;                 // 2. Total Wins
-        if (b.netSets !== a.netSets) return b.netSets - a.netSets; // 3. Net Sets
-        if (b.netPoints !== a.netPoints) return b.netPoints - a.netPoints; // 4. Net Points
-        if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints; // 5. Total Offense
-        return a.lastWinTime - b.lastWinTime; // 6. Chronological
+        if (b.winRate !== a.winRate) return b.winRate - a.winRate; 
+        if (b.won !== a.won) return b.won - a.won;                 
+        if (b.netSets !== a.netSets) return b.netSets - a.netSets; 
+        if (b.netPoints !== a.netPoints) return b.netPoints - a.netPoints; 
+        if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints; 
+        return a.lastWinTime - b.lastWinTime; 
       })
-      .map((p, index) => ({ ...p, rank: index + 1 })); // Calculate Rank before search filter
+      .map((p, index) => ({ ...p, rank: index + 1 }));
       
     if (leaderboardSearch) {
        return sortedWithRanks.filter((p: any) => p.name.toLowerCase().includes(leaderboardSearch.toLowerCase()));
     }
     return sortedWithRanks;
-
   }, [finishedMatches, allMembers, session, maxSets, leaderboardSearch, lbLimitType, lbCustomLimit]);
 
-  // Helpers
+  const billingAttendances = useMemo(() => {
+    const uniqueMap = new Map();
+    attendances.forEach(a => {
+      const existing = uniqueMap.get(a.member.id);
+      if (!existing || (a.attendance.paymentAmount || 0) > (existing.attendance.paymentAmount || 0)) {
+        uniqueMap.set(a.member.id, a);
+      }
+    });
+
+    return Array.from(uniqueMap.values())
+      .filter(a => a.attendance.status !== 'cancelled')
+      .filter(a => a.member.name.toLowerCase().includes(billingSearch.toLowerCase()))
+      .sort((a, b) => a.member.name.localeCompare(b.member.name));
+  }, [attendances, billingSearch]);
+
+  const totalIncome = useMemo(() => {
+    return attendances.reduce((sum, a) => {
+      if (a.attendance.paymentStatus === 'paid' || a.attendance.paymentStatus === 'member') {
+        return sum + (a.attendance.paymentAmount || 0);
+      }
+      return sum;
+    }, 0);
+  }, [attendances]);
+
+  const totalExpense = useMemo(() => {
+    return expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  }, [expenses]);
+
+  const netBalance = totalIncome - totalExpense;
+
   function getMemberData(memberId: number) { return allMembers.find(m => m.id === memberId); }
   function getInitialCourtName(cId: number) { return courts.find(c => c.id === cId)?.name; }
 
@@ -744,11 +746,9 @@ export default function SessionDetails() {
       .map(([, v]) => ({ id: v, name: getMemberData(v as number)?.name || '' }));
   };
 
-  // Player Detail Variables
   const selectedDetailPlayer = playerDetailModal ? getMemberData(playerDetailModal) : null;
   const selectedDetailGames = playerDetailModal ? calculatePlayerGames(selectedDetailPlayer) : [];
 
-  // --- SESSION CONTROLS WITH DOUBLE-CLICK PREVENTION ---
   const handleStartSession = async () => {
     if(isProcessing) return; setIsProcessing(true);
     try {
@@ -770,15 +770,10 @@ export default function SessionDetails() {
     finally { setIsProcessing(false); }
   };
 
-  // --- PDF EXPORT LOGIC ---
   const applyPDFHeaderFooter = (doc: any, title: string, subtitle: string) => {
     let yPos = 20;
-
-    // Stylish dark header background spanning the whole top
-    doc.setFillColor(15, 23, 42); // slate-900
+    doc.setFillColor(15, 23, 42); 
     doc.rect(0, 0, doc.internal.pageSize.width, 40, 'F');
-
-    // Branding / Logo rendering
     if (communityData?.logo?.startsWith('data:image')) {
       try {
         doc.addImage(communityData.logo, 14, 10, 16, 16);
@@ -786,9 +781,8 @@ export default function SessionDetails() {
         doc.setTextColor(255, 255, 255); 
         doc.setFont("helvetica", "bold");
         doc.text(communityData.name || 'Community', 35, 18);
-        
         doc.setFontSize(10);
-        doc.setTextColor(148, 163, 184); // slate-400
+        doc.setTextColor(148, 163, 184); 
         doc.setFont("helvetica", "normal");
         doc.text("Generated by AturMabar", 35, 24);
       } catch(e) { console.warn('PDF Logo parsing error'); }
@@ -797,28 +791,21 @@ export default function SessionDetails() {
       doc.setTextColor(255, 255, 255);
       doc.setFont("helvetica", "bold");
       doc.text(communityData?.name || 'Community', 14, 20);
-      
       doc.setFontSize(10);
-      doc.setTextColor(148, 163, 184); // slate-400
+      doc.setTextColor(148, 163, 184); 
       doc.setFont("helvetica", "normal");
       doc.text("Generated by AturMabar", 14, 26);
     }
-
-    // Title Section
     yPos = 55;
     doc.setFontSize(18);
-    doc.setTextColor(15, 23, 42); // slate-900
+    doc.setTextColor(15, 23, 42); 
     doc.setFont("helvetica", "bold");
     doc.text(title, 14, yPos);
-    
-    // Subtitle Section
     yPos += 8;
     doc.setFontSize(11);
-    doc.setTextColor(100, 116, 139); // slate-500
+    doc.setTextColor(100, 116, 139); 
     doc.setFont("helvetica", "normal");
     doc.text(subtitle, 14, yPos);
-
-    // Dynamic Footer loop across pages
     const pageCount = doc.internal.getNumberOfPages();
     for(let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
@@ -826,7 +813,6 @@ export default function SessionDetails() {
       doc.setTextColor(148, 163, 184);
       doc.text('Generated by AturMabar', 14, doc.internal.pageSize.height - 10);
     }
-
     return yPos + 10; 
   };
 
@@ -839,7 +825,6 @@ export default function SessionDetails() {
       const teamB = `${getMemberData(m.teamB_player1)?.name || 'TBD'} & ${getMemberData(m.teamB_player2)?.name || 'TBD'}`;
       const courtName = getInitialCourtName(m.courtId) || 'Unknown Court';
       const duration = m.startedAt && m.endedAt ? Math.max(0, Math.floor((new Date(m.endedAt).getTime() - new Date(m.startedAt).getTime()) / 60000)) + ' min' : '-';
-
       let saTotal = 0, sbTotal = 0;
       let scores = [];
       for(let i=1; i<=maxSets; i++) {
@@ -850,23 +835,14 @@ export default function SessionDetails() {
             saTotal += sa; sbTotal += sb;
         }
       }
-      
       const winner = saTotal > sbTotal ? 'A' : (sbTotal > saTotal ? 'B' : 'Draw');
-
-      return [
-        m.matchType, 
-        `${courtName}\n${duration}`, 
-        teamA, 
-        scores.join(' / '), 
-        teamB, 
-        winner // Hidden 6th column for styling rules
-      ];
+      return [m.matchType, `${courtName}\n${duration}`, teamA, scores.join(' / '), teamB, winner];
     });
 
     autoTable(doc, {
       startY: tableStartY,
       head: [['Type', 'Details', 'Team A', 'Score', 'Team B']],
-      body: tableData.map(row => row.slice(0, 5)), // Exclude the hidden winner column
+      body: tableData.map(row => row.slice(0, 5)), 
       theme: 'grid',
       headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' },
       styles: { font: 'helvetica', fontSize: 10, cellPadding: 5, lineColor: [226, 232, 240] },
@@ -874,22 +850,18 @@ export default function SessionDetails() {
       didParseCell: function (data) {
         if (data.section === 'body') {
           const winner = tableData[data.row.index][5];
-          
-          // Subtle grey styling for the details column (Court & Time)
           if (data.column.index === 1) {
-            data.cell.styles.textColor = [100, 116, 139]; // slate-500
+            data.cell.styles.textColor = [100, 116, 139]; 
             data.cell.styles.fontSize = 8;
           }
-
-          // Highlight logic for winners in Emerald Green
           if (winner === 'A') {
             if (data.column.index === 2 || data.column.index === 3) {
-              data.cell.styles.textColor = [5, 150, 105]; // emerald-600
+              data.cell.styles.textColor = [5, 150, 105]; 
               data.cell.styles.fontStyle = 'bold';
             }
           } else if (winner === 'B') {
             if (data.column.index === 4 || data.column.index === 3) {
-              data.cell.styles.textColor = [5, 150, 105]; // emerald-600
+              data.cell.styles.textColor = [5, 150, 105]; 
               data.cell.styles.fontStyle = 'bold';
             }
           }
@@ -906,12 +878,7 @@ export default function SessionDetails() {
     const tableStartY = applyPDFHeaderFooter(doc, `Player Report: ${memberName}`, `Session: ${session?.name} | Date: ${new Date(session?.date).toLocaleString(i18n.language)}`);
 
     const tableData = playedGames.map(g => [
-      g.type,
-      `${g.courtName}\n${g.duration}`,
-      g.partnerName,
-      g.scoreString,
-      `${g.opp1Name} & ${g.opp2Name}`,
-      g.result
+      g.type, `${g.courtName}\n${g.duration}`, g.partnerName, g.scoreString, `${g.opp1Name} & ${g.opp2Name}`, g.result
     ]);
 
     autoTable(doc, {
@@ -925,29 +892,27 @@ export default function SessionDetails() {
       didParseCell: function (data) {
         if (data.section === 'body') {
           const result = (data.row.raw as any[])[5];
-          
           if (data.column.index === 1) {
-            data.cell.styles.textColor = [100, 116, 139]; // slate-500
+            data.cell.styles.textColor = [100, 116, 139]; 
             data.cell.styles.fontSize = 8;
           }
-
           if (result === 'Won') {
             if (data.column.index === 2 || data.column.index === 3 || data.column.index === 5) {
-              data.cell.styles.textColor = [5, 150, 105]; // emerald-600
+              data.cell.styles.textColor = [5, 150, 105]; 
               data.cell.styles.fontStyle = 'bold';
             }
           } else if (result === 'Lost') {
-            if (data.column.index === 4) { // Opponents text highlighted instead
-              data.cell.styles.textColor = [5, 150, 105]; // emerald-600
+            if (data.column.index === 4) { 
+              data.cell.styles.textColor = [5, 150, 105]; 
               data.cell.styles.fontStyle = 'bold';
             }
-            if (data.column.index === 5) { // Result text (Lost) in Rose red
-              data.cell.styles.textColor = [225, 29, 72]; // rose-600
+            if (data.column.index === 5) { 
+              data.cell.styles.textColor = [225, 29, 72]; 
               data.cell.styles.fontStyle = 'bold';
             }
           } else if (result === 'Ongoing') {
              if (data.column.index === 5) {
-               data.cell.styles.textColor = [37, 99, 235]; // blue-600
+               data.cell.styles.textColor = [37, 99, 235]; 
              }
           }
         }
@@ -958,7 +923,6 @@ export default function SessionDetails() {
     addToast("Player PDF Exported successfully!");
   };
 
-  // --- ATTENDANCE ACTIONS WITH DOUBLE-CLICK PREVENTION ---
   const openAttendeeModal = () => { setSelectedAttendees([]); setModalSearch(''); setAttendeeModalOpen(true); };
   const toggleSelectAttendee = (memberId: number) => setSelectedAttendees(prev => prev.includes(memberId) ? prev.filter(mid => mid !== memberId) : [...prev, memberId]);
 
@@ -973,9 +937,93 @@ export default function SessionDetails() {
       }));
       await fetchSessionData();
       setAttendeeModalOpen(false);
-      addToast(t('attendance_added') || "Attendees added successfully");
+      addToast(t('attendance_added', "Attendees added successfully"));
     } catch (err) { addToast("Error processing attendees.", "error"); }
     finally { setIsProcessing(false); }
+  };
+
+  const handleOpenImportModal = async () => {
+    setIsProcessing(true);
+    try {
+      const res = await api.get('/members/periods');
+      setMembershipPeriods(res.data);
+      
+      const sessionDate = new Date(session.date);
+      let defaultId = '';
+      const matchingPeriod = res.data.find((p: any) => {
+        const start = new Date(p.startDate);
+        const end = new Date(p.endDate);
+        return sessionDate >= start && sessionDate <= end;
+      });
+      
+      if (matchingPeriod) {
+        defaultId = String(matchingPeriod.id);
+      } else if (res.data.length > 0) {
+        defaultId = String(res.data[0].id);
+      }
+      
+      setSelectedPeriodId(defaultId);
+      setImportModalOpen(true);
+    } catch(err) { 
+      addToast("Error loading periods", "error"); 
+    } finally { 
+      setIsProcessing(false); 
+    }
+  };
+
+  const confirmImport = async () => {
+    if (!selectedPeriodId || isProcessing) return;
+    setIsProcessing(true);
+    try {
+      const periodId = parseInt(selectedPeriodId);
+      const matchingPeriod = membershipPeriods.find(p => p.id === periodId);
+      
+      if (!matchingPeriod) {
+        addToast("Invalid membership period.", "error");
+        setIsProcessing(false);
+        return;
+      }
+
+      const paymentsRes = await api.get(`/members/periods/${periodId}/payments`);
+      const periodMembers = paymentsRes.data;
+
+      const newMembers = periodMembers.filter((pm: any) => !attendances.some(a => a.member.id === pm.memberId));
+      for (const pm of newMembers) {
+         await api.post(`/sessions/${id}/attendances`, { memberId: pm.memberId });
+      }
+
+      const updatedAttRes = await api.get(`/sessions/${id}/attendances`);
+      const updatedAtts = updatedAttRes.data;
+
+      const updatePromises = periodMembers.map((pm: any) => {
+         const att = updatedAtts.find((a: any) => a.member.id === pm.memberId);
+         if (!att) return Promise.resolve();
+
+         const isNew = newMembers.some((nm: any) => nm.memberId === pm.memberId);
+         const statusPromise = isNew 
+           ? api.put(`/sessions/${id}/attendances/${att.attendance.id}`, { status: 'absent' }) 
+           : Promise.resolve();
+
+         const paymentStatus = pm.status === 'paid' ? 'member' : 'member_unpaid';
+         const paymentAmount = pm.status === 'paid' ? memberDefaultFee : 0;
+
+         const paymentPromise = api.put(`/sessions/${id}/attendances/${att.attendance.id}/payment`, { 
+             paymentAmount, 
+             paymentStatus 
+         });
+
+         return Promise.all([statusPromise, paymentPromise]);
+      });
+
+      await Promise.all(updatePromises);
+      await fetchSessionData();
+      setImportModalOpen(false);
+      addToast(`Successfully synced members from ${matchingPeriod.name}`);
+    } catch (err: any) {
+      addToast(err.response?.data?.error || "Error importing members", "error");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleWalkIn = async (e: React.FormEvent) => {
@@ -986,7 +1034,7 @@ export default function SessionDetails() {
       await fetchSessionData();
       setWalkInModalOpen(false);
       setWalkInForm({ name: '', gender: 'male', skillLevel: 'C1' });
-      addToast(t('walk_in_added') || "Walk-in player added successfully");
+      addToast(t('walk_in_added', "Walk-in player added successfully"));
     } catch (err) { addToast("Error adding walk-in", "error"); }
     finally { setIsProcessing(false); }
   };
@@ -996,7 +1044,7 @@ export default function SessionDetails() {
     try {
       await api.put(`/sessions/${id}/attendances/${attendanceId}`, { status });
       await fetchSessionData();
-      addToast(t('status_updated') || "Status updated");
+      addToast(t('status_updated', "Status updated"));
     } catch (err) { addToast("Error updating status", "error"); }
     finally { setIsProcessing(false); }
   };
@@ -1011,13 +1059,12 @@ export default function SessionDetails() {
     finally { setIsProcessing(false); }
   };
 
-  // --- COURTS ACTIONS WITH DOUBLE-CLICK PREVENTION ---
   const handleAddCourt = async () => {
     if (isProcessing) return; setIsProcessing(true);
     try {
       await api.post(`/sessions/${id}/courts`, { name: `Court ${courts.length + 1}` });
       await fetchSessionData();
-      addToast(t('court_added') || "Court added");
+      addToast(t('court_added', "Court added"));
     } catch (err) { addToast("Error adding court", "error"); }
     finally { setIsProcessing(false); }
   };
@@ -1028,7 +1075,7 @@ export default function SessionDetails() {
       await api.put(`/sessions/${id}/courts/${courtId}`, { isActive, name: name || courts.find(c => c.id === courtId)?.name });
       setEditCourtId(null);
       await fetchSessionData();
-      addToast(t('court_updated') || "Court updated");
+      addToast(t('court_updated', "Court updated"));
     } catch (err) { addToast("Error updating court", "error"); }
     finally { setIsProcessing(false); }
   };
@@ -1039,12 +1086,11 @@ export default function SessionDetails() {
     try {
       await api.delete(`/sessions/${id}/courts/${courtId}`);
       await fetchSessionData();
-      addToast(t('court_deleted') || "Court deleted");
+      addToast(t('court_deleted', "Court deleted"));
     } catch (err) { addToast("Error deleting court", "error"); }
     finally { setIsProcessing(false); }
   };
 
-  // --- MATCH ACTIONS WITH DOUBLE-CLICK PREVENTION ---
   const handleAutoGenerateCourt = async (courtId: number) => {
     if (isProcessing) return; setIsProcessing(true);
     try {
@@ -1075,7 +1121,7 @@ export default function SessionDetails() {
     try {
       await api.post(`/matches/${id}/auto-generate`, { courtId: null });
       await fetchSessionData();
-      addToast(t('match_queued') || "Match added to queue");
+      addToast(t('match_queued', "Match added to queue"));
     } catch (err: any) { addToast(err.response?.data?.error || "Error generating match", "error"); }
     finally { setIsProcessing(false); }
   };
@@ -1085,7 +1131,7 @@ export default function SessionDetails() {
     try { 
       await api.put(`/matches/${matchId}/start`); 
       await fetchSessionData(); 
-      addToast(t('match_started') || "Match started"); 
+      addToast(t('match_started', "Match started")); 
     } catch (err) { addToast("Error starting match", "error"); }
     finally { setIsProcessing(false); }
   };
@@ -1104,7 +1150,7 @@ export default function SessionDetails() {
       }
       await api.put(`/matches/${matchId}/finish`, payload);
       await fetchSessionData();
-      addToast(t('match_finished') || "Match finished");
+      addToast(t('match_finished', "Match finished"));
     } catch (err) { addToast("Error finishing match", "error"); }
     finally { setIsProcessing(false); }
   };
@@ -1115,7 +1161,7 @@ export default function SessionDetails() {
     try { 
       await api.delete(`/matches/${confirmDeleteMatchId}`); 
       await fetchSessionData(); 
-      addToast(t('match_cancelled') || "Match cancelled successfully."); 
+      addToast(t('match_cancelled', "Match cancelled successfully.")); 
     } catch (err) { addToast("Error canceling match", "error"); }
     finally { setConfirmDeleteMatchId(null); setIsProcessing(false); }
   };
@@ -1126,7 +1172,7 @@ export default function SessionDetails() {
       await api.put(`/matches/${matchId}/swap-court`, { targetCourtId });
       setSwapCourtModal(null);
       await fetchSessionData();
-      addToast(t('court_swapped') || "Court swapped successfully");
+      addToast(t('court_swapped', "Court swapped successfully"));
     } catch (err) { addToast("Error swapping courts", "error"); }
     finally { setIsProcessing(false); }
   };
@@ -1140,7 +1186,6 @@ export default function SessionDetails() {
     try {
       const m1 = queuedMatchesList[currentIndex];
       const m2 = queuedMatchesList[targetIndex];
-      
       await Promise.all([
         api.put(`/matches/${m1.id}/players`, {
           teamA_player1: m2.teamA_player1, teamA_player2: m2.teamA_player2,
@@ -1185,33 +1230,26 @@ export default function SessionDetails() {
 
       if (editMatchModal.id) {
         await api.put(`/matches/${editMatchModal.id}/players`, payload);
-        addToast(t('match_updated') || "Players updated successfully");
+        addToast(t('match_updated', "Players updated successfully"));
       } else {
         await api.post(`/matches/${id}/manual`, { ...payload, courtId: editMatchModal.courtId });
         addToast("Manual match created successfully");
       }
-
       setEditMatchModal(null);
       await fetchSessionData();
     } catch (err) { addToast("Error saving players", "error"); }
     finally { setIsProcessing(false); }
   };
 
-  // --- HISTORY ACTIONS WITH DOUBLE-CLICK PREVENTION ---
   const openEditHistoryModal = (match: any) => {
     setHistorySetView(1);
     setHistoryForm({
       courtId: match.courtId || 0,
-      ta1: match.teamA_player1 || 0,
-      ta2: match.teamA_player2 || 0,
-      tb1: match.teamB_player1 || 0,
-      tb2: match.teamB_player2 || 0,
-      sa1: match.scoreTeamA_set1 || 0,
-      sb1: match.scoreTeamB_set1 || 0,
-      sa2: match.scoreTeamA_set2 || 0,
-      sb2: match.scoreTeamB_set2 || 0,
-      sa3: match.scoreTeamA_set3 || 0,
-      sb3: match.scoreTeamB_set3 || 0,
+      ta1: match.teamA_player1 || 0, ta2: match.teamA_player2 || 0,
+      tb1: match.teamB_player1 || 0, tb2: match.teamB_player2 || 0,
+      sa1: match.scoreTeamA_set1 || 0, sb1: match.scoreTeamB_set1 || 0,
+      sa2: match.scoreTeamA_set2 || 0, sb2: match.scoreTeamB_set2 || 0,
+      sa3: match.scoreTeamA_set3 || 0, sb3: match.scoreTeamB_set3 || 0,
     });
     setEditHistoryModal(match);
   };
@@ -1233,16 +1271,11 @@ export default function SessionDetails() {
     try {
       await api.put(`/matches/${editHistoryModal.id}/history`, {
         courtId: historyForm.courtId || null,
-        teamA_player1: historyForm.ta1 || null,
-        teamA_player2: historyForm.ta2 || null,
-        teamB_player1: historyForm.tb1 || null,
-        teamB_player2: historyForm.tb2 || null,
-        scoreTeamA_set1: historyForm.sa1 || 0,
-        scoreTeamB_set1: historyForm.sb1 || 0,
-        scoreTeamA_set2: historyForm.sa2 || 0,
-        scoreTeamB_set2: historyForm.sb2 || 0,
-        scoreTeamA_set3: historyForm.sa3 || 0,
-        scoreTeamB_set3: historyForm.sb3 || 0,
+        teamA_player1: historyForm.ta1 || null, teamA_player2: historyForm.ta2 || null,
+        teamB_player1: historyForm.tb1 || null, teamB_player2: historyForm.tb2 || null,
+        scoreTeamA_set1: historyForm.sa1 || 0, scoreTeamB_set1: historyForm.sb1 || 0,
+        scoreTeamA_set2: historyForm.sa2 || 0, scoreTeamB_set2: historyForm.sb2 || 0,
+        scoreTeamA_set3: historyForm.sa3 || 0, scoreTeamB_set3: historyForm.sb3 || 0,
       });
       setEditHistoryModal(null);
       await fetchSessionData();
@@ -1251,20 +1284,91 @@ export default function SessionDetails() {
     finally { setIsProcessing(false); }
   };
 
-  // --- SETTINGS ACTIONS WITH DOUBLE-CLICK PREVENTION ---
+  const handleResetBilling = async () => {
+    if (isProcessing || !window.confirm(t('reset_billing_confirm', 'Are you sure you want to reset all player payments to Unpaid?'))) return;
+    setIsProcessing(true);
+    try {
+      const promises = attendances.map(a => 
+         api.put(`/sessions/${id}/attendances/${a.attendance.id}/payment`, { paymentAmount: 0, paymentStatus: 'unpaid' })
+      );
+      await Promise.all(promises);
+      await fetchSessionData();
+      addToast(t('billing_reset', 'Billing reset successfully.'));
+    } catch (err) { addToast("Error resetting billing", "error"); }
+    finally { setIsProcessing(false); }
+  };
+
+  const handleUpdateDefaultFee = async () => {
+    if (isProcessing) return; setIsProcessing(true);
+    try {
+      await api.put(`/sessions/${id}/billing/default-fee`, { defaultFee, memberDefaultFee });
+      await fetchSessionData();
+      addToast(t('fee_updated', 'Fees updated successfully'));
+    } catch (err) { addToast("Error updating fees", "error"); }
+    finally { setIsProcessing(false); }
+  };
+
+  const handleUpdatePayment = async (attendanceId: number, paymentAmount: number, paymentStatus: string) => {
+    try {
+      await api.put(`/sessions/${id}/attendances/${attendanceId}/payment`, { paymentAmount, paymentStatus });
+      await fetchSessionData();
+    } catch (err) { addToast("Error updating payment", "error"); }
+  };
+
+  const savePaymentAmount = (attendanceId: number, status: string) => {
+    handleUpdatePayment(attendanceId, editPaymentValue, status);
+    setEditingPaymentId(null);
+  };
+
+  const handleStatusChange = (attendance: any, newStatus: string) => {
+    let finalAmount = attendance.paymentAmount || 0;
+    
+    if (newStatus === 'paid') finalAmount = defaultFee;
+    if (newStatus === 'member') finalAmount = memberDefaultFee;
+    if (newStatus === 'free' || newStatus === 'unpaid' || newStatus === 'member_unpaid') finalAmount = 0;
+
+    handleUpdatePayment(attendance.id, finalAmount, newStatus);
+  };
+
+  const handleAddExpense = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isProcessing) return; setIsProcessing(true);
+    try {
+      await api.post(`/sessions/${id}/expenses`, {
+        description: expenseForm.description,
+        amount: parseInt(expenseForm.amount)
+      });
+      setExpenseForm({ description: '', amount: '' });
+      await fetchSessionData();
+      addToast(t('expense_added', 'Expense added'));
+    } catch (err) { addToast("Error adding expense", "error"); }
+    finally { setIsProcessing(false); }
+  };
+
+  const handleDeleteExpense = async (expenseId: number) => {
+    if (isProcessing || !window.confirm("Delete this expense?")) return;
+    setIsProcessing(true);
+    try {
+      await api.delete(`/sessions/${id}/expenses/${expenseId}`);
+      await fetchSessionData();
+      addToast(t('expense_deleted', 'Expense deleted'));
+    } catch (err) { addToast("Error deleting expense", "error"); }
+    finally { setIsProcessing(false); }
+  };
+
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isProcessing) return; setIsProcessing(true);
     try {
       await api.put(`/sessions/${id}`, settingsForm);
       await fetchSessionData();
-      addToast(t('save_settings') || "Settings saved successfully");
+      addToast(t('save_settings', "Settings saved successfully"));
     } catch (err) { addToast("Error saving settings", "error"); }
     finally { setIsProcessing(false); }
   };
 
   const handleDeleteSession = async () => {
-    if (isProcessing || !window.confirm(t('delete_session_warning') || "Delete session?")) return;
+    if (isProcessing || !window.confirm(t('delete_session_warning', "Delete session?"))) return;
     setIsProcessing(true);
     try {
       await api.delete(`/sessions/${id}`);
@@ -1272,7 +1376,6 @@ export default function SessionDetails() {
     } catch (err) { addToast("Error deleting session", "error"); setIsProcessing(false); }
   };
 
-  // Reusable waiting list render function
   const renderWaitingListContent = () => (
     <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
       {waitingListPlayers.length === 0 ? (
@@ -1291,15 +1394,12 @@ export default function SessionDetails() {
               <div className="flex flex-col items-center group relative cursor-help px-2 border-x border-slate-100 dark:border-[#1E293B]">
                 <span className="font-black text-xl leading-none text-blue-600 dark:text-blue-400">{p.gamesPlayed}</span>
                 <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">{t('played', 'Played')}</span>
-                
-                {/* Hover Tooltip */}
                 <div className="hidden group-hover:block absolute bottom-full mb-2 right-0 bg-slate-800 dark:bg-slate-700 text-white p-2.5 rounded-lg shadow-xl text-xs z-50 whitespace-nowrap border border-slate-700 dark:border-slate-600">
                   <div className="font-bold mb-1 border-b border-slate-600 pb-1">{p.name}</div>
                   <div className="flex justify-between gap-4"><span>Finished:</span> <span>{p.finishedCount}</span></div>
                   <div className="flex justify-between gap-4 text-emerald-400"><span>Ongoing:</span> <span>{p.ongoingCount}</span></div>
                 </div>
               </div>
-              
               <button 
                 disabled={isProcessing}
                 onClick={() => updateAttendanceStatus(p.attendanceId, 'resting')}
@@ -1325,11 +1425,11 @@ export default function SessionDetails() {
 
       {/* Top Notification Toasts */}
       <div className="fixed top-20 right-4 z-[100] flex flex-col gap-3 pointer-events-none">
-        {toasts.map(t => (
-          <div key={t.id} className={`pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl text-sm font-bold animate-in slide-in-from-top-5 fade-in duration-300 border ${t.type === 'success' ? 'bg-[#10B981] border-[#059669] text-white' : 'bg-rose-600 border-rose-700 text-white'}`}>
-            {t.type === 'success' ? <Check size={18} /> : <AlertCircle size={18} />}
-            {t.message}
-            <button onClick={() => setToasts(prev => prev.filter(toast => toast.id !== t.id))} className="ml-4 hover:opacity-75"><X size={16}/></button>
+        {toasts.map(toastItem => (
+          <div key={toastItem.id} className={`pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl text-sm font-bold animate-in slide-in-from-top-5 fade-in duration-300 border ${toastItem.type === 'success' ? 'bg-[#10B981] border-[#059669] text-white' : 'bg-rose-600 border-rose-700 text-white'}`}>
+            {toastItem.type === 'success' ? <Check size={18} /> : <AlertCircle size={18} />}
+            {toastItem.message}
+            <button onClick={() => setToasts(prev => prev.filter(t => t.id !== toastItem.id))} className="ml-4 hover:opacity-75"><X size={16}/></button>
           </div>
         ))}
       </div>
@@ -1381,7 +1481,6 @@ export default function SessionDetails() {
           </div>
           
           <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0 justify-end">
-            {/* Allow starting if scheduled OR finished */}
             {(!session?.status || session?.status === 'scheduled' || session?.status === 'finished') && (
               <button disabled={isProcessing} onClick={handleStartSession} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-colors shadow-sm disabled:opacity-50">
                 <Play size={16} fill="currentColor"/> 
@@ -1604,9 +1703,7 @@ export default function SessionDetails() {
             
             <div className="flex flex-col lg:flex-row gap-6 items-start">
               
-              {/* LEFT COLUMN: COURTS & QUEUE */}
               <div className="flex-1 w-full flex flex-col gap-8">
-                
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                   <h2 className="text-lg font-bold">{t('matches')}</h2>
                   <div className="flex flex-wrap gap-2 w-full sm:w-auto">
@@ -1679,7 +1776,6 @@ export default function SessionDetails() {
                 )}
               </div>
 
-              {/* RIGHT COLUMN: WAITING LIST (DESKTOP) */}
               <div className="hidden lg:flex w-80 shrink-0 bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-2xl shadow-sm flex-col h-[calc(100vh-140px)] sticky top-24 overflow-hidden">
                 <div className="p-4 border-b border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0B1120] flex justify-between items-center shrink-0">
                   <h3 className="font-bold text-sm tracking-wide text-slate-800 dark:text-white uppercase">{t('available_players', 'Available Players')}</h3>
@@ -1688,7 +1784,6 @@ export default function SessionDetails() {
                 {renderWaitingListContent()}
               </div>
 
-              {/* MOBILE BOTTOM PILL: WAITING LIST TRIGGER */}
               <div className="fixed bottom-6 left-0 right-0 z-40 flex justify-center lg:hidden pointer-events-none">
                 <button 
                   onClick={() => setIsWaitingListOpen(true)} 
@@ -1700,7 +1795,6 @@ export default function SessionDetails() {
                 </button>
               </div>
 
-              {/* MOBILE SLIDE-OVER: WAITING LIST */}
               <div className={`fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${isWaitingListOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsWaitingListOpen(false)} />
               <div className={`fixed inset-y-0 right-0 z-[110] w-full max-w-[320px] bg-slate-50 dark:bg-[#0F172A] shadow-2xl transform transition-transform duration-300 ease-in-out lg:hidden flex flex-col border-l border-slate-200 dark:border-[#1E293B] ${isWaitingListOpen ? 'translate-x-0' : 'translate-x-full'}`}>
                  <div className="p-4 border-b border-slate-200 dark:border-[#1E293B] bg-white dark:bg-[#0B1120] flex justify-between items-center shrink-0 mt-safe">
@@ -1713,6 +1807,283 @@ export default function SessionDetails() {
                  {renderWaitingListContent()}
               </div>
 
+            </div>
+          </div>
+        )}
+
+        {/* BILLING TAB */}
+        {activeTab === 'billing' && (
+          <div className="animate-in fade-in duration-200">
+            <div className="flex flex-col gap-6">
+              
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] p-5 rounded-2xl shadow-sm flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                    <TrendingUp size={24} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('total_income', 'Total Income')}</p>
+                    <p className="text-xl font-bold text-slate-900 dark:text-white">{formatCurrency(totalIncome)}</p>
+                  </div>
+                </div>
+
+                <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] p-5 rounded-2xl shadow-sm flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                    <TrendingDown size={24} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('total_expense', 'Total Expense')}</p>
+                    <p className="text-xl font-bold text-slate-900 dark:text-white">{formatCurrency(totalExpense)}</p>
+                  </div>
+                </div>
+
+                <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] p-5 rounded-2xl shadow-sm flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${netBalance >= 0 ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400'}`}>
+                    <Wallet size={24} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('net_balance', 'Net Balance')}</p>
+                    <p className={`text-xl font-bold ${netBalance >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                      {formatCurrency(netBalance)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                {/* Income Section */}
+                <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-2xl shadow-sm overflow-hidden flex flex-col">
+                  
+                  <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 p-4 border-b border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0B1120]">
+                    <div className="flex items-center gap-3">
+                      <h3 className="font-bold flex items-center gap-2 text-lg">
+                        <DollarSign size={18} className="text-emerald-500"/> {t('player_payments', 'Player Payments')}
+                      </h3>
+                      <button onClick={handleOpenImportModal} disabled={isProcessing} className="flex items-center gap-2 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#334155] px-3 py-1.5 rounded-lg text-sm font-bold shadow-sm transition-colors disabled:opacity-50">
+                        <Users size={14} /> <span className="hidden sm:inline">{t('import_members', 'Import Members')}</span>
+                      </button>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex items-center gap-2 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] p-1 rounded-lg">
+                        <input type="number" value={defaultFee || ''} onChange={(e) => setDefaultFee(parseInt(e.target.value) || 0)} className="w-20 sm:w-24 bg-transparent outline-none text-right font-bold text-sm px-2 text-slate-900 dark:text-white" placeholder={t('walk_in_fee', 'Walk-in')}/>
+                        <div className="w-px h-5 bg-slate-200 dark:bg-[#334155]"></div>
+                        <input type="number" value={memberDefaultFee || ''} onChange={(e) => setMemberDefaultFee(parseInt(e.target.value) || 0)} className="w-20 sm:w-24 bg-transparent outline-none text-right font-bold text-sm px-2 text-slate-900 dark:text-white" placeholder={t('member_fee', 'Member')}/>
+                      </div>
+                      <button onClick={handleUpdateDefaultFee} disabled={isProcessing} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-sm font-bold shadow-sm transition-colors disabled:opacity-50">
+                        {t('set_fee', 'Set Fee')}
+                      </button>
+                      <button onClick={handleResetBilling} disabled={isProcessing} className="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-900/20 dark:hover:bg-rose-900/40 border border-rose-200 dark:border-rose-800/30 rounded-lg transition-colors ml-1 disabled:opacity-50" title={t('reset_billing', 'Reset All Payments')}>
+                        <RotateCcw size={16}/>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="p-4 border-b border-slate-200 dark:border-[#1E293B] bg-white dark:bg-[#0F172A]">
+                    <div className="relative w-full">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                      <input type="text" placeholder={t('search_players', 'Search players...')} value={billingSearch} onChange={(e) => setBillingSearch(e.target.value)} className={`${inputStyles} pl-9`} />
+                    </div>
+                  </div>
+                  
+                  {/* Desktop Income Table */}
+                  <div className="hidden sm:block overflow-x-auto flex-1">
+                    <table className="w-full text-sm text-left">
+                      <thead className="text-xs text-slate-500 uppercase bg-slate-50 dark:bg-[#0B1120] border-b border-slate-200 dark:border-[#1E293B]">
+                        <tr>
+                          <th className="px-4 py-3">{t('player', 'Player')}</th>
+                          <th className="px-4 py-3 text-right">{t('amount', 'Amount')}</th>
+                          <th className="px-4 py-3 w-40">{t('status', 'Status')}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-[#1E293B]">
+                        {billingAttendances.length === 0 && <tr><td colSpan={3} className="p-4 text-center text-slate-500">No players found</td></tr>}
+                        {billingAttendances.map(({ member, attendance }) => (
+                          <tr key={attendance.id} className="hover:bg-slate-50 dark:hover:bg-[#1E293B]/50 transition-colors">
+                            <td className="px-4 py-3 font-medium whitespace-nowrap">
+                              {member.name}
+                              {attendance.status === 'absent' && <span className="ml-2 text-[9px] font-bold tracking-widest uppercase text-slate-400 border border-slate-200 dark:border-slate-700 px-1.5 py-0.5 rounded bg-slate-50 dark:bg-[#0B1120]">{t('absent', 'Absent')}</span>}
+                            </td>
+                            <td className="px-4 py-3 min-w-[120px] text-right">
+                              {editingPaymentId === attendance.id ? (
+                                <div className="flex items-center justify-end gap-2 w-full">
+                                  <input 
+                                    type="number" 
+                                    autoFocus
+                                    value={editPaymentValue || ''} 
+                                    onChange={(e) => setEditPaymentValue(parseInt(e.target.value) || 0)}
+                                    className="w-24 px-2 py-1 bg-white dark:bg-[#0F172A] border border-blue-500 rounded text-right font-bold outline-none"
+                                    onKeyDown={(e) => { if (e.key === 'Enter') savePaymentAmount(attendance.id, attendance.paymentStatus || 'unpaid'); }}
+                                  />
+                                  <button onClick={() => savePaymentAmount(attendance.id, attendance.paymentStatus || 'unpaid')} className="p-1 text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 rounded"><Check size={14}/></button>
+                                  <button onClick={() => setEditingPaymentId(null)} className="p-1 text-rose-600 bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 rounded"><X size={14}/></button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-end gap-2 group cursor-pointer w-full" onClick={() => { setEditingPaymentId(attendance.id); setEditPaymentValue(attendance.paymentAmount || 0); }}>
+                                  <span className="font-bold">{formatCurrency(attendance.paymentAmount || 0)}</span>
+                                  <Edit2 size={12} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              <select 
+                                value={attendance.paymentStatus || 'unpaid'}
+                                onChange={(e) => handleStatusChange(attendance, e.target.value)}
+                                className={`w-full px-2 py-1.5 rounded outline-none border font-bold text-xs uppercase tracking-wider cursor-pointer ${
+                                  (attendance.paymentStatus || 'unpaid') === 'paid' ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400' :
+                                  (attendance.paymentStatus || 'unpaid') === 'member' ? 'bg-purple-50 border-purple-200 text-purple-700 dark:bg-purple-900/20 dark:border-purple-800 dark:text-purple-400' :
+                                  (attendance.paymentStatus || 'unpaid') === 'member_unpaid' ? 'bg-fuchsia-50 border-fuchsia-200 text-fuchsia-700 dark:bg-fuchsia-900/20 dark:border-fuchsia-800 dark:text-fuchsia-400' :
+                                  (attendance.paymentStatus || 'unpaid') === 'free' ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400' :
+                                  'bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-900/20 dark:border-rose-800 dark:text-rose-400'
+                                }`}
+                              >
+                                <option value="unpaid">{t('unpaid', 'Unpaid')}</option>
+                                <option value="paid">{t('paid', 'Paid')}</option>
+                                <option value="member">{t('member', 'Member')}</option>
+                                <option value="member_unpaid">{t('member_unpaid', 'Member (Unpaid)')}</option>
+                                <option value="free">{t('free', 'Free')}</option>
+                              </select>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile Income Cards */}
+                  <div className="sm:hidden flex flex-col p-4 gap-3 bg-slate-50 dark:bg-[#0B1120] flex-1">
+                    {billingAttendances.length === 0 && <div className="text-center text-slate-500 font-medium py-4">No players found</div>}
+                    {billingAttendances.map(({ member, attendance }) => (
+                      <div key={attendance.id} className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] p-4 rounded-xl shadow-sm flex flex-col gap-3">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2 min-w-0 pr-2">
+                            <span className="font-bold text-sm dark:text-white truncate">{member.name}</span>
+                            {attendance.status === 'absent' && <span className="text-[9px] font-bold tracking-widest uppercase text-slate-400 border border-slate-200 dark:border-slate-700 px-1 py-0.5 rounded bg-slate-50 dark:bg-[#0B1120] shrink-0">{t('absent', 'Absent')}</span>}
+                          </div>
+                          <select 
+                            value={attendance.paymentStatus || 'unpaid'}
+                            onChange={(e) => handleStatusChange(attendance, e.target.value)}
+                            className={`px-2 py-1 rounded outline-none border font-bold text-[10px] uppercase tracking-wider shrink-0 cursor-pointer ${
+                              (attendance.paymentStatus || 'unpaid') === 'paid' ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400' :
+                              (attendance.paymentStatus || 'unpaid') === 'member' ? 'bg-purple-50 border-purple-200 text-purple-700 dark:bg-purple-900/20 dark:border-purple-800 dark:text-purple-400' :
+                              (attendance.paymentStatus || 'unpaid') === 'member_unpaid' ? 'bg-fuchsia-50 border-fuchsia-200 text-fuchsia-700 dark:bg-fuchsia-900/20 dark:border-fuchsia-800 dark:text-fuchsia-400' :
+                              (attendance.paymentStatus || 'unpaid') === 'free' ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400' :
+                              'bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-900/20 dark:border-rose-800 dark:text-rose-400'
+                            }`}
+                          >
+                            <option value="unpaid">{t('unpaid', 'Unpaid')}</option>
+                            <option value="paid">{t('paid', 'Paid')}</option>
+                            <option value="member">{t('member', 'Member')}</option>
+                            <option value="member_unpaid">{t('member_unpaid', 'Member (Unpaid)')}</option>
+                            <option value="free">{t('free', 'Free')}</option>
+                          </select>
+                        </div>
+                        <div className="flex justify-between items-center gap-3">
+                          <span className="text-xs text-slate-500 font-bold uppercase tracking-widest">{t('amount', 'Amount')}</span>
+                          {editingPaymentId === attendance.id ? (
+                            <div className="flex items-center justify-end gap-2 w-full">
+                              <input 
+                                type="number" 
+                                autoFocus
+                                value={editPaymentValue || ''} 
+                                onChange={(e) => setEditPaymentValue(parseInt(e.target.value) || 0)}
+                                className="w-full max-w-[100px] px-2 py-1.5 bg-white dark:bg-[#0B1120] border border-blue-500 rounded text-right font-bold outline-none"
+                              />
+                              <button onClick={() => savePaymentAmount(attendance.id, attendance.paymentStatus || 'unpaid')} className="p-1.5 text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 rounded"><Check size={16}/></button>
+                              <button onClick={() => setEditingPaymentId(null)} className="p-1.5 text-rose-600 bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 rounded"><X size={16}/></button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-end gap-2 group cursor-pointer" onClick={() => { setEditingPaymentId(attendance.id); setEditPaymentValue(attendance.paymentAmount || 0); }}>
+                              <span className="font-bold">{formatCurrency(attendance.paymentAmount || 0)}</span>
+                              <Edit2 size={14} className="text-blue-500" />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Expense Section */}
+                <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-2xl shadow-sm overflow-hidden flex flex-col h-max">
+                  <div className="p-4 border-b border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0B1120]">
+                    <h3 className="font-bold flex items-center gap-2"><DollarSign size={18} className="text-rose-500"/> {t('expenses', 'Expenses')}</h3>
+                  </div>
+                  
+                  <div className="p-4 border-b border-slate-200 dark:border-[#1E293B]">
+                    <form onSubmit={handleAddExpense} className="flex flex-col sm:flex-row gap-3">
+                      <input 
+                        type="text" 
+                        placeholder={t('description', 'Description (e.g., Shuttlecocks)')} 
+                        value={expenseForm.description}
+                        onChange={(e) => setExpenseForm({...expenseForm, description: e.target.value})}
+                        className={`${inputStyles} flex-1`}
+                        required
+                        disabled={isProcessing}
+                      />
+                      <input 
+                        type="number" 
+                        placeholder={t('amount', 'Amount')} 
+                        value={expenseForm.amount}
+                        onChange={(e) => setExpenseForm({...expenseForm, amount: e.target.value})}
+                        className={`${inputStyles} sm:w-32 text-right`}
+                        required
+                        disabled={isProcessing}
+                      />
+                      <button disabled={isProcessing} type="submit" className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-white px-4 py-2 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2 whitespace-nowrap shrink-0 disabled:opacity-50">
+                        <Plus size={16} /> <span className="sm:hidden lg:inline">{t('add_expense', 'Add Expense')}</span>
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Desktop Expenses Table */}
+                  <div className="hidden sm:block overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                      <thead className="text-xs text-slate-500 uppercase bg-slate-50 dark:bg-[#0B1120] border-b border-slate-200 dark:border-[#1E293B]">
+                        <tr>
+                          <th className="px-4 py-3">{t('description', 'Description')}</th>
+                          <th className="px-4 py-3 text-right">{t('amount', 'Amount')}</th>
+                          <th className="px-4 py-3 w-10"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-[#1E293B]">
+                        {expenses.length === 0 && (
+                          <tr><td colSpan={3} className="px-4 py-8 text-center text-slate-500 font-medium">No expenses recorded.</td></tr>
+                        )}
+                        {expenses.map((expense) => (
+                          <tr key={expense.id} className="hover:bg-slate-50 dark:hover:bg-[#1E293B]/50 transition-colors">
+                            <td className="px-4 py-3 font-medium">{expense.description}</td>
+                            <td className="px-4 py-3 text-right font-bold text-rose-600 dark:text-rose-400">
+                              {formatCurrency(expense.amount)}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <button disabled={isProcessing} onClick={() => handleDeleteExpense(expense.id)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded transition-colors disabled:opacity-50">
+                                <Trash2 size={16} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile Expenses Cards */}
+                  <div className="sm:hidden flex flex-col gap-3 p-4 bg-slate-50 dark:bg-[#0B1120]">
+                    {expenses.length === 0 && <div className="text-center text-slate-500 font-medium py-4">No expenses recorded.</div>}
+                    {expenses.map(expense => (
+                      <div key={expense.id} className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] p-4 rounded-xl shadow-sm flex justify-between items-center">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-sm dark:text-white">{expense.description}</span>
+                          <span className="text-rose-600 dark:text-rose-400 font-bold mt-1">{formatCurrency(expense.amount)}</span>
+                        </div>
+                        <button disabled={isProcessing} onClick={() => handleDeleteExpense(expense.id)} className="p-2.5 text-rose-500 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 rounded-lg transition-colors disabled:opacity-50"><Trash2 size={16}/></button>
+                      </div>
+                    ))}
+                  </div>
+
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -2151,6 +2522,45 @@ export default function SessionDetails() {
 
       </main>
 
+      {/* Import Members Modal */}
+      {isImportModalOpen && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-[#0F172A] w-full max-w-md rounded-2xl shadow-2xl flex flex-col border border-slate-200 dark:border-[#1E293B]">
+            <div className="flex justify-between items-center p-5 border-b border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0B1120]">
+              <h3 className="font-bold text-lg">{t('import_members')}</h3>
+              <button disabled={isProcessing} onClick={() => setImportModalOpen(false)} className="p-1.5 text-slate-400 hover:bg-slate-200 dark:hover:bg-[#1E293B] rounded-full transition-colors"><X size={18}/></button>
+            </div>
+            
+            <div className="p-6">
+              {membershipPeriods.length === 0 ? (
+                <div className="text-center text-slate-500 py-4">No active membership periods found.</div>
+              ) : (
+                <>
+                  <label className="block text-sm font-bold mb-2 text-slate-700 dark:text-slate-300">Select Membership Period</label>
+                  <select 
+                    value={selectedPeriodId} 
+                    onChange={e => setSelectedPeriodId(e.target.value)} 
+                    className={`${inputStyles} font-bold appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_12px_center] pr-8`}
+                  >
+                    {membershipPeriods.map(period => (
+                      <option key={period.id} value={period.id}>{period.name}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-slate-500 mt-4">
+                    Importing will sync all members from the selected period into this session's ledger. They will be marked as "Absent" until they physically arrive.
+                  </p>
+                </>
+              )}
+            </div>
+
+            <div className="p-5 border-t border-slate-200 dark:border-[#1E293B] bg-slate-50 dark:bg-[#0B1120] flex justify-end gap-3 rounded-b-2xl">
+              <button disabled={isProcessing} onClick={() => setImportModalOpen(false)} className="px-5 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-[#1E293B] rounded-lg transition-colors disabled:opacity-50">Cancel</button>
+              <button disabled={isProcessing || membershipPeriods.length === 0} onClick={confirmImport} className="px-6 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors disabled:opacity-50">Import Now</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Manual Match Edit Modal */}
       {editMatchModal && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in">
@@ -2350,7 +2760,6 @@ export default function SessionDetails() {
             </div>
             <div className="p-4 overflow-y-auto flex flex-col gap-2">
               
-              {/* Added Move to Queue Button */}
               {swapCourtModal.status !== 'on_court' && swapCourtModal.courtId !== null && (
                 <button disabled={isProcessing} onClick={() => handleSwapCourt(swapCourtModal.id, null)} className="w-full text-left p-4 rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-900/10 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors font-bold flex justify-between items-center text-amber-700 dark:text-amber-500 mb-2 disabled:opacity-50">
                   Move to Queue (Waiting List)

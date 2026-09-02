@@ -3,7 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { 
   Zap, LogOut, Settings, X, ShieldAlert, User, Lock, Globe, Image as ImageIcon, 
-  Upload, Sun, Moon, Users, CalendarDays, Trophy, ChevronRight, AlertCircle 
+  Upload, Sun, Moon, Users, CalendarDays, Trophy, ChevronRight, AlertCircle,
+  Activity, Calendar, Clock, Play, CheckCircle
 } from 'lucide-react';
 import api from '../api/axios';
 
@@ -12,10 +13,25 @@ const PRESET_AVATARS = ['🏸', '🏆', '👟', '👕', '🔥', '🌟', '⚡', '
 export default function Dashboard() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+
+  // Admin access interception
+  useEffect(() => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const parsedUser = JSON.parse(userStr);
+        if (parsedUser.role === 'admin') {
+          navigate('/admin', { replace: true });
+        }
+      } catch (e) {}
+    }
+  }, [navigate]);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [userData, setUserData] = useState<any>(null);
   const [communityData, setCommunityData] = useState<any>(null);
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -49,9 +65,13 @@ export default function Dashboard() {
       const response = await api.get('/users/me');
       setUserData(response.data.user);
       setCommunityData(response.data.community);
+      setRecentActivities(response.data.recentActivities || []);
       setProfileForm({ communityName: response.data.community.name, logo: response.data.community.logo });
       setAccountForm(prev => ({ ...prev, newEmail: response.data.user.email }));
     } catch (error) {
+      // DESTROY the token to break the infinite loop
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
       navigate('/login');
     } finally {
       setLoading(false);
@@ -120,6 +140,14 @@ export default function Dashboard() {
     }
   };
 
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'active': return <span className="flex items-center gap-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 px-2 py-1 rounded text-[10px] sm:text-xs font-bold uppercase tracking-wider"><Play size={10} fill="currentColor"/> {t('status_active', 'Active')}</span>;
+      case 'finished': return <span className="flex items-center gap-1 bg-slate-200 text-slate-700 dark:bg-[#1E293B] dark:text-slate-400 px-2 py-1 rounded text-[10px] sm:text-xs font-bold uppercase tracking-wider"><CheckCircle size={10}/> {t('status_finished', 'Finished')}</span>;
+      default: return <span className="flex items-center gap-1 bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 px-2 py-1 rounded text-[10px] sm:text-xs font-bold uppercase tracking-wider"><Clock size={10}/> {t('status_scheduled', 'Scheduled')}</span>;
+    }
+  };
+
   if (loading) return <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0F172A] flex items-center justify-center text-slate-500">{t('loading')}</div>;
 
   const isExpired = communityData?.subscriptionStatus !== 'lifetime' && (!communityData?.subscriptionEndsAt || new Date(communityData.subscriptionEndsAt) < new Date());
@@ -131,7 +159,6 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0B1120] text-slate-900 dark:text-slate-100 transition-colors duration-200">
       
-      {/* Top Navigation */}
       <nav className="border-b border-slate-200 dark:border-[#1E293B] bg-white dark:bg-[#0F172A] px-4 sm:px-8 py-4 flex justify-between items-center sticky top-0 z-20">
         <div className="flex items-center gap-2">
           <div className="bg-blue-600 p-1.5 rounded-md flex items-center justify-center text-white shrink-0">
@@ -148,7 +175,6 @@ export default function Dashboard() {
             <span className="text-sm font-semibold truncate hidden sm:block">{communityData?.name}</span>
           </div>
 
-          {/* Quick Toggles */}
           <button onClick={toggleLanguage} className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1E293B]">
             <Globe size={16} />
             {i18n.language.toUpperCase()}
@@ -189,7 +215,6 @@ export default function Dashboard() {
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-1">{t('welcome')}, {communityData?.name}</h1>
           </header>
 
-          {/* Quick Actions Section */}
           <div className="mb-8">
             <h2 className="text-lg font-bold mb-4">{t('quick_actions')}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -225,21 +250,52 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Recent Activity Section */}
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold">{t('recent_activity')}</h2>
-              <button className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">{t('view_all')}</button>
+              <Link to="/sessions" className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">{t('view_all', 'View All')}</Link>
             </div>
-            <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-2xl p-8 text-center shadow-sm">
-              <AlertCircle className="mx-auto text-slate-300 dark:text-slate-600 mb-3" size={32} />
-              <p className="text-slate-500 dark:text-slate-400 text-sm">{t('no_activity')}</p>
+            
+            <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-2xl shadow-sm overflow-hidden">
+              {recentActivities.length === 0 ? (
+                <div className="p-8 text-center">
+                  <AlertCircle className="mx-auto text-slate-300 dark:text-slate-600 mb-3" size={32} />
+                  <p className="text-slate-500 dark:text-slate-400 text-sm">{t('no_activity', 'No recent activities found.')}</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100 dark:divide-[#1E293B]">
+                  {recentActivities.map((activity: any) => (
+                    <div 
+                      key={activity.id} 
+                      onClick={() => navigate(`/sessions/${activity.id}`)}
+                      className="p-4 sm:p-5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-[#1E293B]/30 cursor-pointer transition-colors group"
+                    >
+                      <div className="flex items-start gap-3 sm:gap-4">
+                        <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-[#1E293B] border border-slate-200 dark:border-[#334155] flex items-center justify-center text-slate-500 shrink-0">
+                          <Calendar size={18} />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-sm sm:text-base group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{activity.name}</h3>
+                          <div className="text-xs sm:text-sm text-slate-500 mt-0.5 sm:mt-1 flex items-center gap-1.5 sm:gap-2">
+                            <span>{new Date(activity.date).toLocaleDateString(i18n.language, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                            <span>•</span>
+                            <span>{new Date(activity.date).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' })}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+                        {getStatusBadge(activity.status)}
+                        <ChevronRight size={18} className="text-slate-300 dark:text-slate-600 group-hover:text-blue-500 transition-colors hidden sm:block" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
       </main>
 
-      {/* Settings Modal */}
       {isSettingsOpen && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white dark:bg-[#0F172A] w-full h-[90dvh] sm:h-auto sm:max-h-[85vh] sm:max-w-3xl rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row border border-slate-200 dark:border-[#1E293B]">
