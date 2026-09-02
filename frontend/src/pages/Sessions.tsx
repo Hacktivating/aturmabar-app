@@ -492,7 +492,7 @@ export default function Sessions() {
             <div className="flex items-center justify-between gap-3 border-t border-subtle bg-surface px-5 py-4 dark:border-subtle-dark dark:bg-surface-dark sm:px-7">
               <button type="button" onClick={() => wizardStep === 1 ? setIsModalOpen(false) : setWizardStep(step => step - 1)} className="rounded-lg px-4 py-2.5 text-sm font-semibold text-muted-ink transition-colors hover:bg-muted dark:text-muted-dark dark:hover:bg-elevated-dark">{wizardStep === 1 ? t('cancel') : t('back')}</button>
               {wizardStep < 5 ? (
-                <button type="button" onClick={() => setWizardStep(step => step + 1)} className="rounded-lg bg-ink px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-ink-soft dark:bg-ink-dark dark:text-ink dark:hover:bg-primary-dark">{t('next')}</button>
+                <button type="button" onClick={() => setWizardStep(step => step + 1)} className="rounded-lg bg-ink px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-ink-soft dark:bg-ink-dark dark:text-white dark:hover:bg-primary-dark">{t('next')}</button>
               ) : (
                 <button type="submit" form="session-form" disabled={isProcessing} className="rounded-lg bg-ink px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-ink-soft disabled:cursor-not-allowed disabled:opacity-50 dark:bg-ink-dark dark:text-ink dark:hover:bg-primary-dark">{isProcessing ? t('saving') : t('create_session')}</button>
               )}
