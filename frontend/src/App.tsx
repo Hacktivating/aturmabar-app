@@ -9,7 +9,6 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import AdminDashboard from './pages/AdminDashboard';
 import VerifyEmailChange from './pages/VerifyEmailChange';
-import { AdminRoute } from './components/AdminRoute';
 import { useEffect } from 'react';
 import NotFound from './pages/NotFound';
 import Members from './pages/Members';
