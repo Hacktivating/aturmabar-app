@@ -11,6 +11,7 @@
 import { neon } from '@neondatabase/serverless';
 import { drizzle as drizzleNeon } from 'drizzle-orm/neon-http';
 import { drizzle as drizzleLocal } from 'drizzle-orm/postgres-js';
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from './schema';
 import * as dotenv from "dotenv";
@@ -18,12 +19,13 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 const activeEnv = process.env.ACTIVE_DB_ENV || 'local';
+type Database = PostgresJsDatabase<typeof schema>;
 
-const initializeDb = () => {
+const initializeDb = (): Database => {
   if (activeEnv === 'neon') {
     // Preserved Cloud Driver
     const sql = neon(process.env.DATABASE_URL_NEON!);
-    return drizzleNeon(sql, { schema });
+    return drizzleNeon(sql, { schema }) as unknown as Database;
   } else {
     // Local Docker Driver
     const queryClient = postgres(process.env.DATABASE_URL_LOCAL!);
@@ -31,4 +33,4 @@ const initializeDb = () => {
   }
 };
 
-export const db = initializeDb();
+export const db: Database = initializeDb();

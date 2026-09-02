@@ -2,7 +2,7 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import { eq, and, gt } from "drizzle-orm";
+import { eq, and, gt, or } from "drizzle-orm";
 import { db } from "../db";
 import { users, verificationTokens, passwordResetTokens, communities } from "../db/schema";
 import { sendVerificationEmail, sendPasswordResetEmail } from "../utils/mailer";
@@ -43,7 +43,7 @@ router.post("/register", async (req, res) => {
     }
 
     const existingUser = await db.query.users.findFirst({
-      where: (u, { or, eq }) => or(eq(u.email, email), eq(u.username, username)),
+      where: or(eq(users.email, email), eq(users.username, username)),
     });
 
     if (existingUser) {
@@ -134,7 +134,7 @@ router.post("/login", async (req, res) => {
     }
 
     const user = await db.query.users.findFirst({
-      where: (u, { or, eq }) => or(eq(u.email, identifier), eq(u.username, identifier)),
+      where: or(eq(users.email, identifier), eq(users.username, identifier)),
     });
 
     if (!user) {
