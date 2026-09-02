@@ -64,7 +64,7 @@ export const membershipPayments = pgTable("membership_payments", {
   id: serial("id").primaryKey(),
   periodId: integer("period_id").references(() => membershipPeriods.id, { onDelete: "cascade" }).notNull(),
   memberId: integer("member_id").references(() => members.id, { onDelete: "cascade" }).notNull(),
-  status: text("status").default("unpaid").notNull(), // 'paid', 'unpaid'
+  status: text("status").default("unpaid").notNull(),
 });
 
 export const sessions = pgTable("sessions", {
@@ -72,6 +72,11 @@ export const sessions = pgTable("sessions", {
   communityId: integer("community_id").references(() => communities.id, { onDelete: "cascade" }).notNull(),
   name: text("name").notNull(),
   date: timestamp("date").notNull(),
+  
+  sessionType: text("session_type").default("regular").notNull(),
+  opposingCommunityName: text("opposing_community_name"),
+  matchQuotas: jsonb("match_quotas").$type<{ MD: number; WD: number; XD: number }>(),
+
   scoringSystem: text("scoring_system").default("BWF 21 Points x 3 Sets").notNull(),
   customSets: integer("custom_sets"),
   customPoints: integer("custom_points"),
@@ -96,6 +101,7 @@ export const sessionAttendances = pgTable("session_attendances", {
   id: serial("id").primaryKey(),
   sessionId: integer("session_id").references(() => sessions.id, { onDelete: "cascade" }).notNull(),
   memberId: integer("member_id").references(() => members.id, { onDelete: "cascade" }).notNull(),
+  team: text("team").default("home").notNull(),
   status: text("status").default("active").notNull(),
   arrivedAt: timestamp("arrived_at").defaultNow().notNull(),
   isWalkIn: boolean("is_walk_in").default(false).notNull(),
@@ -107,6 +113,7 @@ export const matches = pgTable("matches", {
   id: serial("id").primaryKey(),
   sessionId: integer("session_id").references(() => sessions.id, { onDelete: "cascade" }).notNull(),
   courtId: integer("court_id").references(() => sessionCourts.id, { onDelete: "set null" }),
+  name: text("name"), // ADDED: To store "MD 1", "WD 2", etc.
   teamA_player1: integer("team_a_p1").references(() => members.id),
   teamA_player2: integer("team_a_p2").references(() => members.id),
   teamB_player1: integer("team_b_p1").references(() => members.id),

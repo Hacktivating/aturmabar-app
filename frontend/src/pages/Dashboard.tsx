@@ -161,7 +161,7 @@ export default function Dashboard() {
 
       <nav className="border-b border-subtle dark:border-subtle-dark bg-surface dark:bg-surface-dark px-4 sm:px-8 py-4 flex justify-between items-center sticky top-0 z-20">
         <div className="flex items-center gap-2">
-          <div className="bg-ink dark:bg-ink-dark p-1.5 rounded-md flex items-center justify-center text-white dark:text-ink shrink-0">
+          <div className="bg-ink dark:bg-ink-dark p-1.5 rounded-md flex items-center justify-center text-white dark:text-white shrink-0">
             <Zap size={18} fill="currentColor" />
           </div>
           <span className="text-lg sm:text-xl font-bold tracking-tight hidden sm:block">AturMabar</span>

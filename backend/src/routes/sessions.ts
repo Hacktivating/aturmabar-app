@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { eq, and, desc, gte } from "drizzle-orm";
+import { eq, and, desc, gte, asc } from "drizzle-orm";
 import { db } from "../db";
-import { sessions, sessionCourts, communities, sessionAttendances, members, sessionExpenses, membershipPayments } from "../db/schema";
+import { sessions, sessionCourts, communities, sessionAttendances, members, sessionExpenses, membershipPayments, matches } from "../db/schema";
 import { verifyAuth, AuthRequest } from "../middleware/auth";
 
 const router = Router();
@@ -12,7 +12,6 @@ const getCommunity = async (userId: number) => {
   return community;
 };
 
-// GET: Fetch all sessions (Filterable by future/past)
 router.get("/", async (req: AuthRequest, res) => {
   try {
     const community = await getCommunity(req.user!.userId);
@@ -31,10 +30,12 @@ router.get("/", async (req: AuthRequest, res) => {
   }
 });
 
-// POST: Create a new future session and initialize courts
 router.post("/", async (req: AuthRequest, res) => {
   try {
-    const { name, date, courtCount, scoringSystem, customSets, customPoints, pairingRule } = req.body;
+    const { 
+      name, date, courtCount, scoringSystem, customSets, customPoints, 
+      pairingRule, sessionType, opposingCommunityName, matchQuotas 
+    } = req.body;
     
     if (!name || !date || !courtCount) {
       return res.status(400).json({ error: "Name, date, and court count are required." });
@@ -48,11 +49,13 @@ router.post("/", async (req: AuthRequest, res) => {
     const community = await getCommunity(req.user!.userId);
     if (!community) return res.status(404).json({ error: "Community not found." });
 
-    // 1. Create the session
     const [newSession] = await db.insert(sessions).values({
       communityId: community.id,
       name,
       date: sessionDate,
+      sessionType: sessionType || "regular",
+      opposingCommunityName: opposingCommunityName || null,
+      matchQuotas: matchQuotas || null,
       scoringSystem: scoringSystem || "BWF 21 Points x 3 Sets",
       customSets: customSets || null,
       customPoints: customPoints || null,
@@ -60,7 +63,6 @@ router.post("/", async (req: AuthRequest, res) => {
       status: "scheduled",
     }).returning();
 
-    // 2. Initialize the requested number of courts
     const courtsToInsert = Array.from({ length: courtCount }).map((_, i) => ({
       sessionId: newSession.id,
       name: `Court ${i + 1}`,
@@ -69,6 +71,28 @@ router.post("/", async (req: AuthRequest, res) => {
 
     await db.insert(sessionCourts).values(courtsToInsert);
 
+    // NEW: Auto-generate Sparring matches based on quota
+    if (sessionType === 'sparring' && matchQuotas) {
+      const sparringMatches = [];
+      const types = ['MD', 'WD', 'XD'] as const;
+      
+      for (const type of types) {
+        const count = matchQuotas[type] || 0;
+        for (let i = 1; i <= count; i++) {
+          sparringMatches.push({
+            sessionId: newSession.id,
+            name: `${type} ${i}`,
+            matchType: type,
+            status: 'queued'
+          });
+        }
+      }
+
+      if (sparringMatches.length > 0) {
+        await db.insert(matches).values(sparringMatches);
+      }
+    }
+
     res.status(201).json({ message: "Session scheduled successfully.", session: newSession });
   } catch (error) {
     console.error("POST /sessions Error:", error);
@@ -76,7 +100,6 @@ router.post("/", async (req: AuthRequest, res) => {
   }
 });
 
-// GET: Fetch a single session with its courts and expenses
 router.get("/:id", async (req: AuthRequest, res) => {
   try {
     const sessionId = parseInt(String(req.params.id), 10);
@@ -110,7 +133,6 @@ router.get("/:id", async (req: AuthRequest, res) => {
   }
 });
 
-// DELETE: Remove a scheduled session
 router.delete("/:id", async (req: AuthRequest, res) => {
   try {
     const sessionId = parseInt(String(req.params.id), 10);
@@ -131,7 +153,6 @@ router.delete("/:id", async (req: AuthRequest, res) => {
   }
 });
 
-// PUT: Start the session manually
 router.put("/:id/start", async (req: AuthRequest, res) => {
   try {
     const sessionId = parseInt(String(req.params.id), 10);
@@ -152,7 +173,6 @@ router.put("/:id/start", async (req: AuthRequest, res) => {
 
 // --- ATTENDANCE MANAGEMENT ---
 
-// GET: Fetch all attendances for a session
 router.get("/:id/attendances", async (req: AuthRequest, res) => {
   try {
     const sessionId = parseInt(String(req.params.id), 10);
@@ -167,13 +187,11 @@ router.get("/:id/attendances", async (req: AuthRequest, res) => {
   }
 });
 
-// POST: Add existing member to session
 router.post("/:id/attendances", async (req: AuthRequest, res) => {
   try {
     const sessionId = parseInt(String(req.params.id), 10);
-    const { memberId } = req.body;
+    const { memberId, team } = req.body;
     
-    // Check if already attended
     const [existing] = await db.select().from(sessionAttendances)
       .where(and(eq(sessionAttendances.sessionId, sessionId), eq(sessionAttendances.memberId, memberId)));
     
@@ -182,6 +200,7 @@ router.post("/:id/attendances", async (req: AuthRequest, res) => {
     await db.insert(sessionAttendances).values({
       sessionId,
       memberId,
+      team: team || "home",
       status: "active"
     });
     res.status(201).json({ message: "Attendance added." });
@@ -190,7 +209,6 @@ router.post("/:id/attendances", async (req: AuthRequest, res) => {
   }
 });
 
-// PUT: Update attendance status (active, resting, cancelled)
 router.put("/:id/attendances/:attendanceId", async (req: AuthRequest, res) => {
   try {
     const attendanceId = parseInt(String(req.params.attendanceId), 10);
@@ -202,16 +220,14 @@ router.put("/:id/attendances/:attendanceId", async (req: AuthRequest, res) => {
   }
 });
 
-// POST: Add walk-in player (Creates member + attendance)
 router.post("/:id/walk-in", async (req: AuthRequest, res) => {
   try {
     const sessionId = parseInt(String(req.params.id), 10);
-    const { name, gender, skillLevel } = req.body;
+    const { name, gender, skillLevel, team } = req.body;
     const community = await getCommunity(req.user!.userId);
     
     if (!community) return res.status(404).json({ error: "Community not found." });
 
-    // 1. Create Member
     const [newMember] = await db.insert(members).values({
       communityId: community.id,
       name,
@@ -220,10 +236,10 @@ router.post("/:id/walk-in", async (req: AuthRequest, res) => {
       status: "active"
     }).returning();
 
-    // 2. Add Attendance
     await db.insert(sessionAttendances).values({
       sessionId,
       memberId: newMember.id,
+      team: team || "home",
       status: "active",
       isWalkIn: true
     });
@@ -236,7 +252,6 @@ router.post("/:id/walk-in", async (req: AuthRequest, res) => {
 
 // --- COURT MANAGEMENT ---
 
-// PUT: Update court details (name, active status)
 router.put("/:id/courts/:courtId", async (req: AuthRequest, res) => {
   try {
     const courtId = parseInt(String(req.params.courtId), 10);
@@ -248,7 +263,6 @@ router.put("/:id/courts/:courtId", async (req: AuthRequest, res) => {
   }
 });
 
-// POST: Add a new court to a session
 router.post("/:id/courts", async (req: AuthRequest, res) => {
   try {
     const sessionId = parseInt(String(req.params.id), 10);
@@ -260,7 +274,6 @@ router.post("/:id/courts", async (req: AuthRequest, res) => {
   }
 });
 
-// DELETE: Remove a court
 router.delete("/:id/courts/:courtId", async (req: AuthRequest, res) => {
   try {
     const courtId = parseInt(String(req.params.courtId), 10);
@@ -271,13 +284,12 @@ router.delete("/:id/courts/:courtId", async (req: AuthRequest, res) => {
   }
 });
 
-// PUT: Update session settings
 router.put("/:id", async (req: AuthRequest, res) => {
   try {
     const sessionId = parseInt(String(req.params.id), 10);
-    const { name, scoringSystem, customSets, customPoints, pairingRule, matchLimit } = req.body;
+    const { name, scoringSystem, customSets, customPoints, pairingRule, matchLimit, sessionType, opposingCommunityName, matchQuotas } = req.body;
     await db.update(sessions)
-      .set({ name, scoringSystem, customSets, customPoints, pairingRule, matchLimit })
+      .set({ name, scoringSystem, customSets, customPoints, pairingRule, matchLimit, sessionType, opposingCommunityName, matchQuotas })
       .where(eq(sessions.id, sessionId));
     res.status(200).json({ message: "Session updated." });
   } catch (error) {
@@ -285,7 +297,6 @@ router.put("/:id", async (req: AuthRequest, res) => {
   }
 });
 
-// PUT: Update member's grade directly from session
 router.put("/:id/members/:memberId/grade", async (req: AuthRequest, res) => {
   try {
     const memberId = parseInt(String(req.params.memberId), 10);
@@ -297,7 +308,6 @@ router.put("/:id/members/:memberId/grade", async (req: AuthRequest, res) => {
   }
 });
 
-// PUT: End a session
 router.put("/:id/finish", async (req: AuthRequest, res) => {
   try {
     const sessionId = parseInt(String(req.params.id), 10);
@@ -308,22 +318,56 @@ router.put("/:id/finish", async (req: AuthRequest, res) => {
   }
 });
 
+// --- MATCH MANAGEMENT SPECIFIC TO SPARRING ---
+router.put("/matches/:matchId/sparring", async (req: AuthRequest, res) => {
+  try {
+    const matchId = parseInt(String(req.params.matchId), 10);
+    const { 
+      teamA_player1, teamA_player2, teamB_player1, teamB_player2, 
+      courtId, status, 
+      scoreTeamA_set1, scoreTeamB_set1,
+      scoreTeamA_set2, scoreTeamB_set2,
+      scoreTeamA_set3, scoreTeamB_set3
+    } = req.body;
+
+    const payload: any = {
+      teamA_player1: teamA_player1 || null,
+      teamA_player2: teamA_player2 || null,
+      teamB_player1: teamB_player1 || null,
+      teamB_player2: teamB_player2 || null,
+      courtId: courtId || null,
+      status: status || 'queued',
+      scoreTeamA_set1: scoreTeamA_set1 || 0,
+      scoreTeamB_set1: scoreTeamB_set1 || 0,
+      scoreTeamA_set2: scoreTeamA_set2 || 0,
+      scoreTeamB_set2: scoreTeamB_set2 || 0,
+      scoreTeamA_set3: scoreTeamA_set3 || 0,
+      scoreTeamB_set3: scoreTeamB_set3 || 0,
+    };
+
+    // Auto-handle timestamps based on status
+    if (status === 'on_court') payload.startedAt = new Date();
+    if (status === 'finished') payload.endedAt = new Date();
+
+    await db.update(matches).set(payload).where(eq(matches.id, matchId));
+    res.status(200).json({ message: "Match updated." });
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error updating sparring match." });
+  }
+});
+
 // --- BILLING MANAGEMENT ---
 
-// POST: Sync membership period into session billing
 router.post("/:id/billing/sync-period", async (req: AuthRequest, res) => {
   try {
     const sessionId = parseInt(String(req.params.id), 10);
     const { periodId } = req.body;
     
-    // 1. Get the session to know default member fee
     const [session] = await db.select().from(sessions).where(eq(sessions.id, sessionId));
     if (!session) return res.status(404).json({ error: "Session not found." });
 
-    // 2. Get all payments/members for this specific period
     const periodMembers = await db.select().from(membershipPayments).where(eq(membershipPayments.periodId, periodId));
     
-    // 3. Get current session attendances to prevent overwriting active players
     const currentAttendances = await db.select().from(sessionAttendances).where(eq(sessionAttendances.sessionId, sessionId));
     const attendedMap = new Map(currentAttendances.map(a => [a.memberId, a]));
 
@@ -333,17 +377,16 @@ router.post("/:id/billing/sync-period", async (req: AuthRequest, res) => {
       const paymentAmount = isPaid ? session.memberDefaultFee : 0;
 
       if (attendedMap.has(pm.memberId)) {
-        // Update existing attendee (whether active, resting, or absent)
         const existing = attendedMap.get(pm.memberId)!;
         return db.update(sessionAttendances)
           .set({ paymentStatus, paymentAmount })
           .where(eq(sessionAttendances.id, existing.id));
       } else {
-        // Insert missing period member as a ghost 'absent' record
         return db.insert(sessionAttendances).values({
           sessionId,
           memberId: pm.memberId,
           status: "absent",
+          team: "home",
           isWalkIn: false,
           paymentStatus,
           paymentAmount
@@ -359,7 +402,6 @@ router.post("/:id/billing/sync-period", async (req: AuthRequest, res) => {
   }
 });
 
-// PUT: Reset All Payments
 router.put("/:id/billing/reset", async (req: AuthRequest, res) => {
   try {
     await db.update(sessionAttendances)
@@ -371,7 +413,6 @@ router.put("/:id/billing/reset", async (req: AuthRequest, res) => {
   }
 });
 
-// PUT: Update Session Default Fee
 router.put("/:id/billing/default-fee", async (req: AuthRequest, res) => {
   try {
     const { defaultFee, memberDefaultFee } = req.body;
@@ -384,7 +425,6 @@ router.put("/:id/billing/default-fee", async (req: AuthRequest, res) => {
   }
 });
 
-// PUT: Update Player Payment Status
 router.put("/:id/attendances/:attendanceId/payment", async (req: AuthRequest, res) => {
   try {
     const { paymentAmount, paymentStatus } = req.body;
@@ -397,7 +437,6 @@ router.put("/:id/attendances/:attendanceId/payment", async (req: AuthRequest, re
   }
 });
 
-// POST: Add Expense
 router.post("/:id/expenses", async (req: AuthRequest, res) => {
   try {
     const { description, amount } = req.body;
@@ -412,7 +451,6 @@ router.post("/:id/expenses", async (req: AuthRequest, res) => {
   }
 });
 
-// DELETE: Delete Expense
 router.delete("/:id/expenses/:expenseId", async (req: AuthRequest, res) => {
   try {
     await db.delete(sessionExpenses)
