@@ -20,16 +20,16 @@
   --color-border-subtle: #e8e0d6;
   --color-border-default: #d8cec0;
 
-  --color-app-dark: #151515;
-  --color-surface-dark: #1d1d1b;
-  --color-elevated-dark: #282724;
-  --color-strong-dark: #3a3732;
-  --color-primary-dark: #f5f1ea;
-  --color-muted-dark: #b9b0a5;
-  --color-ink-dark: #f0e9df;
-  --color-accent-soft-dark: #332f2a;
-  --color-subtle-dark: #302d29;
-  --color-default-dark: #4a443d;
+  --color-app-dark: #101214;
+  --color-surface-dark: #181b1f;
+  --color-elevated-dark: #22272d;
+  --color-strong-dark: #323941;
+  --color-primary-dark: #f5f4f0;
+  --color-muted-dark: #b1b7ba;
+  --color-ink-dark: #f4eee4;
+  --color-accent-soft-dark: #3a332b;
+  --color-subtle-dark: #2a3036;
+  --color-default-dark: #424a52;
 }
 
 @custom-variant dark (&:where(.dark, .dark *));
@@ -67,6 +67,47 @@ button {
 
 ::selection {
   @apply bg-accent text-primary dark:bg-accent-soft-dark dark:text-primary-dark;
+}
+
+/* Keep dark mode neutral and readable even where older screens still carry
+   colorful status utilities. Status meaning is preserved by iconography and
+   labels; the surface system stays charcoal and warm-neutral. */
+.dark [class~="dark:bg-purple-900/40"],
+.dark [class~="dark:bg-cyan-900/40"],
+.dark [class~="dark:bg-emerald-900/40"],
+.dark [class~="dark:bg-lime-900/40"],
+.dark [class~="dark:bg-pink-900/40"],
+.dark [class~="dark:bg-blue-900/40"],
+.dark [class~="dark:bg-blue-900/30"],
+.dark [class~="dark:bg-blue-900/20"],
+.dark [class~="dark:bg-rose-900/30"],
+.dark [class~="dark:bg-rose-900/20"],
+.dark [class~="dark:bg-emerald-900/50"],
+.dark [class~="dark:bg-rose-500/10"],
+.dark [class~="dark:bg-purple-900/30"] {
+  background-color: var(--color-elevated-dark) !important;
+  border-color: var(--color-subtle-dark) !important;
+}
+
+.dark [class~="dark:text-purple-400"],
+.dark [class~="dark:text-cyan-400"],
+.dark [class~="dark:text-emerald-400"],
+.dark [class~="dark:text-lime-400"],
+.dark [class~="dark:text-pink-400"],
+.dark [class~="dark:text-blue-400"],
+.dark [class~="dark:text-rose-400"] {
+  color: var(--color-primary-dark) !important;
+}
+
+.dark [class~="dark:border-purple-800"],
+.dark [class~="dark:border-cyan-800"],
+.dark [class~="dark:border-emerald-800"],
+.dark [class~="dark:border-lime-800"],
+.dark [class~="dark:border-pink-800"],
+.dark [class~="dark:border-blue-800"],
+.dark [class~="dark:border-emerald-900/50"],
+.dark [class~="dark:border-rose-900"] {
+  border-color: var(--color-subtle-dark) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

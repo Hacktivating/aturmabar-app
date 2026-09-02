@@ -8,12 +8,19 @@ interface Member {
   id: number;
   name: string;
   phone: string;
-  gender: string;
+  gender: string | null;
   skillLevel: string;
   avoidPartnerIds: number[];
   avoidOpponentIds: number[];
   status: string;
 }
+
+const normalizeGender = (value: unknown): 'male' | 'female' | null => {
+  const gender = String(value ?? '').trim().toLowerCase();
+  if (['male', 'man', 'm', 'laki-laki', 'laki laki', 'pria'].includes(gender)) return 'male';
+  if (['female', 'woman', 'f', 'perempuan', 'wanita'].includes(gender)) return 'female';
+  return null;
+};
 
 const SKILL_LEVELS = [
   { id: 'A1', label: 'A1 - Pro', color: 'bg-elevated text-white dark:bg-muted dark:text-primary' },
@@ -371,10 +378,12 @@ export default function Members() {
                           <tr key={member.id} className="hover:bg-app dark:hover:bg-elevated-dark/30 transition-colors">
                             <td className="p-4 font-medium text-sm">{member.name}</td>
                             <td className="p-4 text-sm font-medium">
-                              {member.gender === 'male' ? (
-                                <span className="text-ink flex items-center gap-1.5">♂ {t('male')}</span>
+                              {normalizeGender(member.gender) === 'male' ? (
+                                <span className="text-ink dark:text-primary-dark flex items-center gap-1.5">♂ {t('male')}</span>
+                              ) : normalizeGender(member.gender) === 'female' ? (
+                                <span className="text-primary-soft dark:text-primary-dark flex items-center gap-1.5">♀ {t('female')}</span>
                               ) : (
-                                <span className="text-pink-500 flex items-center gap-1.5">♀ {t('female')}</span>
+                                <span className="text-muted-ink dark:text-muted-dark">—</span>
                               )}
                             </td>
                             <td className="p-4 text-sm text-muted-ink">{member.phone || '-'}</td>
@@ -408,10 +417,12 @@ export default function Members() {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-3 text-xs">
-                          {member.gender === 'male' ? (
-                            <span className="text-ink font-medium flex items-center gap-1.5 bg-accent-soft dark:bg-accent-soft-dark px-2 py-1 rounded">♂ {t('male')}</span>
+                          {normalizeGender(member.gender) === 'male' ? (
+                            <span className="text-ink dark:text-primary-dark font-medium flex items-center gap-1.5 bg-accent-soft dark:bg-accent-soft-dark px-2 py-1 rounded">♂ {t('male')}</span>
+                          ) : normalizeGender(member.gender) === 'female' ? (
+                            <span className="text-primary-soft dark:text-primary-dark font-medium flex items-center gap-1.5 bg-accent-soft dark:bg-accent-soft-dark px-2 py-1 rounded">♀ {t('female')}</span>
                           ) : (
-                            <span className="text-pink-500 font-medium flex items-center gap-1.5 bg-pink-50 dark:bg-pink-900/20 px-2 py-1 rounded">♀ {t('female')}</span>
+                            <span className="text-muted-ink dark:text-muted-dark font-medium flex items-center gap-1.5 bg-muted dark:bg-elevated-dark px-2 py-1 rounded">—</span>
                           )}
                           <span className={`px-2 py-1 rounded font-bold tracking-wide ${getBadgeStyle(member.skillLevel)}`}>
                             {getBadgeLabel(member.skillLevel)}
