@@ -101,8 +101,8 @@ export default function Register() {
       <AuthLayout title={t('register')}>
 
         <div className="flex items-center justify-center gap-2 mb-6">
-          <div className={`h-1.5 w-12 rounded-full transition-colors ${step >= 1 ? 'bg-ink' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
-          <div className={`h-1.5 w-12 rounded-full transition-colors ${step >= 2 ? 'bg-ink' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
+          <div className={`h-1.5 w-12 rounded-full transition-colors ${step >= 1 ? 'bg-ink' : 'bg-muted dark:bg-elevated-dark'}`}></div>
+          <div className={`h-1.5 w-12 rounded-full transition-colors ${step >= 2 ? 'bg-ink' : 'bg-muted dark:bg-elevated-dark'}`}></div>
         </div>
 
         <form onSubmit={step === 1 ? (e) => { e.preventDefault(); handleNext(); } : handleSubmit} className="flex flex-col gap-4">
@@ -123,8 +123,8 @@ export default function Register() {
               <div>
                 <label className={labelStyles}>{t('password')}</label>
                 <div className="relative">
-                  <input type={showPassword ? "text" : "password"} required value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} className={`${inputStyles} pr-10`} placeholder="••••••••" />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-faint hover:text-muted-ink dark:hover:text-gray-300 flex items-center justify-center">
+                  <input type={showPassword ? "text" : "password"} required value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} className={`${inputStyles} pr-10`} placeholder={t('register_password_hint')} />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-faint hover:text-muted-ink dark:hover:text-primary-dark flex items-center justify-center">
                     {showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}
                   </button>
                 </div>
@@ -133,8 +133,8 @@ export default function Register() {
               <div>
                 <label className={labelStyles}>{t('confirm_password')}</label>
                 <div className="relative">
-                  <input type={showConfirm ? "text" : "password"} required value={formData.confirmPassword} onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})} className={`${inputStyles} pr-10`} placeholder="••••••••" />
-                  <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-faint hover:text-muted-ink dark:hover:text-gray-300 flex items-center justify-center">
+                  <input type={showConfirm ? "text" : "password"} required value={formData.confirmPassword} onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})} className={`${inputStyles} pr-10`} placeholder={t('register_password_hint')} />
+                  <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-faint hover:text-muted-ink dark:hover:text-primary-dark flex items-center justify-center">
                     {showConfirm ? <EyeOff size={16}/> : <Eye size={16}/>}
                   </button>
                 </div>
@@ -233,7 +233,7 @@ export default function Register() {
           <div className="bg-surface dark:bg-surface-dark w-full max-w-sm rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center p-4 border-b border-gray-100 dark:border-subtle-dark">
               <h3 className="font-semibold text-primary dark:text-primary-dark">{t('select_logo')}</h3>
-              <button onClick={() => setIsModalOpen(false)} className="p-1 text-faint hover:text-muted-ink dark:hover:text-gray-300 hover:bg-muted dark:hover:bg-gray-800 rounded-full transition-colors">
+              <button onClick={() => setIsModalOpen(false)} className="p-1 text-faint hover:text-muted-ink dark:hover:text-primary-dark hover:bg-muted dark:hover:bg-gray-800 rounded-full transition-colors">
                 <X size={18} />
               </button>
             </div>

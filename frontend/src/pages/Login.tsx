@@ -121,6 +121,7 @@ export default function Login() {
               required
               value={password}
               onChange={(event) => setPassword(event.target.value)}
+              placeholder={t('login_password_hint')}
               className={`${inputStyles} pl-11 pr-12`}
             />
             <button
@@ -137,7 +138,7 @@ export default function Login() {
         <button
           type="submit"
           disabled={isLoading}
-          className="mt-1 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-ink px-4 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-blue-600/20 transition duration-150 hover:bg-ink-soft active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/30"
+          className="mt-1 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-ink px-4 py-3.5 text-sm font-extrabold text-white shadow-sm transition duration-150 hover:bg-ink-soft active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/30"
         >
           {isLoading && <Loader2 size={17} className="animate-spin" aria-hidden="true" />}
           {isLoading ? t('loading') : t('login')}

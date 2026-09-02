@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Users, SquareStack, Play, History, Clock, Settings as SettingsIcon,
-  Plus, UserPlus, Check, Pause, X, Edit2, Zap, Globe, Sun, Moon, LogOut, ChevronDown, Search, Trash2, GripVertical, ArrowRightLeft, ListOrdered, AlertCircle, AlertTriangle, Save, ChevronLeft, ChevronRight, FileDown, Info, Square, Trophy, Medal, ChevronUp, Wallet, TrendingUp, TrendingDown, DollarSign, RotateCcw
+  Plus, UserPlus, Check, Pause, X, Edit2, Zap, Globe, Sun, Moon, LogOut, ChevronDown, Search, Trash2, GripVertical, ArrowRightLeft, ListOrdered, AlertCircle, AlertTriangle, Save, ChevronLeft, ChevronRight, FileDown, Info, Square, Trophy, Medal, ChevronUp, Wallet, TrendingUp, TrendingDown, DollarSign, RotateCcw, CircleHelp
 } from 'lucide-react';
 import api from '../api/axios';
 import jsPDF from 'jspdf';
@@ -347,6 +347,7 @@ export default function SessionDetails() {
   const [courtName, setCourtName] = useState('');
   const [playerDetailModal, setPlayerDetailModal] = useState<number | null>(null);
   const [isWaitingListOpen, setIsWaitingListOpen] = useState(false);
+  const [isFairnessModalOpen, setIsFairnessModalOpen] = useState(false);
 
   const [settingsForm, setSettingsForm] = useState<any>({});
 
@@ -540,6 +541,45 @@ export default function SessionDetails() {
         return new Date(a.arrivedAt).getTime() - new Date(b.arrivedAt).getTime();
       });
   }, [attendances, busyPlayerIds, playerMatchCounts]);
+
+  const fairnessInsights = useMemo(() => {
+    const matchHistory = [...finishedMatches, ...activeMatches.filter(m => m.status === 'on_court')];
+    const stats = new Map<number, { id: number; name: string; turns: number; lastPlayedAt: number; partners: Map<number, number>; opponents: Map<number, number> }>();
+    allMembers.forEach(member => stats.set(member.id, { id: member.id, name: member.name, turns: 0, lastPlayedAt: 0, partners: new Map(), opponents: new Map() }));
+
+    matchHistory.forEach(match => {
+      const sides = [
+        [match.teamA_player1, match.teamA_player2],
+        [match.teamB_player1, match.teamB_player2]
+      ];
+      const playedAt = new Date(match.startedAt || match.endedAt || Date.now()).getTime();
+      sides.forEach(([first, second], sideIndex) => {
+        const playerIds = [first, second].filter(Boolean) as number[];
+        playerIds.forEach(playerId => {
+          const player = stats.get(playerId);
+          if (!player) return;
+          player.turns += 1;
+          player.lastPlayedAt = Math.max(player.lastPlayedAt, playedAt);
+          const partnerId = playerIds.find(id => id !== playerId);
+          if (partnerId) player.partners.set(partnerId, (player.partners.get(partnerId) || 0) + 1);
+          const opponents = sides[sideIndex === 0 ? 1 : 0].filter(Boolean) as number[];
+          opponents.forEach(opponentId => player.opponents.set(opponentId, (player.opponents.get(opponentId) || 0) + 1));
+        });
+      });
+    });
+
+    const now = Date.now();
+    return Array.from(stats.values())
+      .filter(player => attendances.some(item => item.member.id === player.id && item.attendance.status !== 'cancelled'))
+      .map(player => {
+        const waitingPosition = waitingListPlayers.findIndex(item => item.id === player.id);
+        const restMinutes = player.lastPlayedAt ? Math.max(0, Math.round((now - player.lastPlayedAt) / 60000)) : null;
+        const partnerRepeat = Math.max(0, ...Array.from(player.partners.values()).map(value => value - 1));
+        const opponentRepeat = Math.max(0, ...Array.from(player.opponents.values()).map(value => value - 1));
+        return { ...player, restMinutes, waitingPosition: waitingPosition >= 0 ? waitingPosition + 1 : null, partnerRepeat, opponentRepeat };
+      })
+      .sort((a, b) => a.turns - b.turns || (a.lastPlayedAt || 0) - (b.lastPlayedAt || 0) || a.name.localeCompare(b.name));
+  }, [allMembers, attendances, activeMatches, finishedMatches, waitingListPlayers]);
 
   const calculatePlayerGames = (member: any) => {
     if (!member) return [];
@@ -1506,6 +1546,9 @@ export default function SessionDetails() {
             <button disabled={isProcessing} onClick={exportSessionPDF} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-accent-soft dark:bg-elevated-dark hover:bg-accent-soft dark:hover:bg-strong-dark text-ink dark:text-ink-dark px-4 py-2.5 rounded-xl text-sm font-bold transition-colors border border-transparent dark:border-strong-dark shadow-sm disabled:opacity-50">
               <FileDown size={18}/> <span className="hidden sm:block">{t('export_pdf', 'Export PDF')}</span>
             </button>
+            <button type="button" onClick={() => setIsFairnessModalOpen(true)} className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-xl border border-subtle bg-surface px-4 py-2.5 text-sm font-bold text-primary transition-colors hover:bg-muted dark:border-subtle-dark dark:bg-surface-dark dark:text-primary-dark dark:hover:bg-elevated-dark">
+              <CircleHelp size={17} /> <span className="hidden sm:block">{t('fairness_insights')}</span>
+            </button>
           </div>
         </div>
         <div className="hidden sm:flex max-w-7xl mx-auto px-8 overflow-x-auto scrollbar-hide">
@@ -1713,7 +1756,7 @@ export default function SessionDetails() {
                     <button disabled={session?.status !== 'active' || isProcessing} onClick={handleQueueMatch} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-muted dark:bg-elevated-dark hover:bg-elevated dark:hover:bg-strong-dark text-primary dark:text-primary-dark px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
                       <ListOrdered size={16}/> {t('queue_match')}
                     </button>
-                    <button disabled={session?.status !== 'active' || isProcessing} onClick={handleAutoFillAllCourts} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-ink hover:bg-ink-soft text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button disabled={session?.status !== 'active' || isProcessing} onClick={handleAutoFillAllCourts} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-lg bg-ink px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-ink-soft disabled:cursor-not-allowed disabled:opacity-50 dark:bg-ink-dark dark:text-ink dark:hover:bg-primary-dark">
                       <Zap size={16}/> {t('auto_fill')}
                     </button>
                   </div>
@@ -1898,7 +1941,7 @@ export default function SessionDetails() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-[#1E293B]">
-                        {billingAttendances.length === 0 && <tr><td colSpan={3} className="p-4 text-center text-muted-ink">No players found</td></tr>}
+                        {billingAttendances.length === 0 && <tr><td colSpan={3} className="p-4 text-center text-muted-ink">{t('no_players')}</td></tr>}
                         {billingAttendances.map(({ member, attendance }) => (
                           <tr key={attendance.id} className="hover:bg-app dark:hover:bg-elevated-dark/50 transition-colors">
                             <td className="px-4 py-3 font-medium whitespace-nowrap">
@@ -1953,7 +1996,7 @@ export default function SessionDetails() {
 
                   {/* Mobile Income Cards */}
                   <div className="sm:hidden flex flex-col p-4 gap-3 bg-app dark:bg-app-dark flex-1">
-                    {billingAttendances.length === 0 && <div className="text-center text-muted-ink font-medium py-4">No players found</div>}
+                    {billingAttendances.length === 0 && <div className="text-center text-muted-ink font-medium py-4">{t('no_players')}</div>}
                     {billingAttendances.map(({ member, attendance }) => (
                       <div key={attendance.id} className="bg-surface dark:bg-surface-dark border border-subtle dark:border-subtle-dark p-4 rounded-xl shadow-sm flex flex-col gap-3">
                         <div className="flex justify-between items-center">
@@ -2954,6 +2997,51 @@ export default function SessionDetails() {
         </div>
       )}
 
+
+      {isFairnessModalOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-ink/70 p-3 backdrop-blur-sm sm:p-6" role="dialog" aria-modal="true" aria-labelledby="fairness-title">
+          <div className="flex max-h-[90dvh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-subtle bg-surface shadow-2xl dark:border-subtle-dark dark:bg-surface-dark">
+            <div className="flex items-start justify-between gap-4 border-b border-subtle px-5 py-5 dark:border-subtle-dark sm:px-7">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-ink dark:text-muted-dark">{t('organizer_view')}</p>
+                <h2 id="fairness-title" className="mt-1 text-xl font-bold tracking-tight text-primary dark:text-primary-dark">{t('fairness_insights')}</h2>
+                <p className="mt-1 max-w-xl text-sm leading-5 text-muted-ink dark:text-muted-dark">{t('fairness_insights_desc')}</p>
+              </div>
+              <button type="button" onClick={() => setIsFairnessModalOpen(false)} aria-label={t('close')} className="rounded-lg p-2 text-muted-ink transition-colors hover:bg-muted hover:text-ink dark:text-muted-dark dark:hover:bg-elevated-dark dark:hover:text-primary-dark"><X size={18} /></button>
+            </div>
+
+            <div className="min-h-0 overflow-y-auto px-5 py-5 sm:px-7">
+              {fairnessInsights.length === 0 ? (
+                <div className="rounded-xl border border-subtle bg-app p-8 text-center text-sm text-muted-ink dark:border-subtle-dark dark:bg-elevated-dark dark:text-muted-dark">{t('fairness_insights_empty')}</div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="hidden grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(0,1fr))] gap-3 px-4 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-ink dark:text-muted-dark sm:grid">
+                    <span>{t('player')}</span><span>{t('court_turns')}</span><span>{t('rest_time')}</span><span>{t('partner_repetition')}</span><span>{t('opponent_repetition')}</span>
+                  </div>
+                  {fairnessInsights.map((insight) => (
+                    <div key={insight.id} className="rounded-xl border border-subtle bg-app p-4 dark:border-subtle-dark dark:bg-elevated-dark">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="min-w-0 truncate text-sm font-bold text-primary dark:text-primary-dark">{insight.name}</span>
+                        {insight.waitingPosition && <span className="shrink-0 rounded-full bg-accent-soft px-2 py-1 text-[10px] font-bold text-ink dark:bg-accent-soft-dark dark:text-ink-dark">{t('queue_position').replace('{{position}}', insight.waitingPosition.toString())}</span>}
+                      </div>
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+                        <div><p className="text-[10px] font-bold uppercase tracking-wide text-muted-ink dark:text-muted-dark sm:hidden">{t('court_turns')}</p><p className="mt-1 font-bold text-primary dark:text-primary-dark sm:mt-0">{insight.turns}</p></div>
+                        <div><p className="text-[10px] font-bold uppercase tracking-wide text-muted-ink dark:text-muted-dark sm:hidden">{t('rest_time')}</p><p className="mt-1 font-bold text-primary dark:text-primary-dark sm:mt-0">{insight.restMinutes === null ? t('not_played_yet') : t('minutes_value').replace('{{minutes}}', insight.restMinutes.toString())}</p></div>
+                        <div><p className="text-[10px] font-bold uppercase tracking-wide text-muted-ink dark:text-muted-dark sm:hidden">{t('partner_repetition')}</p><p className="mt-1 font-bold text-primary dark:text-primary-dark sm:mt-0">{insight.partnerRepeat}</p></div>
+                        <div><p className="text-[10px] font-bold uppercase tracking-wide text-muted-ink dark:text-muted-dark sm:hidden">{t('opponent_repetition')}</p><p className="mt-1 font-bold text-primary dark:text-primary-dark sm:mt-0">{insight.opponentRepeat}</p></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-subtle bg-surface px-5 py-4 dark:border-subtle-dark dark:bg-surface-dark sm:px-7">
+              <p className="text-xs leading-5 text-muted-ink dark:text-muted-dark">{t('fairness_insights_note')}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

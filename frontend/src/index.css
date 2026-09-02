@@ -72,6 +72,30 @@ button {
 /* Keep dark mode neutral and readable even where older screens still carry
    colorful status utilities. Status meaning is preserved by iconography and
    labels; the surface system stays charcoal and warm-neutral. */
+.dark [class~="bg-ink"],
+.dark [class~="bg-ink-soft"] {
+  background-color: var(--color-ink-dark) !important;
+  color: var(--color-ink) !important;
+}
+
+.dark [class~="hover:bg-ink-soft"]:hover,
+.dark [class~="dark:hover:bg-primary-dark"]:hover {
+  background-color: var(--color-primary-dark) !important;
+  color: var(--color-ink) !important;
+}
+
+.dark [class~="dark:text-ink"] {
+  color: var(--color-ink-dark) !important;
+}
+
+.dark [class~="dark:hover:text-ink"]:hover,
+.dark [class~="dark:hover:text-ink-dark"]:hover {
+  color: var(--color-primary-dark) !important;
+}
+
+.dark [class~="dark:border-ink"] {
+  border-color: var(--color-ink-dark) !important;
+}
 .dark [class~="dark:bg-purple-900/40"],
 .dark [class~="dark:bg-cyan-900/40"],
 .dark [class~="dark:bg-emerald-900/40"],

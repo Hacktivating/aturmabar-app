@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, X, Search, Calendar, Trash2, ChevronLeft, ChevronRight, Zap, Globe, Sun, Moon, Settings, LogOut, ArrowLeft, PlayCircle, CalendarDays } from 'lucide-react';
+import { Plus, X, Search, Calendar, Trash2, ChevronLeft, ChevronRight, SlidersHorizontal, Banknote, Zap, Globe, Sun, Moon, Settings, LogOut, ArrowLeft, PlayCircle, CalendarDays } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../api/axios';
 
@@ -44,8 +44,13 @@ export default function Sessions() {
     customSets: 3,
     customPoints: 21,
     pairingRule: 'strict',
-    matchLimit: 0
+    matchLimit: 0,
+    defaultFee: 0,
+    memberDefaultFee: 0
   });
+  const [wizardStep, setWizardStep] = useState(1);
+  const [wizardMemberIds, setWizardMemberIds] = useState<number[]>([]);
+  const [wizardMembers, setWizardMembers] = useState<Array<{ id: number; name: string; gender?: string; skillLevel?: string }>>([]);
 
   useEffect(() => {
     if (isDark) { document.documentElement.classList.add('dark'); localStorage.setItem('theme', 'dark'); }
@@ -91,13 +96,21 @@ export default function Sessions() {
   const totalPages = Math.ceil(processedSessions.length / itemsPerPage);
   const paginatedSessions = processedSessions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  const openCreateModal = () => {
+  const openCreateModal = async () => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(18, 0, 0, 0);
     const localDateTime = new Date(tomorrow.getTime() - tomorrow.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
-    setFormData({ ...formData, date: localDateTime, name: '' });
+    setFormData({ ...formData, date: localDateTime, name: '', defaultFee: 0, memberDefaultFee: 0 });
+    setWizardStep(1);
+    setWizardMemberIds([]);
+    try {
+      const membersRes = await api.get('/members');
+      setWizardMembers(membersRes.data);
+    } catch (err) {
+      setWizardMembers([]);
+    }
     setIsModalOpen(true);
   };
 
@@ -110,7 +123,17 @@ export default function Sessions() {
         customSets: formData.scoringSystem === 'custom' ? formData.customSets : null,
         customPoints: formData.scoringSystem === 'custom' ? formData.customPoints : null,
       };
-      await api.post('/sessions', payload);
+      const response = await api.post('/sessions', payload);
+      const sessionId = response.data.session?.id;
+      if (sessionId) {
+        await api.put(`/sessions/${sessionId}/billing/default-fee`, {
+          defaultFee: formData.defaultFee,
+          memberDefaultFee: formData.memberDefaultFee
+        });
+      }
+      if (sessionId && wizardMemberIds.length > 0) {
+        await Promise.all(wizardMemberIds.map(memberId => api.post(`/sessions/${sessionId}/attendances`, { memberId })));
+      }
       setIsModalOpen(false);
       fetchInitializationData();
     } catch (err: any) {
@@ -313,117 +336,166 @@ export default function Sessions() {
         </div>
       </main>
 
-      {/* Create Session Modal */}
+      {/* Create Session Wizard */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-surface dark:bg-surface-dark w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90dvh] border border-subtle dark:border-subtle-dark">
-            <div className="flex justify-between items-center p-5 border-b border-subtle dark:border-subtle-dark bg-app dark:bg-app-dark">
-              <h3 className="font-bold text-lg">{t('create_session')}</h3>
-              <button onClick={() => setIsModalOpen(false)} className="p-1.5 text-faint hover:bg-muted dark:hover:bg-elevated-dark rounded-full transition-colors"><X size={18} /></button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/80 p-3 backdrop-blur-sm sm:p-6">
+          <div className="flex max-h-[94dvh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-subtle bg-surface shadow-2xl dark:border-subtle-dark dark:bg-surface-dark">
+            <div className="border-b border-subtle bg-surface px-5 py-5 dark:border-subtle-dark dark:bg-surface-dark sm:px-7">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-ink dark:text-muted-dark">{t('session_setup')}</p>
+                  <h3 className="mt-1 text-xl font-bold tracking-tight text-primary dark:text-primary-dark">{t('create_session')}</h3>
+                </div>
+                <button type="button" onClick={() => setIsModalOpen(false)} aria-label={t('cancel')} className="rounded-lg p-2 text-muted-ink transition-colors hover:bg-muted hover:text-ink dark:text-muted-dark dark:hover:bg-elevated-dark dark:hover:text-primary-dark"><X size={18} /></button>
+              </div>
+
+              <div className="mt-6 grid grid-cols-5 gap-2" aria-label={t('session_setup_progress')}>
+                {[1, 2, 3, 4, 5].map((step) => (
+                  <div key={step} className="flex min-w-0 flex-col gap-2">
+                    <div className={'h-1 rounded-full ' + (step <= wizardStep ? 'bg-ink dark:bg-ink-dark' : 'bg-muted dark:bg-elevated-dark')} />
+                    <span className={'truncate text-[10px] font-semibold ' + (step === wizardStep ? 'text-primary dark:text-primary-dark' : 'text-faint dark:text-muted-dark')}>{t(['session_setup_basics', 'session_setup_courts', 'session_setup_roster', 'session_setup_rules', 'session_setup_fees'][step - 1])}</span>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <div className="p-6 overflow-y-auto">
-              <form id="session-form" onSubmit={handleSubmit} className="flex flex-col gap-5">
-                <div>
-                  <label className={labelStyles}>{t('session_name')}</label>
-                  <input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g., Sunday Morning Sparring" className={inputStyles} />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className={labelStyles}>{t('date_time')}</label>
-                    <input
-                      type="datetime-local"
-                      required
-                      min={currentLocalDateTime}
-                      value={formData.date}
-                      onChange={e => setFormData({...formData, date: e.target.value})}
-                      className={`${inputStyles} [&::-webkit-calendar-picker-indicator]:dark:invert`}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelStyles}>{t('court_count')}</label>
-                    <input type="number" required min={1} max={20} value={formData.courtCount} onChange={e => setFormData({...formData, courtCount: parseInt(e.target.value) || 1})} className={inputStyles} />
-                  </div>
-                </div>
-
-                {/* LEADERBOARD MATCH LIMIT SETTING */}
-                <div>
-                  <label className={labelStyles}>{t('match_limit', 'Leaderboard Match Limit')}</label>
-                  <div className="flex gap-3">
-                    <select
-                      value={formLimitType}
-                      onChange={e => {
-                        const val = e.target.value;
-                        if (val === 'all') setFormData({...formData, matchLimit: 0});
-                        else if (val === 'custom') setFormData({...formData, matchLimit: 6});
-                        else setFormData({...formData, matchLimit: parseInt(val)});
-                      }}
-                      className={`${inputStyles} font-medium flex-1 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_12px_center] pr-8`}
-                    >
-                      <option value="all">{t('all_games', 'All Games')}</option>
-                      <option value="1">1 Game</option>
-                      <option value="2">2 Games</option>
-                      <option value="3">3 Games</option>
-                      <option value="4">4 Games</option>
-                      <option value="5">5 Games</option>
-                      <option value="custom">{t('custom_amount', 'Custom Amount')}</option>
-                    </select>
-                    {formLimitType === 'custom' && (
-                      <input
-                        type="number"
-                        min={1}
-                        value={formData.matchLimit}
-                        onChange={e => setFormData({...formData, matchLimit: parseInt(e.target.value) || 0})}
-                        className={`${inputStyles} w-24 text-center font-bold`}
-                      />
-                    )}
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-subtle dark:border-subtle-dark">
-                  <label className={labelStyles}>{t('scoring_system')}</label>
-                  <div className="relative">
-                    <select value={formData.scoringSystem} onChange={e => setFormData({...formData, scoringSystem: e.target.value})} className={`${inputStyles} appearance-none pr-8 font-medium bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_12px_center]`}>
-                      <option value="BWF 21 Points x 3 Sets">{t('bwf_21')}</option>
-                      <option value="BWF 15 Points x 3 Sets">{t('bwf_15')}</option>
-                      <option value="42 Points x 1 Set">{t('pts_42')}</option>
-                      <option value="30 Points x 1 Set">{t('pts_30')}</option>
-                      <option value="custom">{t('custom')}</option>
-                    </select>
-                  </div>
-                </div>
-
-                {formData.scoringSystem === 'custom' && (
-                  <div className="grid grid-cols-2 gap-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-6 sm:px-7">
+              <form id="session-form" onSubmit={handleSubmit} className="space-y-6">
+                {wizardStep === 1 && (
+                  <div className="space-y-5">
                     <div>
-                      <label className={labelStyles}>{t('custom_sets')}</label>
-                      <input type="number" required min={1} max={5} value={formData.customSets} onChange={e => setFormData({...formData, customSets: parseInt(e.target.value) || 1})} className={inputStyles} />
+                      <h4 className="text-lg font-bold text-primary dark:text-primary-dark">{t('session_setup_basics')}</h4>
+                      <p className="mt-1 text-sm text-muted-ink dark:text-muted-dark">{t('session_setup_basics_desc')}</p>
                     </div>
                     <div>
-                      <label className={labelStyles}>{t('custom_points')}</label>
-                      <input type="number" required min={1} max={100} value={formData.customPoints} onChange={e => setFormData({...formData, customPoints: parseInt(e.target.value) || 21})} className={inputStyles} />
+                      <label className={labelStyles}>{t('session_name')}</label>
+                      <input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder={t('session_name_placeholder')} className={inputStyles} autoFocus />
+                    </div>
+                    <div>
+                      <label className={labelStyles}>{t('date_time')}</label>
+                      <input type="datetime-local" required min={currentLocalDateTime} value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className={inputStyles + ' [&::-webkit-calendar-picker-indicator]:dark:invert'} />
                     </div>
                   </div>
                 )}
 
-                <div>
-                  <label className={labelStyles}>{t('pairing_rule')}</label>
-                  <div className="relative">
-                    <select value={formData.pairingRule} onChange={e => setFormData({...formData, pairingRule: e.target.value})} className={`${inputStyles} appearance-none pr-8 font-medium bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_12px_center]`}>
-                      <option value="very_strict">{t('very_strict')}</option>
-                      <option value="strict">{t('strict')}</option>
-                      <option value="moderate">{t('moderate')}</option>
-                      <option value="randomize">{t('randomize')}</option>
-                    </select>
+                {wizardStep === 2 && (
+                  <div className="space-y-5">
+                    <div>
+                      <h4 className="text-lg font-bold text-primary dark:text-primary-dark">{t('session_setup_courts')}</h4>
+                      <p className="mt-1 text-sm text-muted-ink dark:text-muted-dark">{t('session_setup_courts_desc')}</p>
+                    </div>
+                    <div>
+                      <label className={labelStyles}>{t('court_count')}</label>
+                      <input type="number" required min={1} max={20} value={formData.courtCount} onChange={e => setFormData({...formData, courtCount: parseInt(e.target.value) || 1})} className={inputStyles} />
+                    </div>
+                    <div className="rounded-xl border border-subtle bg-app p-4 dark:border-subtle-dark dark:bg-elevated-dark">
+                      <div className="flex items-start gap-3">
+                        <SlidersHorizontal size={18} className="mt-0.5 text-ink dark:text-ink-dark" />
+                        <div>
+                          <p className="text-sm font-semibold text-primary dark:text-primary-dark">{t('session_setup_courts_tip')}</p>
+                          <p className="mt-1 text-xs leading-5 text-muted-ink dark:text-muted-dark">{t('session_setup_courts_tip_desc')}</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {wizardStep === 3 && (
+                  <div className="space-y-5">
+                    <div>
+                      <h4 className="text-lg font-bold text-primary dark:text-primary-dark">{t('session_setup_roster')}</h4>
+                      <p className="mt-1 text-sm text-muted-ink dark:text-muted-dark">{t('session_setup_roster_desc')}</p>
+                    </div>
+                    <div className="rounded-xl border border-subtle dark:border-subtle-dark">
+                      {wizardMembers.length === 0 ? (
+                        <div className="p-6 text-center text-sm text-muted-ink dark:text-muted-dark">{t('session_setup_no_members')}</div>
+                      ) : (
+                        <div className="max-h-64 divide-y divide-subtle overflow-y-auto dark:divide-subtle-dark">
+                          {wizardMembers.map((member) => {
+                            const selected = wizardMemberIds.includes(member.id);
+                            return (
+                              <label key={member.id} className="flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-muted dark:hover:bg-elevated-dark">
+                                <input type="checkbox" checked={selected} onChange={() => setWizardMemberIds(ids => selected ? ids.filter(id => id !== member.id) : [...ids, member.id])} className="h-4 w-4 accent-[var(--color-ink)]" />
+                                <span className="min-w-0 flex-1 truncate text-sm font-semibold text-primary dark:text-primary-dark">{member.name}</span>
+                                {member.skillLevel && <span className="rounded-md bg-muted px-2 py-1 text-[10px] font-bold text-primary-soft dark:bg-strong-dark dark:text-primary-dark">{member.skillLevel}</span>}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs font-medium text-muted-ink dark:text-muted-dark">{t('session_setup_selected_members').replace('{{count}}', wizardMemberIds.length.toString())}</p>
+                  </div>
+                )}
+
+                {wizardStep === 4 && (
+                  <div className="space-y-5">
+                    <div>
+                      <h4 className="text-lg font-bold text-primary dark:text-primary-dark">{t('session_setup_rules')}</h4>
+                      <p className="mt-1 text-sm text-muted-ink dark:text-muted-dark">{t('session_setup_rules_desc')}</p>
+                    </div>
+                    <div>
+                      <label className={labelStyles}>{t('scoring_system')}</label>
+                      <select value={formData.scoringSystem} onChange={e => setFormData({...formData, scoringSystem: e.target.value})} className={inputStyles}>
+                        <option value="BWF 21 Points x 3 Sets">{t('bwf_21')}</option>
+                        <option value="BWF 15 Points x 3 Sets">{t('bwf_15')}</option>
+                        <option value="42 Points x 1 Set">{t('pts_42')}</option>
+                        <option value="30 Points x 1 Set">{t('pts_30')}</option>
+                        <option value="custom">{t('custom')}</option>
+                      </select>
+                    </div>
+                    {formData.scoringSystem === 'custom' && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div><label className={labelStyles}>{t('custom_sets')}</label><input type="number" required min={1} max={5} value={formData.customSets} onChange={e => setFormData({...formData, customSets: parseInt(e.target.value) || 1})} className={inputStyles} /></div>
+                        <div><label className={labelStyles}>{t('custom_points')}</label><input type="number" required min={1} max={100} value={formData.customPoints} onChange={e => setFormData({...formData, customPoints: parseInt(e.target.value) || 21})} className={inputStyles} /></div>
+                      </div>
+                    )}
+                    <div>
+                      <label className={labelStyles}>{t('pairing_rule')}</label>
+                      <select value={formData.pairingRule} onChange={e => setFormData({...formData, pairingRule: e.target.value})} className={inputStyles}>
+                        <option value="very_strict">{t('very_strict')}</option>
+                        <option value="strict">{t('strict')}</option>
+                        <option value="moderate">{t('moderate')}</option>
+                        <option value="randomize">{t('randomize')}</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelStyles}>{t('match_limit')}</label>
+                      <select value={formLimitType} onChange={e => { const val = e.target.value; if (val === 'all') setFormData({...formData, matchLimit: 0}); else if (val === 'custom') setFormData({...formData, matchLimit: 6}); else setFormData({...formData, matchLimit: parseInt(val)}); }} className={inputStyles}>
+                        <option value="all">{t('all_games')}</option>
+                        <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="custom">{t('custom_amount')}</option>
+                      </select>
+                    </div>
+                    {formLimitType === 'custom' && <input type="number" min={1} value={formData.matchLimit} onChange={e => setFormData({...formData, matchLimit: parseInt(e.target.value) || 0})} className={inputStyles} placeholder={t('match_limit_placeholder')} />}
+                  </div>
+                )}
+
+                {wizardStep === 5 && (
+                  <div className="space-y-5">
+                    <div>
+                      <h4 className="text-lg font-bold text-primary dark:text-primary-dark">{t('session_setup_fees')}</h4>
+                      <p className="mt-1 text-sm text-muted-ink dark:text-muted-dark">{t('session_setup_fees_desc')}</p>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div><label className={labelStyles}>{t('walk_in_fee')}</label><div className="relative"><Banknote size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" /><input type="number" min={0} value={formData.defaultFee} onChange={e => setFormData({...formData, defaultFee: parseInt(e.target.value) || 0})} className={inputStyles + ' pl-9'} placeholder="0" /></div></div>
+                      <div><label className={labelStyles}>{t('member_fee')}</label><div className="relative"><Banknote size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" /><input type="number" min={0} value={formData.memberDefaultFee} onChange={e => setFormData({...formData, memberDefaultFee: parseInt(e.target.value) || 0})} className={inputStyles + ' pl-9'} placeholder="0" /></div></div>
+                    </div>
+                    <div className="rounded-xl border border-subtle bg-app p-4 dark:border-subtle-dark dark:bg-elevated-dark">
+                      <p className="text-sm font-semibold text-primary dark:text-primary-dark">{t('session_setup_summary')}</p>
+                      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm"><dt className="text-muted-ink dark:text-muted-dark">{t('session_name')}</dt><dd className="truncate text-right font-semibold text-primary dark:text-primary-dark">{formData.name || '—'}</dd><dt className="text-muted-ink dark:text-muted-dark">{t('court_count')}</dt><dd className="text-right font-semibold text-primary dark:text-primary-dark">{formData.courtCount}</dd><dt className="text-muted-ink dark:text-muted-dark">{t('session_setup_roster')}</dt><dd className="text-right font-semibold text-primary dark:text-primary-dark">{wizardMemberIds.length}</dd></dl>
+                    </div>
+                  </div>
+                )}
               </form>
             </div>
 
-            <div className="p-5 border-t border-subtle dark:border-subtle-dark bg-app dark:bg-app-dark flex justify-end gap-3 shrink-0">
-              <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-sm font-medium text-muted-ink dark:text-muted-dark hover:bg-muted dark:hover:bg-elevated-dark rounded-lg transition-colors">{t('cancel')}</button>
-              <button type="submit" form="session-form" disabled={isProcessing} className="px-6 py-2.5 text-sm font-medium bg-ink hover:bg-ink-soft text-white rounded-lg shadow-sm transition-colors disabled:opacity-50">{t('create_session')}</button>
+            <div className="flex items-center justify-between gap-3 border-t border-subtle bg-surface px-5 py-4 dark:border-subtle-dark dark:bg-surface-dark sm:px-7">
+              <button type="button" onClick={() => wizardStep === 1 ? setIsModalOpen(false) : setWizardStep(step => step - 1)} className="rounded-lg px-4 py-2.5 text-sm font-semibold text-muted-ink transition-colors hover:bg-muted dark:text-muted-dark dark:hover:bg-elevated-dark">{wizardStep === 1 ? t('cancel') : t('back')}</button>
+              {wizardStep < 5 ? (
+                <button type="button" onClick={() => setWizardStep(step => step + 1)} className="rounded-lg bg-ink px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-ink-soft dark:bg-ink-dark dark:text-ink dark:hover:bg-primary-dark">{t('next')}</button>
+              ) : (
+                <button type="submit" form="session-form" disabled={isProcessing} className="rounded-lg bg-ink px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-ink-soft disabled:cursor-not-allowed disabled:opacity-50 dark:bg-ink-dark dark:text-ink dark:hover:bg-primary-dark">{isProcessing ? t('saving') : t('create_session')}</button>
+              )}
             </div>
           </div>
         </div>
