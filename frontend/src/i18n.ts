@@ -41,6 +41,15 @@ const resources = {
       "login_identifier_hint": "Use your email or username",
       "show_password": "Show password",
       "hide_password": "Hide password",
+      "forgot_password_title": "Reset your password",
+      "forgot_password_description": "Enter your email and we’ll send you a link to reset your password.",
+      "send_reset_link": "Send reset link",
+      "back_to_login": "Back to login",
+      "reset_password_title": "Create a new password",
+      "reset_password_description": "Choose a new password for your AturMabar account.",
+      "new_password_label": "New password",
+      "reset_password": "Reset password",
+      "invalid_reset_token": "This reset link is invalid or has expired.",
 
       // Subscription & Access
       "sub_inactive": "Subscription Inactive",
@@ -350,6 +359,15 @@ const resources = {
       "login_identifier_hint": "Gunakan email atau nama pengguna",
       "show_password": "Tampilkan kata sandi",
       "hide_password": "Sembunyikan kata sandi",
+      "forgot_password_title": "Atur ulang kata sandi",
+      "forgot_password_description": "Masukkan email Anda dan kami akan mengirimkan tautan untuk mengatur ulang kata sandi.",
+      "send_reset_link": "Kirim tautan reset",
+      "back_to_login": "Kembali ke masuk",
+      "reset_password_title": "Buat kata sandi baru",
+      "reset_password_description": "Pilih kata sandi baru untuk akun AturMabar Anda.",
+      "new_password_label": "Kata sandi baru",
+      "reset_password": "Atur ulang kata sandi",
+      "invalid_reset_token": "Tautan reset ini tidak valid atau sudah kedaluwarsa.",
 
       // Subscription & Access
       "sub_inactive": "Langganan Tidak Aktif",
