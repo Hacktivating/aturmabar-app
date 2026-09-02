@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, X, Search, Calendar, Trash2, ChevronLeft, ChevronRight, SlidersHorizontal, Banknote, Zap, Globe, Sun, Moon, Settings, LogOut, ArrowLeft, PlayCircle, CalendarDays } from 'lucide-react';
+import { Plus, X, Search, Calendar, Trash2, ChevronLeft, ChevronRight, SlidersHorizontal, Banknote, Zap, Globe, Sun, Moon, Settings, LogOut, ArrowLeft, PlayCircle, CalendarDays, ShieldAlert } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../api/axios';
 
@@ -8,6 +8,7 @@ interface Session {
   id: number;
   name: string;
   date: string;
+  sessionType: string;
   scoringSystem: string;
   pairingRule: string;
   status: string;
@@ -25,21 +26,20 @@ export default function Sessions() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState('');
-
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     date: '',
     courtCount: 3,
+    sessionType: 'regular',
+    opposingCommunityName: '',
+    matchQuotas: { MD: 0, WD: 0, XD: 0 },
     scoringSystem: 'BWF 21 Points x 3 Sets',
     customSets: 3,
     customPoints: 21,
@@ -86,7 +86,6 @@ export default function Sessions() {
 
   useEffect(() => { fetchInitializationData(); }, []);
 
-  // Filter & Paginate
   const processedSessions = sessions.filter(s => {
     const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesDate = dateFilter ? s.date.startsWith(dateFilter) : true;
@@ -102,7 +101,16 @@ export default function Sessions() {
     tomorrow.setHours(18, 0, 0, 0);
     const localDateTime = new Date(tomorrow.getTime() - tomorrow.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
-    setFormData({ ...formData, date: localDateTime, name: '', defaultFee: 0, memberDefaultFee: 0 });
+    setFormData({ 
+      ...formData, 
+      date: localDateTime, 
+      name: '', 
+      sessionType: 'regular',
+      opposingCommunityName: '',
+      matchQuotas: { MD: 0, WD: 0, XD: 0 },
+      defaultFee: 0, 
+      memberDefaultFee: 0 
+    });
     setWizardStep(1);
     setWizardMemberIds([]);
     try {
@@ -132,7 +140,7 @@ export default function Sessions() {
         });
       }
       if (sessionId && wizardMemberIds.length > 0) {
-        await Promise.all(wizardMemberIds.map(memberId => api.post(`/sessions/${sessionId}/attendances`, { memberId })));
+        await Promise.all(wizardMemberIds.map(memberId => api.post(`/sessions/${sessionId}/attendances`, { memberId, team: 'home' })));
       }
       setIsModalOpen(false);
       fetchInitializationData();
@@ -167,17 +175,13 @@ export default function Sessions() {
   };
 
   const currentLocalDateTime = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-
   const inputStyles = "w-full px-4 py-3 bg-app dark:bg-surface-dark border border-default dark:border-subtle-dark rounded-xl text-sm outline-none focus:ring-2 focus:ring-ink transition-all text-primary dark:text-primary-dark";
   const labelStyles = "block text-xs font-semibold mb-2 text-primary-soft dark:text-faint";
-
-  // Derive dropdown type for modal
   const formLimitType = formData.matchLimit === 0 ? 'all' : ([1,2,3,4,5].includes(formData.matchLimit) ? String(formData.matchLimit) : 'custom');
 
   return (
     <div className="min-h-screen bg-app dark:bg-app-dark text-primary dark:text-primary-dark font-sans flex flex-col">
 
-      {/* Top Navigation */}
       <nav className="h-16 border-b border-subtle dark:border-subtle-dark bg-surface dark:bg-surface-dark sticky top-0 z-30 shrink-0">
         <div className="max-w-7xl mx-auto w-full h-full flex justify-between items-center px-4 sm:px-8">
           <div className="flex items-center gap-2">
@@ -196,13 +200,11 @@ export default function Sessions() {
             </div>
 
             <button onClick={toggleLanguage} className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-muted-ink dark:text-faint hover:text-ink dark:hover:text-ink-dark transition-colors px-2 py-1.5 rounded-lg">
-              <Globe size={16} />
-              {i18n.language.toUpperCase()}
+              <Globe size={16} /> {i18n.language.toUpperCase()}
             </button>
             <button onClick={() => setIsDark(!isDark)} className="p-1.5 text-muted-ink hover:text-ink dark:text-faint dark:hover:text-ink-dark rounded-lg transition-colors">
               {isDark ? <Sun size={18} /> : <Moon size={18} />}
             </button>
-
             <button onClick={() => navigate('/dashboard')} className="p-1.5 text-muted-ink hover:text-ink dark:text-faint dark:hover:text-ink-dark rounded-lg transition-colors shrink-0" title="Settings / Dashboard">
               <Settings size={18} />
             </button>
@@ -239,9 +241,7 @@ export default function Sessions() {
           </button>
         </div>
 
-        {/* Data Container */}
         <div className="bg-surface dark:bg-surface-dark border border-subtle dark:border-subtle-dark rounded-2xl shadow-sm overflow-hidden flex flex-col flex-1 min-h-[400px]">
-
           {loading ? (
             <div className="flex-1 flex items-center justify-center text-muted-ink p-8">{t('loading')}</div>
           ) : paginatedSessions.length === 0 ? (
@@ -251,7 +251,6 @@ export default function Sessions() {
             </div>
           ) : (
             <>
-              {/* Desktop Table View */}
               <div className="hidden sm:block overflow-x-auto flex-1">
                 <table className="w-full text-left border-collapse min-w-[800px]">
                   <thead className="bg-app dark:bg-app-dark border-b border-subtle dark:border-subtle-dark sticky top-0 z-10">
@@ -265,13 +264,14 @@ export default function Sessions() {
                   <tbody className="divide-y divide-slate-100 dark:divide-[#1E293B]">
                     {paginatedSessions.map((session) => (
                       <tr key={session.id} onClick={() => navigate(`/sessions/${session.id}`)} className="hover:bg-app dark:hover:bg-elevated-dark/30 transition-colors cursor-pointer group">
-                        <td className="p-5 font-bold text-base dark:text-primary-dark group-hover:text-ink dark:group-hover:text-ink-dark transition-colors">{session.name}</td>
+                        <td className="p-5 font-bold text-base dark:text-primary-dark group-hover:text-ink dark:group-hover:text-ink-dark transition-colors flex items-center gap-2">
+                          {session.name}
+                          {session.sessionType === 'sparring' && <span className="bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400 px-2 py-0.5 rounded text-[10px] font-bold tracking-widest uppercase">SPARRING</span>}
+                        </td>
                         <td className="p-5 text-sm font-medium text-muted-ink dark:text-faint">
                           {new Date(session.date).toLocaleString(i18n.language, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
                         </td>
-                        <td className="p-5">
-                          {getStatusBadge(session.status || 'scheduled')}
-                        </td>
+                        <td className="p-5">{getStatusBadge(session.status || 'scheduled')}</td>
                         <td className="p-5">
                           <div className="flex items-center justify-end gap-3">
                             {(!session.status || session.status === 'scheduled') && (
@@ -279,9 +279,7 @@ export default function Sessions() {
                                 <PlayCircle size={16} /> {t('start_session')}
                               </button>
                             )}
-                            <button onClick={(e) => { e.stopPropagation(); handleDelete(session.id); }} className="p-1.5 text-faint hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors">
-                              <Trash2 size={18}/>
-                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); handleDelete(session.id); }} className="p-1.5 text-faint hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors"><Trash2 size={18}/></button>
                           </div>
                         </td>
                       </tr>
@@ -290,13 +288,15 @@ export default function Sessions() {
                 </table>
               </div>
 
-              {/* Mobile Card View */}
               <div className="sm:hidden flex flex-col flex-1 divide-y divide-slate-100 dark:divide-[#1E293B] overflow-y-auto">
                 {paginatedSessions.map((session) => (
                   <div key={session.id} onClick={() => navigate(`/sessions/${session.id}`)} className="p-4 flex flex-col gap-3 hover:bg-app dark:hover:bg-elevated-dark/30 transition-colors cursor-pointer">
                     <div className="flex justify-between items-start">
                       <div>
-                        <div className="font-bold text-base mb-1">{session.name}</div>
+                        <div className="font-bold text-base mb-1 flex items-center gap-2">
+                          {session.name}
+                          {session.sessionType === 'sparring' && <span className="bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400 px-1.5 py-0.5 rounded text-[9px] font-bold tracking-widest uppercase">SPARRING</span>}
+                        </div>
                         <div className="text-xs font-medium text-muted-ink">
                           {new Date(session.date).toLocaleString(i18n.language, { dateStyle: 'medium', timeStyle: 'short' })}
                         </div>
@@ -305,10 +305,7 @@ export default function Sessions() {
                     </div>
 
                     <div className="flex items-center justify-between mt-2 pt-3 border-t border-subtle dark:border-subtle-dark">
-                      <button onClick={(e) => { e.stopPropagation(); handleDelete(session.id); }} className="p-2 text-faint hover:text-rose-600 bg-app dark:bg-elevated-dark rounded-lg transition-colors">
-                        <Trash2 size={16}/>
-                      </button>
-
+                      <button onClick={(e) => { e.stopPropagation(); handleDelete(session.id); }} className="p-2 text-faint hover:text-rose-600 bg-app dark:bg-elevated-dark rounded-lg transition-colors"><Trash2 size={16}/></button>
                       {(!session.status || session.status === 'scheduled') && (
                         <button onClick={(e) => { e.stopPropagation(); handleStartSession(session.id); }} className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2 rounded-lg transition-colors">
                           <PlayCircle size={16} /> {t('start_session')}
@@ -321,12 +318,9 @@ export default function Sessions() {
             </>
           )}
 
-          {/* Pagination UI */}
           {!loading && totalPages > 1 && (
             <div className="mt-auto p-4 border-t border-subtle dark:border-subtle-dark flex items-center justify-between bg-app dark:bg-app-dark shrink-0">
-              <span className="text-xs text-muted-ink font-medium">
-                {t('page_of').replace('{{current}}', currentPage.toString()).replace('{{total}}', totalPages.toString())}
-              </span>
+              <span className="text-xs text-muted-ink font-medium">{t('page_of').replace('{{current}}', currentPage.toString()).replace('{{total}}', totalPages.toString())}</span>
               <div className="flex gap-2">
                 <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="p-2 border border-subtle dark:border-subtle-dark rounded-lg bg-surface dark:bg-surface-dark disabled:opacity-50 hover:bg-muted dark:hover:bg-elevated-dark transition-colors"><ChevronLeft size={16}/></button>
                 <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="p-2 border border-subtle dark:border-subtle-dark rounded-lg bg-surface dark:bg-surface-dark disabled:opacity-50 hover:bg-muted dark:hover:bg-elevated-dark transition-colors"><ChevronRight size={16}/></button>
@@ -361,16 +355,47 @@ export default function Sessions() {
 
             <div className="min-h-0 flex-1 overflow-y-auto px-5 py-6 sm:px-7">
               <form id="session-form" onSubmit={handleSubmit} className="space-y-6">
+                
                 {wizardStep === 1 && (
                   <div className="space-y-5">
                     <div>
                       <h4 className="text-lg font-bold text-primary dark:text-primary-dark">{t('session_setup_basics')}</h4>
                       <p className="mt-1 text-sm text-muted-ink dark:text-muted-dark">{t('session_setup_basics_desc')}</p>
                     </div>
+
+                    {/* NEW: Regular vs Sparring Toggle */}
+                    <div className="flex gap-4">
+                      <button 
+                        type="button" 
+                        onClick={() => setFormData({...formData, sessionType: 'regular'})} 
+                        className={`flex-1 p-4 rounded-xl border-2 transition-all ${formData.sessionType === 'regular' ? 'border-ink bg-app dark:border-ink-dark dark:bg-elevated-dark' : 'border-subtle bg-surface hover:bg-app dark:border-subtle-dark dark:bg-surface-dark dark:hover:bg-elevated-dark'}`}
+                      >
+                        <span className="block font-bold text-base text-primary dark:text-white">Regular Session</span>
+                        <span className="block text-xs text-muted-ink dark:text-faint mt-1">Internal community play</span>
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={() => setFormData({...formData, sessionType: 'sparring'})} 
+                        className={`flex-1 p-4 rounded-xl border-2 transition-all ${formData.sessionType === 'sparring' ? 'border-purple-500 bg-purple-50 dark:border-purple-500 dark:bg-purple-900/20' : 'border-subtle bg-surface hover:bg-app dark:border-subtle-dark dark:bg-surface-dark dark:hover:bg-elevated-dark'}`}
+                      >
+                        <span className="block font-bold text-base text-primary dark:text-white">Sparring Match</span>
+                        <span className="block text-xs text-muted-ink dark:text-faint mt-1">Play against another club</span>
+                      </button>
+                    </div>
+
                     <div>
                       <label className={labelStyles}>{t('session_name')}</label>
                       <input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder={t('session_name_placeholder')} className={inputStyles} autoFocus />
                     </div>
+
+                    {/* NEW: Opponent Input if Sparring */}
+                    {formData.sessionType === 'sparring' && (
+                      <div className="animate-in fade-in slide-in-from-top-2">
+                        <label className={labelStyles}>Opposing Community Name</label>
+                        <input type="text" required={formData.sessionType === 'sparring'} value={formData.opposingCommunityName} onChange={e => setFormData({...formData, opposingCommunityName: e.target.value})} placeholder="e.g., PB Spartan" className={`${inputStyles} border-purple-200 dark:border-purple-900 focus:ring-purple-500`} />
+                      </div>
+                    )}
+
                     <div>
                       <label className={labelStyles}>{t('date_time')}</label>
                       <input type="datetime-local" required min={currentLocalDateTime} value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className={inputStyles + ' [&::-webkit-calendar-picker-indicator]:dark:invert'} />
@@ -434,6 +459,21 @@ export default function Sessions() {
                       <h4 className="text-lg font-bold text-primary dark:text-primary-dark">{t('session_setup_rules')}</h4>
                       <p className="mt-1 text-sm text-muted-ink dark:text-muted-dark">{t('session_setup_rules_desc')}</p>
                     </div>
+
+                    {/* NEW: Sparring Match Quotas */}
+                    {formData.sessionType === 'sparring' && (
+                      <div className="p-4 border-2 border-purple-200 dark:border-purple-900/50 bg-purple-50 dark:bg-purple-900/10 rounded-xl mb-6 animate-in fade-in">
+                        <div className="flex items-center gap-2 mb-4 text-purple-700 dark:text-purple-400 font-bold">
+                          <ShieldAlert size={18} /> Match Quotas (Optional)
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div><label className="block text-xs font-bold mb-1 text-purple-700/70 dark:text-purple-400/70">MD Count</label><input type="number" min={0} value={formData.matchQuotas.MD} onChange={e => setFormData({...formData, matchQuotas: {...formData.matchQuotas, MD: parseInt(e.target.value) || 0}})} className={`${inputStyles} border-purple-200 focus:ring-purple-500 font-bold`} /></div>
+                          <div><label className="block text-xs font-bold mb-1 text-purple-700/70 dark:text-purple-400/70">WD Count</label><input type="number" min={0} value={formData.matchQuotas.WD} onChange={e => setFormData({...formData, matchQuotas: {...formData.matchQuotas, WD: parseInt(e.target.value) || 0}})} className={`${inputStyles} border-purple-200 focus:ring-purple-500 font-bold`} /></div>
+                          <div><label className="block text-xs font-bold mb-1 text-purple-700/70 dark:text-purple-400/70">XD Count</label><input type="number" min={0} value={formData.matchQuotas.XD} onChange={e => setFormData({...formData, matchQuotas: {...formData.matchQuotas, XD: parseInt(e.target.value) || 0}})} className={`${inputStyles} border-purple-200 focus:ring-purple-500 font-bold`} /></div>
+                        </div>
+                      </div>
+                    )}
+
                     <div>
                       <label className={labelStyles}>{t('scoring_system')}</label>
                       <select value={formData.scoringSystem} onChange={e => setFormData({...formData, scoringSystem: e.target.value})} className={inputStyles}>
