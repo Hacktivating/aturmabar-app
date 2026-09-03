@@ -362,4 +362,24 @@ router.put("/:matchId/history", async (req: AuthRequest, res) => {
   }
 });
 
+// Add this route to your matches.ts
+router.put("/:id/reset", async (req: AuthRequest, res) => {
+  try {
+    const matchId = parseInt(String(req.params.id), 10);
+    await db.update(matches)
+      .set({ 
+        status: 'queued', 
+        startedAt: null, 
+        scoreTeamA_set1: 0, scoreTeamB_set1: 0,
+        scoreTeamA_set2: 0, scoreTeamB_set2: 0,
+        scoreTeamA_set3: 0, scoreTeamB_set3: 0 
+      })
+      .where(eq(matches.id, matchId));
+    res.status(200).json({ message: "Match reset successfully." });
+  } catch (error) {
+    console.error("PUT /matches/:id/reset Error:", error);
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
+
 export default router;

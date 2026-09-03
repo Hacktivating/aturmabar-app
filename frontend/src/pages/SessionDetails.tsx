@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Users, SquareStack, Play, History, Clock, Settings as SettingsIcon,
-  Plus, UserPlus, Check, Pause, X, Edit2, Zap, Globe, Sun, Moon, LogOut, ChevronDown, Search, Trash2, GripVertical, ArrowRightLeft, ListOrdered, AlertCircle, AlertTriangle, Save, ChevronLeft, ChevronRight, FileDown, Info, Square, Trophy, Medal, ChevronUp, Wallet, TrendingUp, TrendingDown, DollarSign, RotateCcw, CircleHelp
+  Plus, UserPlus, Check, Pause, X, Edit2, Zap, Globe, Sun, Moon, LogOut, ChevronDown, Search, Trash2, GripVertical, ArrowRightLeft, ListOrdered, AlertCircle, AlertTriangle, Save, ChevronLeft, ChevronRight, FileDown, Info, Square, Trophy, Medal, ChevronUp, Wallet, TrendingUp, TrendingDown, DollarSign, RotateCcw, CircleHelp, ShieldAlert
 } from 'lucide-react';
 import api from '../api/axios';
 import jsPDF from 'jspdf';
@@ -61,7 +61,7 @@ const getGradeColor = (levelId: string | undefined | null) => {
   switch (levelId) {
     case 'A1': return 'bg-elevated text-white dark:bg-muted dark:text-primary border-transparent';
     case 'A2': return 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400 border-purple-200 dark:border-purple-800';
-    case 'B1': return 'bg-accent-soft text-ink dark:bg-accent-soft-dark dark:text-ink-dark border-accent dark:border-strong-dark';
+    case 'B1': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 border-blue-200 dark:border-blue-800';
     case 'B2': return 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-400 border-cyan-200 dark:border-cyan-800';
     case 'C1': return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800';
     case 'C2': return 'bg-lime-100 text-lime-700 dark:bg-lime-900/40 dark:text-lime-400 border-lime-200 dark:border-lime-800';
@@ -152,7 +152,7 @@ const PlayerSlotSelect = ({ options, value, onChange, placeholder, currentName, 
   );
 };
 
-const MatchCard = ({ match, court, sessionStatus, maxSets, isProcessing, getMemberData, openEditMatchModal, handleAutoGenerateCourt, setSwapCourtModal, setConfirmDeleteMatchId, handleStartMatch, handleFinishMatch, handleReorderQueue, queueIndex, totalQueued, t }: any) => {
+const MatchCard = ({ match, court, sessionStatus, maxSets, isProcessing, getMemberData, openEditMatchModal, handleAutoGenerateCourt, setSwapCourtModal, setConfirmDeleteMatchId, setConfirmResetMatchId, handleStartMatch, handleFinishMatch, handleReorderQueue, queueIndex, totalQueued, t }: any) => {
   const [currentSet, setCurrentSet] = useState(1);
   const [scores, setScores] = useState({
     a1: match?.scoreTeamA_set1 || '', b1: match?.scoreTeamB_set1 || '',
@@ -288,8 +288,8 @@ const MatchCard = ({ match, court, sessionStatus, maxSets, isProcessing, getMemb
               <button type="submit" disabled={isProcessing} className="w-full bg-ink hover:bg-ink-soft text-white py-2.5 rounded-lg text-xs font-bold transition-colors shadow-sm mt-1 disabled:opacity-50">
                 {t('finish_free_court', 'Finish & Free Court')}
               </button>
-              <button type="button" disabled={isProcessing} onClick={() => setConfirmDeleteMatchId(match.id)} className="w-full bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-500 py-2.5 rounded-lg text-xs font-bold transition-colors mt-1 disabled:opacity-50">
-                {t('cancel_match', 'Cancel Match')}
+              <button type="button" disabled={isProcessing} onClick={() => setConfirmResetMatchId(match.id)} className="w-full bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-500 py-2.5 rounded-lg text-xs font-bold transition-colors mt-1 disabled:opacity-50">
+                Cancel Match
               </button>
             </form>
           ) : court ? (
@@ -309,7 +309,6 @@ const MatchCard = ({ match, court, sessionStatus, maxSets, isProcessing, getMemb
     </div>
   );
 };
-
 export default function SessionDetails() {
   const { id } = useParams();
   const { t, i18n } = useTranslation();
@@ -319,7 +318,7 @@ export default function SessionDetails() {
   const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark');
 
   const [session, setSession] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState('attendance'); // Default to attendance tab initially
+  const [activeTab, setActiveTab] = useState('attendance'); 
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -373,6 +372,7 @@ export default function SessionDetails() {
   const [historySetView, setHistorySetView] = useState(1);
 
   const [confirmDeleteMatchId, setConfirmDeleteMatchId] = useState<number | null>(null);
+  const [confirmResetMatchId, setConfirmResetMatchId] = useState<number | null>(null);
 
   const [toasts, setToasts] = useState<{id: number, message: string, type: 'success'|'error'}[]>([]);
   const addToast = (msg: string, type: 'success'|'error' = 'success') => {
@@ -651,7 +651,6 @@ export default function SessionDetails() {
       });
   }, [attendances, playtimeSearch, finishedMatches, activeMatches, maxSets, allMembers]);
 
-  // Regular Leaderboard
   const sessionLeaderboardData = useMemo(() => {
     if (!session || session.sessionType === 'sparring' || !finishedMatches) return [];
     
@@ -742,7 +741,6 @@ export default function SessionDetails() {
     return sortedWithRanks;
   }, [finishedMatches, allMembers, session, maxSets, leaderboardSearch, lbLimitType, lbCustomLimit]);
 
-  // Sparring Leaderboard
   const sparringScore = useMemo(() => {
     let homeMatches = 0, awayMatches = 0;
     let homeSets = 0, awaySets = 0;
@@ -809,7 +807,6 @@ export default function SessionDetails() {
     const selectedIds = Object.entries(manualPlayers).filter(([k]) => k !== currentKey).map(([, v]) => v);
     let filtered = availableForManualMatch;
     
-    // Strict Team filtering for Sparring Mode
     if (session?.sessionType === 'sparring') {
       const requiredTeam = (currentKey === 'ta1' || currentKey === 'ta2') ? 'home' : 'away';
       filtered = filtered.filter(m => m.team === requiredTeam);
@@ -1215,13 +1212,37 @@ export default function SessionDetails() {
     }
   };
 
+  const handleResetMatch = async () => {
+    if (!confirmResetMatchId || isProcessing) return;
+    setIsProcessing(true);
+    try {
+      await api.put(`/matches/${confirmResetMatchId}/reset`);
+      await fetchSessionData();
+      addToast("Match reset to queued status.");
+    } catch (err) {
+      addToast("Error resetting match", "error");
+    } finally {
+      setConfirmResetMatchId(null);
+      setIsProcessing(false);
+    }
+  };
+
   const handleConfirmDeleteMatch = async () => {
     if (!confirmDeleteMatchId || isProcessing) return;
     setIsProcessing(true);
     try { 
-      await api.delete(`/matches/${confirmDeleteMatchId}`); 
+      if (session?.sessionType === 'sparring') {
+          await api.put(`/matches/${confirmDeleteMatchId}/sparring`, { 
+              teamA_player1: null, teamA_player2: null, 
+              teamB_player1: null, teamB_player2: null, 
+              courtId: null, status: 'queued' 
+          });
+          addToast("Match cleared successfully.");
+      } else {
+          await api.delete(`/matches/${confirmDeleteMatchId}`); 
+          addToast(t('match_cancelled', "Match cancelled successfully.")); 
+      }
       await fetchSessionData(); 
-      addToast(t('match_cancelled', "Match cancelled successfully.")); 
     } catch (err) { addToast("Error canceling match", "error"); }
     finally { setConfirmDeleteMatchId(null); setIsProcessing(false); }
   };
@@ -1547,7 +1568,17 @@ export default function SessionDetails() {
                       {m.status === 'queued' ? (
                         <select 
                           value={m.courtId || ''} 
-                          onChange={(e) => handleUpdateSparringMatch(m.id, { courtId: parseInt(e.target.value) || null })}
+                          onChange={(e) => {
+                            const targetId = parseInt(e.target.value) || null;
+                            if (targetId) {
+                               const isOccupied = activeMatches.some(am => am.courtId === targetId && am.status === 'on_court');
+                               if (isOccupied) {
+                                  addToast("Cannot move to this court because a match is currently ongoing. Please finish or cancel it first.", "error");
+                                  return;
+                               }
+                            }
+                            handleUpdateSparringMatch(m.id, { courtId: targetId });
+                          }}
                           className="w-full px-2 py-1.5 bg-surface dark:bg-surface-dark border border-subtle dark:border-subtle-dark rounded outline-none text-xs font-bold focus:ring-1 focus:ring-ink"
                         >
                           <option value="">No Court</option>
@@ -1586,7 +1617,10 @@ export default function SessionDetails() {
                          >Start</button>
                        )}
                        {m.status === 'on_court' && (
-                         <button onClick={() => openEditHistoryModal(m)} className="px-3 py-1.5 bg-emerald-500 text-white rounded text-xs font-bold shadow-sm hover:bg-emerald-600">Finish</button>
+                         <div className="flex justify-end gap-1.5">
+                           <button onClick={() => setConfirmResetMatchId(m.id)} className="p-1.5 bg-rose-50 text-rose-600 rounded shadow-sm hover:bg-rose-100" title="Reset Match"><RotateCcw size={14}/></button>
+                           <button onClick={() => openEditHistoryModal(m)} className="px-3 py-1.5 bg-emerald-500 text-white rounded text-xs font-bold shadow-sm hover:bg-emerald-600">Finish</button>
+                         </div>
                        )}
                        {m.status === 'finished' && (
                          <button onClick={() => openEditHistoryModal(m)} className="px-3 py-1.5 bg-surface dark:bg-app-dark border border-subtle dark:border-subtle-dark text-primary dark:text-primary-dark rounded text-xs font-bold shadow-sm hover:bg-app">Edit</button>
@@ -1976,6 +2010,7 @@ export default function SessionDetails() {
                             openEditMatchModal={openEditMatchModal}
                             handleFinishMatch={handleFinishMatch}
                             setConfirmDeleteMatchId={setConfirmDeleteMatchId}
+                            setConfirmResetMatchId={setConfirmResetMatchId}
                             setSwapCourtModal={setSwapCourtModal}
                             handleStartMatch={handleStartMatch}
                             handleAutoGenerateCourt={handleAutoGenerateCourt}
@@ -2001,6 +2036,7 @@ export default function SessionDetails() {
                               openEditMatchModal={openEditMatchModal} 
                               handleFinishMatch={handleFinishMatch} 
                               setConfirmDeleteMatchId={setConfirmDeleteMatchId} 
+                              setConfirmResetMatchId={setConfirmResetMatchId}
                               setSwapCourtModal={setSwapCourtModal} 
                               handleStartMatch={handleStartMatch} 
                               handleAutoGenerateCourt={handleAutoGenerateCourt} 
@@ -3034,7 +3070,24 @@ export default function SessionDetails() {
         </div>
       )}
 
-      {/* Swap Court Modal */}
+      {/* Confirmation Modal - Reset Match */}
+      {confirmResetMatchId && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-surface dark:bg-surface-dark w-full max-w-sm rounded-2xl shadow-2xl border border-subtle dark:border-subtle-dark p-6 text-center">
+             <div className="w-16 h-16 rounded-full bg-rose-50 dark:bg-rose-900/20 text-rose-600 mx-auto flex items-center justify-center mb-4">
+               <RotateCcw size={32} />
+             </div>
+             <h3 className="text-xl font-bold mb-2">Reset Match?</h3>
+             <p className="text-muted-ink dark:text-faint text-sm mb-6">This will reset the match timer and status back to Waiting. Are you sure?</p>
+             <div className="flex gap-3">
+               <button disabled={isProcessing} onClick={() => setConfirmResetMatchId(null)} className="flex-1 py-3 bg-muted dark:bg-elevated-dark hover:bg-muted dark:hover:bg-strong-dark rounded-xl font-bold transition-colors disabled:opacity-50">{t('abort')}</button>
+               <button disabled={isProcessing} onClick={handleResetMatch} className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold transition-colors disabled:opacity-50">Reset Match</button>
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Swap Court Modal (WITH ONGOING MATCH CHECK) */}
       {swapCourtModal && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in">
           <div className="bg-surface dark:bg-surface-dark w-full max-w-md rounded-2xl shadow-2xl flex flex-col max-h-[85dvh] overflow-hidden border border-subtle dark:border-subtle-dark">
@@ -3054,12 +3107,29 @@ export default function SessionDetails() {
               {courts.filter(c => c.isActive && c.id !== swapCourtModal.courtId).length === 0 ? (
                 <div className="text-center text-muted-ink py-4">No other active courts available.</div>
               ) : (
-                courts.filter(c => c.isActive && c.id !== swapCourtModal.courtId).map(c => (
-                  <button disabled={isProcessing} key={c.id} onClick={() => handleSwapCourt(swapCourtModal.id, c.id)} className="w-full text-left p-4 rounded-xl border border-subtle dark:border-subtle-dark bg-app dark:bg-app-dark hover:bg-accent-soft hover:border-ink dark:hover:bg-elevated-dark dark:hover:dark:border-strong-dark transition-colors font-bold flex justify-between items-center disabled:opacity-50">
-                    {c.name}
-                    <ArrowRightLeft size={16} className="text-faint" />
-                  </button>
-                ))
+                courts.filter(c => c.isActive && c.id !== swapCourtModal.courtId).map(c => {
+                  const isOccupied = activeMatches.some(m => m.courtId === c.id && m.status === 'on_court');
+                  return (
+                    <button 
+                      disabled={isProcessing} 
+                      key={c.id} 
+                      onClick={() => {
+                        if (isOccupied) {
+                          addToast("Cannot swap to this court. A match is currently ongoing. Please finish or cancel it first.", "error");
+                        } else {
+                          handleSwapCourt(swapCourtModal.id, c.id);
+                        }
+                      }} 
+                      className={`w-full text-left p-4 rounded-xl border ${isOccupied ? 'border-rose-200 bg-rose-50/50 dark:border-rose-900/50 dark:bg-rose-900/10 cursor-not-allowed opacity-75' : 'border-subtle dark:border-subtle-dark bg-app dark:bg-app-dark hover:bg-accent-soft hover:border-ink dark:hover:bg-elevated-dark dark:hover:dark:border-strong-dark'} transition-colors font-bold flex justify-between items-center`}
+                    >
+                      <div className="flex flex-col">
+                        <span>{c.name}</span>
+                        {isOccupied && <span className="text-[10px] text-rose-500 uppercase tracking-widest mt-1">Match Ongoing</span>}
+                      </div>
+                      <ArrowRightLeft size={16} className={isOccupied ? "text-rose-400" : "text-faint"} />
+                    </button>
+                  );
+                })
               )}
             </div>
           </div>
