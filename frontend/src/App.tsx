@@ -15,6 +15,7 @@ import Members from './pages/Members';
 import Sessions from './pages/Sessions';
 import SessionDetails from './pages/SessionDetails';
 import Leaderboard from './pages/Leaderboard';
+import Scoreboard from './pages/Scoreboard';
 
 function App() {
   useEffect(() => {
@@ -42,6 +43,7 @@ function App() {
         <Route path="/sessions" element={<ProtectedRoute><Sessions /></ProtectedRoute>} />
         <Route path="/sessions/:id" element={<ProtectedRoute><SessionDetails /></ProtectedRoute>} />
         <Route path="/leaderboard" element={<Leaderboard />} />
+        <Route path="/scoreboard" element={<Scoreboard />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
