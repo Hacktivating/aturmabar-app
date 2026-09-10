@@ -3,13 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, Link } from 'react-router-dom';
 import { Trophy, Calendar, SquareStack, ArrowLeft, Zap, Globe, Sun, Moon, Settings as SettingsIcon, LogOut, Medal, ChevronDown } from 'lucide-react';
 import api from '../api/axios';
+import { useAppPreferences } from '../hooks/useAppPreferences';
 
 export default function Leaderboard() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const { isDark, toggleTheme, toggleLanguage, handleLogout } = useAppPreferences();
 
   const [communityData, setCommunityData] = useState<any>(null);
-  const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark');
   const [loading, setLoading] = useState(true);
 
   const [members, setMembers] = useState<any[]>([]);
@@ -20,22 +21,8 @@ export default function Leaderboard() {
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (isDark) { document.documentElement.classList.add('dark'); localStorage.setItem('theme', 'dark'); }
-    else { document.documentElement.classList.remove('dark'); localStorage.setItem('theme', 'light'); }
-  }, [isDark]);
 
-  const toggleLanguage = () => {
-    const newLang = i18n.language === 'en' ? 'id' : 'en';
-    i18n.changeLanguage(newLang);
-    localStorage.setItem('language', newLang);
-  };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    navigate('/login');
-  };
 
   useEffect(() => {
     const initData = async () => {
@@ -213,7 +200,7 @@ export default function Leaderboard() {
             <button onClick={toggleLanguage} className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-muted-ink dark:text-faint hover:text-ink dark:hover:text-ink-dark px-2 py-1.5 rounded-lg transition-colors">
               <Globe size={16} /> {i18n.language.toUpperCase()}
             </button>
-            <button onClick={() => setIsDark(!isDark)} className="p-1.5 text-muted-ink hover:text-ink dark:text-faint dark:hover:text-ink-dark rounded-lg transition-colors">
+            <button onClick={toggleTheme} className="p-1.5 text-muted-ink hover:text-ink dark:text-faint dark:hover:text-ink-dark rounded-lg transition-colors">
               {isDark ? <Sun size={18} /> : <Moon size={18} />}
             </button>
             <button onClick={() => navigate('/dashboard')} className="p-1.5 text-muted-ink hover:text-ink dark:text-faint dark:hover:text-ink-dark rounded-lg transition-colors shrink-0">

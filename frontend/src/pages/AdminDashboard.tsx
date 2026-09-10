@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ShieldAlert, LogOut, Trash2, Edit2, Plus, X, Search, CheckCircle, XCircle, Clock, Sun, Moon, Globe } from 'lucide-react';
 import api from '../api/axios';
+import { useAppPreferences } from '../hooks/useAppPreferences';
 
 interface Account {
   id: number;
@@ -13,7 +13,7 @@ interface Account {
 }
 
 export default function AdminDashboard() {
-  const navigate = useNavigate();
+  const { isDark, toggleTheme, toggleLanguage, handleLogout } = useAppPreferences();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -27,18 +27,8 @@ export default function AdminDashboard() {
   });
 
   const { t, i18n } = useTranslation();
-  const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark');
 
-  useEffect(() => {
-    if (isDark) { document.documentElement.classList.add('dark'); localStorage.setItem('theme', 'dark'); }
-    else { document.documentElement.classList.remove('dark'); localStorage.setItem('theme', 'light'); }
-  }, [isDark]);
 
-  const toggleLanguage = () => {
-    const newLang = i18n.language === 'en' ? 'id' : 'en';
-    i18n.changeLanguage(newLang);
-    localStorage.setItem('language', newLang);
-  };
 
   const fetchAccounts = async () => {
     try {
@@ -53,11 +43,6 @@ export default function AdminDashboard() {
 
   useEffect(() => { fetchAccounts(); }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    navigate('/login');
-  };
 
   const filteredAccounts = accounts.filter(acc => {
     const term = searchQuery.toLowerCase();
@@ -146,7 +131,7 @@ export default function AdminDashboard() {
             <Globe size={16} />
             {i18n.language.toUpperCase()}
           </button>
-          <button onClick={() => setIsDark(!isDark)} className="p-1.5 text-muted-ink dark:text-faint hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-muted dark:hover:bg-elevated rounded-lg transition-colors">
+          <button onClick={toggleTheme} className="p-1.5 text-muted-ink dark:text-faint hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-muted dark:hover:bg-elevated rounded-lg transition-colors">
             {isDark ? <Sun size={18} /> : <Moon size={18} />}
           </button>
           <div className="w-px h-5 bg-muted dark:bg-strong-dark mx-1 hidden sm:block"></div>

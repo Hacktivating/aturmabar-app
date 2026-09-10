@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../api/axios';
+import { useAppPreferences } from '../hooks/useAppPreferences';
 
 // --- DYNAMIC TOUR OVERLAY ENGINE ---
 const TourOverlay = ({ step, currentStep, targetId, title, content, onNext, nextText, actionButton, hideNext, onCancel, allowClick, hideTooltip }: any) => {
@@ -200,9 +201,9 @@ const SearchableMultiSelect = ({ options, value, onChange, placeholder }: any) =
 export default function Members() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const { isDark, toggleTheme, toggleLanguage, handleLogout } = useAppPreferences();
 
   const [communityData, setCommunityData] = useState<any>(null);
-  const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark');
 
   const nameInputRef = useRef<HTMLInputElement>(null);
 
@@ -264,22 +265,8 @@ export default function Members() {
     name: '', phone: '', gender: 'male', skillLevel: 'C1', avoidPartnerIds: [] as number[], avoidOpponentIds: [] as number[], status: 'active'
   });
 
-  useEffect(() => {
-    if (isDark) { document.documentElement.classList.add('dark'); localStorage.setItem('theme', 'dark'); }
-    else { document.documentElement.classList.remove('dark'); localStorage.setItem('theme', 'light'); }
-  }, [isDark]);
 
-  const toggleLanguage = () => {
-    const newLang = i18n.language === 'en' ? 'id' : 'en';
-    i18n.changeLanguage(newLang);
-    localStorage.setItem('language', newLang);
-  };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    navigate('/login');
-  };
 
   const fetchInitializationData = async () => {
     try {
@@ -546,7 +533,7 @@ export default function Members() {
               <Globe size={16} />
               {i18n.language.toUpperCase()}
             </button>
-            <button onClick={() => setIsDark(!isDark)} className="p-1.5 text-muted-ink dark:text-faint hover:text-ink dark:hover:text-ink-dark hover:bg-muted dark:hover:bg-elevated rounded-lg transition-colors">
+            <button onClick={toggleTheme} className="p-1.5 text-muted-ink dark:text-faint hover:text-ink dark:hover:text-ink-dark hover:bg-muted dark:hover:bg-elevated rounded-lg transition-colors">
               {isDark ? <Sun size={18} /> : <Moon size={18} />}
             </button>
 
