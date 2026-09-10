@@ -2,7 +2,7 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { eq, desc } from "drizzle-orm";
 import { db } from "../db";
-import { users, communities, sessions, verificationTokens } from "../db/schema"; // Added sessions
+import { users, communities, sessions, verificationTokens } from "../db/schema"; 
 import { verifyAuth, AuthRequest } from "../middleware/auth";
 import crypto from "crypto";
 import { sendEmailChangeVerification } from "../utils/mailer";
@@ -93,6 +93,35 @@ router.post("/request-email", async (req: AuthRequest, res) => {
     
     res.status(200).json({ message: "Verification link sent to new email." });
   } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST: Verify account password for Simple Mode unlock
+router.post("/verify-password", async (req: AuthRequest, res) => {
+  try {
+    const { password } = req.body;
+    const userId = req.user!.userId;
+    
+    if (!password) {
+      return res.status(400).json({ error: "Password is required." });
+    }
+
+    const user = await db.query.users.findFirst({ where: eq(users.id, userId) });
+    
+    if (!user) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    const isValid = await bcrypt.compare(password, user.passwordHash);
+    
+    if (isValid) {
+      res.status(200).json({ message: "Password verified successfully." });
+    } else {
+      res.status(401).json({ error: "Incorrect account password." });
+    }
+  } catch (error) {
+    console.error("Verify Password Error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

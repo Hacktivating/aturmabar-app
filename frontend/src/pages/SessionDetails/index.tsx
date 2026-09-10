@@ -6,7 +6,7 @@ import {
   Plus, Check, Pause, X, Edit2, Zap, Globe, Sun, Moon, LogOut, ChevronDown, Search, 
   Trash2, ArrowRightLeft, ListOrdered, AlertCircle, AlertTriangle, FileDown, Square, 
   Trophy, Medal, Wallet, TrendingUp, TrendingDown, DollarSign, RotateCcw, CircleHelp,
-  ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight, Lock, Unlock, Info, PlayCircle
 } from 'lucide-react';
 import api from '../../api/axios';
 import jsPDF from 'jspdf';
@@ -14,6 +14,7 @@ import autoTable from 'jspdf-autotable';
 
 import { SessionGlobalTimer, getGradeColor, getMatchTypeColor, formatCurrency } from './utils';
 import { PlayerSlotSelect } from './components/PlayerSlotSelect';
+import { MatchCard } from './components/MatchCard'; 
 
 // Import Tabs
 import { AttendanceTab } from './tabs/AttendanceTab';
@@ -24,6 +25,7 @@ import { HistoryTab } from './tabs/HistoryTab';
 import { LeaderboardTab } from './tabs/LeaderboardTab';
 import { PlaytimeTab } from './tabs/PlaytimeTab';
 import { SettingsTab } from './tabs/SettingsTab';
+import { CustomDateTimePicker } from '../../components/CustomDateTimePicker';
 
 const TABS = [
   { id: 'attendance', label: 'attendance', icon: <Users size={18} /> },
@@ -78,6 +80,52 @@ export default function SessionDetails() {
   const [isWaitingListOpen, setIsWaitingListOpen] = useState(false);
   const [isFairnessModalOpen, setIsFairnessModalOpen] = useState(false);
 
+  // --- SIMPLE MODE STATES (HARDENED SECURITY) ---
+  const [isSimpleMode, setIsSimpleMode] = useState(() => localStorage.getItem(`simple_mode_${id}`) === 'true');
+  const [showSimpleTutorial, setShowSimpleTutorial] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState(1);
+  const [showSimpleExit, setShowSimpleExit] = useState(false);
+  const [isEnterSimpleModeOpen, setIsEnterSimpleModeOpen] = useState(false);
+  const [simplePin, setSimplePin] = useState('');
+  const [adminPin, setAdminPin] = useState(() => localStorage.getItem('simple_mode_pin') || '1234');
+  const [tempPin, setTempPin] = useState('');
+  const [unlockMethod, setUnlockMethod] = useState<'pin' | 'password'>('pin');
+  const [toasts, setToasts] = useState<{id: number, message: string, type: 'success'|'error'}[]>([]);
+
+  const addToast = (msg: string, type: 'success'|'error' = 'success') => {
+    const message = msg.charAt(0).toUpperCase() + msg.slice(1);
+    const toastId = Date.now();
+    setToasts(prev => [...prev, { id: toastId, message, type }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== toastId)), 4000);
+  };
+
+  // --- HARDENED "NO TRICKS" SIMPLE MODE TRAP ---
+  useEffect(() => {
+    if (isSimpleMode) {
+      // 1. Trap the Back Button (Swipes / Native Browser Back)
+      window.history.pushState(null, '', window.location.href);
+      const handlePopState = () => {
+        window.history.pushState(null, '', window.location.href);
+        addToast("Exit Simple Mode using your PIN to navigate away.", "error");
+      };
+
+      // 2. Warn on Browser Refresh or Tab Close
+      const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+        e.preventDefault();
+        e.returnValue = 'Are you sure you want to leave? Simple Mode is still active.';
+      };
+
+      window.addEventListener('popstate', handlePopState);
+      window.addEventListener('beforeunload', handleBeforeUnload);
+
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+      };
+    }
+  }, [isSimpleMode]);
+  // ---------------------------------------------
+
   const [settingsForm, setSettingsForm] = useState<any>({});
   const [defaultFee, setDefaultFee] = useState<number>(0);
   const [memberDefaultFee, setMemberDefaultFee] = useState<number>(0);
@@ -101,16 +149,7 @@ export default function SessionDetails() {
   const [historyForm, setHistoryForm] = useState({ courtId: 0, ta1: 0, ta2: 0, tb1: 0, tb2: 0, sa1: 0, sb1: 0, sa2: 0, sb2: 0, sa3: 0, sb3: 0 });
   const [historySetView, setHistorySetView] = useState(1);
 
-  const [toasts, setToasts] = useState<{id: number, message: string, type: 'success'|'error'}[]>([]);
-
   const inputStyles = "w-full px-3 py-2.5 bg-app dark:bg-surface-dark border border-default dark:border-subtle-dark rounded-lg text-sm outline-none focus:ring-2 focus:ring-ink transition-all text-primary dark:text-primary-dark";
-
-  const addToast = (msg: string, type: 'success'|'error' = 'success') => {
-    const message = msg.charAt(0).toUpperCase() + msg.slice(1);
-    const toastId = Date.now();
-    setToasts(prev => [...prev, { id: toastId, message, type }]);
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== toastId)), 4000);
-  };
 
   useEffect(() => {
     if (isDark) { document.documentElement.classList.add('dark'); localStorage.setItem('theme', 'dark'); }
@@ -310,7 +349,6 @@ export default function SessionDetails() {
 
   const settingsLimitType = settingsForm.matchLimit === 0 ? 'all' : ([1,2,3,4,5].includes(settingsForm.matchLimit) ? String(settingsForm.matchLimit) : 'custom');
 
-  // Helpers
   function getMemberData(memberId: number) { return allMembers.find(m => m.id === memberId); }
   function getInitialCourtName(cId: number) { return courts.find(c => c.id === cId)?.name; }
   
@@ -330,6 +368,73 @@ export default function SessionDetails() {
   const handleStartSession = async () => { if(isProcessing) return; setIsProcessing(true); try { await api.put(`/sessions/${id}/start`); await fetchSessionData(); addToast("Session started successfully"); } catch(err) { addToast("Error starting session", "error"); } finally { setIsProcessing(false); } };
   const handleEndSession = async () => { if(isProcessing || !window.confirm("Are you sure you want to end this session? All ongoing matches will need to be finished manually.")) return; setIsProcessing(true); try { await api.put(`/sessions/${id}/finish`); await fetchSessionData(); addToast("Session ended successfully"); } catch(err) { addToast("Error ending session", "error"); } finally { setIsProcessing(false); } };
   
+  const handleUpdateSessionRule = async (rule: string) => {
+    if (isProcessing) return; setIsProcessing(true);
+    try { await api.put(`/sessions/${id}`, { ...settingsForm, pairingRule: rule }); await fetchSessionData(); addToast("Matchmaking rule updated"); } 
+    catch (err) { addToast("Error updating rules", "error"); } 
+    finally { setIsProcessing(false); }
+  };
+
+  // --- SIMPLE MODE ENTRY / EXIT ACTIONS ---
+  const handleOpenSimpleModePrompt = () => {
+    setTempPin(adminPin);
+    setIsEnterSimpleModeOpen(true);
+  };
+
+  const confirmEnterSimpleMode = () => {
+    if (!tempPin || tempPin.length < 4) {
+      addToast('PIN must be 4 numbers', 'error');
+      return;
+    }
+    setAdminPin(tempPin);
+    localStorage.setItem('simple_mode_pin', tempPin);
+    localStorage.setItem(`simple_mode_${id}`, 'true'); // Persist lock
+    setIsEnterSimpleModeOpen(false);
+    setIsSimpleMode(true);
+    setShowSimpleTutorial(true);
+    setTutorialStep(1);
+    setActiveTab('matches');
+  };
+
+  const attemptExitSimpleMode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (unlockMethod === 'pin') {
+      if (simplePin === adminPin) {
+        setIsSimpleMode(false);
+        setShowSimpleExit(false);
+        setSimplePin('');
+        localStorage.removeItem(`simple_mode_${id}`); // Remove lock
+        addToast("Exited Simple Mode");
+      } else {
+        alert("Incorrect PIN.");
+        setSimplePin('');
+      }
+    } else {
+      if (isProcessing) return;
+      setIsProcessing(true);
+      try {
+        await api.post('/users/verify-password', { password: simplePin });
+        setIsSimpleMode(false);
+        setShowSimpleExit(false);
+        setSimplePin('');
+        setUnlockMethod('pin');
+        localStorage.removeItem(`simple_mode_${id}`); // Remove lock
+        addToast("Exited Simple Mode via Password");
+      } catch (err: any) {
+        const backendError = err.response?.data?.error;
+        if (backendError) {
+           alert(`Failed: ${backendError}`);
+        } else {
+           alert("Network error: Could not reach the verify-password endpoint. Did you add the backend route?");
+        }
+        setSimplePin('');
+      } finally {
+        setIsProcessing(false);
+      }
+    }
+  };
+  // ----------------------------------------
+
   const applyPDFHeaderFooter = (doc: any, title: string, subtitle: string) => {
     let yPos = 20; doc.setFillColor(15, 23, 42); doc.rect(0, 0, doc.internal.pageSize.width, 40, 'F');
     if (communityData?.logo?.startsWith('data:image')) { try { doc.addImage(communityData.logo, 14, 10, 16, 16); doc.setFontSize(16); doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold"); doc.text(communityData.name || 'Community', 35, 18); doc.setFontSize(10); doc.setTextColor(148, 163, 184); doc.setFont("helvetica", "normal"); doc.text("Generated by AturMabar", 35, 24); } catch(e) {} } else { doc.setFontSize(18); doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold"); doc.text(communityData?.name || 'Community', 14, 20); doc.setFontSize(10); doc.setTextColor(148, 163, 184); doc.setFont("helvetica", "normal"); doc.text("Generated by AturMabar", 14, 26); }
@@ -376,12 +481,7 @@ export default function SessionDetails() {
   const handleUpdateGrade = async (memberId: number, skillLevel: string) => { if (isProcessing) return; setIsProcessing(true); try { await api.put(`/sessions/${id}/members/${memberId}/grade`, { skillLevel }); await fetchSessionData(); addToast("Player grade updated successfully"); } catch (err) { addToast("Error updating grade", "error"); } finally { setIsProcessing(false); } };
   const handleAddCourt = async () => { if (isProcessing) return; setIsProcessing(true); try { await api.post(`/sessions/${id}/courts`, { name: `Court ${courts.length + 1}` }); await fetchSessionData(); addToast(String(t('court_added', { defaultValue: "Court added" }))); } catch (err) { addToast("Error adding court", "error"); } finally { setIsProcessing(false); } };
   const handleUpdateCourt = async (courtId: number, isActive: boolean, name?: string) => { if (isProcessing) return; setIsProcessing(true); try { await api.put(`/sessions/${id}/courts/${courtId}`, { isActive, name: name || courts.find(c => c.id === courtId)?.name }); setEditCourtId(null); await fetchSessionData(); addToast(String(t('court_updated', { defaultValue: "Court updated" }))); } catch (err) { addToast("Error updating court", "error"); } finally { setIsProcessing(false); } };
-  
-  const handleConfirmDeleteCourt = async () => {
-    if (!confirmDeleteCourtId || isProcessing) return; setIsProcessing(true);
-    try { await api.delete(`/sessions/${id}/courts/${confirmDeleteCourtId}`); await fetchSessionData(); addToast(String(t('court_deleted', { defaultValue: "Court deleted" }))); } catch (err) { addToast("Error deleting court", "error"); } finally { setConfirmDeleteCourtId(null); setIsProcessing(false); }
-  };
-
+  const handleConfirmDeleteCourt = async () => { if (!confirmDeleteCourtId || isProcessing) return; setIsProcessing(true); try { await api.delete(`/sessions/${id}/courts/${confirmDeleteCourtId}`); await fetchSessionData(); addToast(String(t('court_deleted', { defaultValue: "Court deleted" }))); } catch (err) { addToast("Error deleting court", "error"); } finally { setConfirmDeleteCourtId(null); setIsProcessing(false); } };
   const handleAutoGenerateCourt = async (courtId: number) => { if (isProcessing) return; setIsProcessing(true); try { await api.post(`/matches/${id}/auto-generate`, { courtId }); await fetchSessionData(); addToast("Match generated successfully"); } catch (err: any) { addToast(err.response?.data?.error || "Error generating match", "error"); } finally { setIsProcessing(false); } };
   const handleAutoFillAllCourts = async () => { if (isProcessing) return; setIsProcessing(true); try { const emptyCourts = courts.filter(c => c.isActive && !matches.find(m => m.courtId === c.id && (m.status === 'on_court' || m.status === 'queued'))); let generated = 0; for (const court of emptyCourts) { try { await api.post(`/matches/${id}/auto-generate`, { courtId: court.id }); generated++; } catch (err) { break; } } await fetchSessionData(); if (generated > 0) addToast(`Successfully filled ${generated} court(s)`); else addToast("Not enough available players", "error"); } finally { setIsProcessing(false); } };
   const handleQueueMatch = async () => { if (isProcessing) return; setIsProcessing(true); try { await api.post(`/matches/${id}/auto-generate`, { courtId: null }); await fetchSessionData(); addToast(String(t('match_queued', { defaultValue: "Match added to queue" }))); } catch (err: any) { addToast(err.response?.data?.error || "Error generating match", "error"); } finally { setIsProcessing(false); } };
@@ -445,6 +545,45 @@ export default function SessionDetails() {
   const handleSaveSettings = async (e: React.FormEvent) => { e.preventDefault(); if (isProcessing) return; setIsProcessing(true); try { await api.put(`/sessions/${id}`, settingsForm); await fetchSessionData(); addToast(String(t('save_settings', { defaultValue: "Settings saved successfully" }))); } catch (err) { addToast("Error saving settings", "error"); } finally { setIsProcessing(false); } };
   const handleDeleteSession = async () => { if (isProcessing || !window.confirm(String(t('delete_session_warning', { defaultValue: "Delete session?" })))) return; setIsProcessing(true); try { await api.delete(`/sessions/${id}`); navigate('/sessions'); } catch (err) { addToast("Error deleting session", "error"); setIsProcessing(false); } };
 
+  const renderWaitingListContent = () => (
+    <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2 no-scrollbar">
+      {waitingListPlayers.length === 0 ? (
+        <div className="p-8 text-center text-faint text-sm font-medium">No available players waiting.</div>
+      ) : (
+        waitingListPlayers.map((p: any) => (
+          <div key={p.id} className="p-3 bg-surface dark:bg-app-dark border border-subtle dark:border-subtle-dark rounded-xl flex justify-between items-center shadow-sm">
+            <div className="flex flex-col min-w-0 pr-3 flex-1">
+              <span className="font-bold text-sm truncate dark:text-primary-dark">{p.name}</span>
+              <div className="flex items-center gap-2 mt-1">
+                <span className={`text-[9px] border px-1.5 py-0.5 rounded font-mono font-bold ${getGradeColor(p.skillLevel)}`}>{p.skillLevel}</span>
+                <span className="text-[10px] text-faint">{new Date(p.arrivedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="flex flex-col items-center group relative cursor-help px-2 border-x border-subtle dark:border-subtle-dark">
+                <span className="font-black text-xl leading-none text-ink dark:text-ink-dark">{p.gamesPlayed}</span>
+                <span className="text-[8px] font-bold text-faint uppercase tracking-widest mt-1">{String(t('played', { defaultValue: 'Played' }))}</span>
+                <div className="hidden group-hover:block absolute bottom-full mb-2 right-0 bg-elevated dark:bg-strong-dark text-white p-2.5 rounded-lg shadow-xl text-xs z-50 whitespace-nowrap border dark:border-default-dark dark:border-strong-dark">
+                  <div className="font-bold mb-1 border-b dark:border-strong-dark pb-1">{p.name}</div>
+                  <div className="flex justify-between gap-4"><span>Finished:</span> <span>{p.finishedCount}</span></div>
+                  <div className="flex justify-between gap-4 text-emerald-400"><span>Ongoing:</span> <span>{p.ongoingCount}</span></div>
+                </div>
+              </div>
+              <button 
+                disabled={isProcessing}
+                onClick={() => updateAttendanceStatus(p.attendanceId, 'resting')}
+                className="w-8 h-8 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-600 hover:bg-amber-100 transition-colors flex items-center justify-center disabled:opacity-50"
+                title={String(t('set_resting', { defaultValue: 'Set to Resting' }))}
+              >
+                <Pause size={14} fill="currentColor" />
+              </button>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+
   if (loading) return <div className="min-h-screen bg-app dark:bg-app-dark flex items-center justify-center text-muted-ink">{t('loading')}</div>;
 
   return (
@@ -461,141 +600,458 @@ export default function SessionDetails() {
         ))}
       </div>
 
-      {/* Main Top Navigation */}
-      <nav className="h-16 border-b border-subtle dark:border-subtle-dark bg-surface dark:bg-surface-dark sticky top-0 z-30 shrink-0">
-        <div className="max-w-7xl mx-auto w-full h-full flex justify-between items-center px-4 sm:px-8">
-          <div className="flex items-center gap-2">
-            <div className="bg-ink dark:bg-ink-dark p-1.5 rounded-md flex items-center justify-center text-white dark:text-white shrink-0">
-              <Zap size={18} fill="currentColor" />
-            </div>
-            <span className="text-lg sm:text-xl font-bold tracking-tight hidden sm:block">AturMabar</span>
-          </div>
-
-          <div className="flex items-center gap-2 sm:gap-4">
-            <div className="flex items-center gap-2 pr-2 sm:pr-4 border-r border-subtle dark:border-subtle-dark max-w-[140px] sm:max-w-xs">
-              <div className="w-8 h-8 rounded-full bg-muted dark:bg-elevated-dark border border-subtle dark:border-strong-dark flex items-center justify-center text-sm shrink-0 overflow-hidden">
-                {communityData?.logo?.startsWith('data:image') ? <img src={communityData.logo} alt="logo" className="w-full h-full object-cover"/> : communityData?.logo || '🏸'}
+      {/* --- STANDARD NAV & HEADER --- */}
+      <div className={isSimpleMode ? 'hidden' : 'contents'}>
+        <nav className="h-16 border-b border-subtle dark:border-subtle-dark bg-surface dark:bg-surface-dark sticky top-0 z-30 shrink-0">
+          <div className="max-w-7xl mx-auto w-full h-full flex justify-between items-center px-4 sm:px-8">
+            <div className="flex items-center gap-2">
+              <div className="bg-ink dark:bg-ink-dark p-1.5 rounded-md flex items-center justify-center text-white dark:text-white shrink-0">
+                <Zap size={18} fill="currentColor" />
               </div>
-              <span className="text-sm font-semibold truncate hidden sm:block">{communityData?.name}</span>
+              <span className="text-lg sm:text-xl font-bold tracking-tight hidden sm:block">AturMabar</span>
             </div>
-            <button onClick={toggleLanguage} className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-muted-ink dark:text-faint hover:text-ink dark:hover:text-ink-dark px-2 py-1.5 rounded-lg transition-colors">
-              <Globe size={16} /> {i18n.language.toUpperCase()}
-            </button>
-            <button onClick={() => setIsDark(!isDark)} className="p-1.5 text-muted-ink hover:text-ink dark:text-faint dark:hover:text-ink-dark rounded-lg transition-colors">
-              {isDark ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
-            <button onClick={() => navigate('/dashboard')} className="p-1.5 text-muted-ink hover:text-ink dark:text-faint dark:hover:text-ink-dark rounded-lg transition-colors shrink-0">
-              <SettingsIcon size={18} />
-            </button>
-            <button onClick={handleLogout} className="flex items-center gap-2 text-sm text-rose-600 font-medium hover:bg-rose-50 dark:hover:bg-rose-900/20 px-2 sm:px-3 py-1.5 rounded-lg transition-colors shrink-0">
-              <LogOut size={16} /> <span className="hidden sm:inline">{t('logout')}</span>
-            </button>
-          </div>
-        </div>
-      </nav>
 
-      {/* Session Details Header */}
-      <div className="bg-surface dark:bg-surface-dark border-b border-subtle dark:border-subtle-dark shrink-0">
-        <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 sm:py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <Link to="/sessions" className="p-2 sm:p-2.5 bg-app dark:bg-elevated-dark border border-subtle dark:border-strong-dark rounded-xl hover:bg-muted dark:hover:bg-strong-dark/80 transition-colors shrink-0">
-              <ArrowLeft size={20} />
-            </Link>
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{session?.name}</h1>
-                {session?.sessionType === 'sparring' && (
-                  <span className="bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400 px-2 py-0.5 rounded text-[10px] font-bold tracking-widest uppercase border border-purple-200 dark:border-purple-800">
-                    Sparring: {communityData?.name} vs {session?.opposingCommunityName}
-                  </span>
-                )}
+            <div className="flex items-center gap-2 sm:gap-4">
+              <div className="flex items-center gap-2 pr-2 sm:pr-4 border-r border-subtle dark:border-subtle-dark max-w-[140px] sm:max-w-xs">
+                <div className="w-8 h-8 rounded-full bg-muted dark:bg-elevated-dark border border-subtle dark:border-strong-dark flex items-center justify-center text-sm shrink-0 overflow-hidden">
+                  {communityData?.logo?.startsWith('data:image') ? <img src={communityData.logo} alt="logo" className="w-full h-full object-cover"/> : communityData?.logo || '🏸'}
+                </div>
+                <span className="text-sm font-semibold truncate hidden sm:block">{communityData?.name}</span>
               </div>
-              <div className="text-xs sm:text-sm text-muted-ink font-medium mt-0.5">{session && new Date(session.date).toLocaleString(i18n.language, { dateStyle: 'medium', timeStyle: 'short' })}</div>
+
+              <button onClick={toggleLanguage} className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-muted-ink dark:text-faint hover:text-ink dark:hover:text-ink-dark px-2 py-1.5 rounded-lg transition-colors">
+                <Globe size={16} /> {i18n.language.toUpperCase()}
+              </button>
+              <button onClick={() => setIsDark(!isDark)} className="p-1.5 text-muted-ink hover:text-ink dark:text-faint dark:hover:text-ink-dark rounded-lg transition-colors">
+                {isDark ? <Sun size={18} /> : <Moon size={18} />}
+              </button>
+              <button onClick={() => navigate('/dashboard')} className="p-1.5 text-muted-ink hover:text-ink dark:text-faint dark:hover:text-ink-dark rounded-lg transition-colors shrink-0" title="Settings / Dashboard">
+                <SettingsIcon size={18} />
+              </button>
+              <button onClick={handleLogout} className="flex items-center gap-2 text-sm text-rose-600 font-medium hover:bg-rose-50 dark:hover:bg-rose-900/20 px-2 sm:px-3 py-1.5 rounded-lg transition-colors shrink-0">
+                <LogOut size={16} /> <span className="hidden sm:inline">{String(t('logout', { defaultValue: 'Logout' }))}</span>
+              </button>
+            </div>
+          </div>
+        </nav>
+
+        <div className="bg-surface dark:bg-surface-dark border-b border-subtle dark:border-subtle-dark shrink-0">
+          <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 sm:py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <Link to="/sessions" className="p-2 sm:p-2.5 bg-app dark:bg-elevated-dark border border-subtle dark:border-strong-dark rounded-xl hover:bg-muted dark:hover:bg-strong-dark/80 transition-colors shrink-0">
+                <ArrowLeft size={20} />
+              </Link>
+              <div>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{session?.name}</h1>
+                  {session?.sessionType === 'sparring' && (
+                    <span className="bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400 px-2 py-0.5 rounded text-[10px] font-bold tracking-widest uppercase border border-purple-200 dark:border-purple-800">
+                      Sparring: {communityData?.name} vs {session?.opposingCommunityName}
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs sm:text-sm text-muted-ink font-medium mt-0.5">{session && new Date(session.date).toLocaleString(i18n.language, { dateStyle: 'medium', timeStyle: 'short' })}</div>
+              </div>
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0 justify-end">
+              {(!session?.status || session?.status === 'scheduled' || session?.status === 'finished') && (
+                <button disabled={isProcessing} onClick={handleStartSession} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-colors shadow-sm disabled:opacity-50">
+                  <Play size={16} fill="currentColor"/> 
+                  {session?.status === 'finished' ? t('restart_session', 'Restart Session') : t('start_session', 'Start Session')}
+                </button>
+              )}
+              
+              {session?.status === 'active' && (
+                <>
+                  <SessionGlobalTimer startedAt={session?.startedAt} />
+                  <button type="button" onClick={handleOpenSimpleModePrompt} className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-xl bg-amber-500 text-white px-4 py-2.5 text-sm font-bold transition-colors hover:bg-amber-600 shadow-sm">
+                    <Zap size={17} /> <span className="hidden sm:block">Simple Mode</span>
+                  </button>
+                  <button disabled={isProcessing} onClick={handleEndSession} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-colors shadow-sm disabled:opacity-50">
+                    <Square size={16} fill="currentColor"/> {t('end_session', 'End Session')}
+                  </button>
+                </>
+              )}
+
+              {session?.status === 'finished' && (
+                <span className="bg-muted text-primary-soft dark:bg-elevated-dark dark:text-faint px-4 py-2.5 rounded-xl text-sm font-bold tracking-widest uppercase">
+                  {t('status_finished', 'FINISHED')}
+                </span>
+              )}
+
+              <button disabled={isProcessing} onClick={exportSessionPDF} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-accent-soft dark:bg-elevated-dark hover:bg-accent-soft dark:hover:bg-strong-dark text-ink dark:text-ink-dark px-4 py-2.5 rounded-xl text-sm font-bold transition-colors border border-transparent dark:border-strong-dark shadow-sm disabled:opacity-50">
+                <FileDown size={18}/> <span className="hidden sm:block">{t('export_pdf', 'Export PDF')}</span>
+              </button>
+              <button type="button" onClick={() => setIsFairnessModalOpen(true)} className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-xl border border-subtle bg-surface px-4 py-2.5 text-sm font-bold text-primary transition-colors hover:bg-muted dark:border-subtle-dark dark:bg-surface-dark dark:text-primary-dark dark:hover:bg-elevated-dark">
+                <CircleHelp size={17} /> <span className="hidden sm:block">{t('fairness_insights')}</span>
+              </button>
             </div>
           </div>
           
-          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0 justify-end">
-            {(!session?.status || session?.status === 'scheduled' || session?.status === 'finished') && (
-              <button disabled={isProcessing} onClick={handleStartSession} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-colors shadow-sm disabled:opacity-50">
-                <Play size={16} fill="currentColor"/> 
-                {session?.status === 'finished' ? t('restart_session', 'Restart Session') : t('start_session', 'Start Session')}
+          <div className="hidden sm:flex max-w-7xl mx-auto px-8 overflow-x-auto scrollbar-hide">
+            {TABS.map(tab => (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 px-5 py-3 border-b-2 text-sm font-semibold whitespace-nowrap transition-colors ${activeTab === tab.id ? 'border-ink text-ink dark:text-ink' : 'border-transparent text-muted-ink hover:text-primary dark:hover:text-muted-dark'}`}>
+                {tab.icon} {t(tab.label)}
               </button>
-            )}
-            
-            {session?.status === 'active' && (
-              <>
-                <SessionGlobalTimer startedAt={session?.startedAt} />
-                <button disabled={isProcessing} onClick={handleEndSession} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-colors shadow-sm disabled:opacity-50">
-                  <Square size={16} fill="currentColor"/> {t('end_session', 'End Session')}
-                </button>
-              </>
-            )}
-
-            {session?.status === 'finished' && (
-              <span className="bg-muted text-primary-soft dark:bg-elevated-dark dark:text-faint px-4 py-2.5 rounded-xl text-sm font-bold tracking-widest uppercase">
-                {t('status_finished', 'FINISHED')}
-              </span>
-            )}
-
-            <button disabled={isProcessing} onClick={exportSessionPDF} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-accent-soft dark:bg-elevated-dark hover:bg-accent-soft dark:hover:bg-strong-dark text-ink dark:text-ink-dark px-4 py-2.5 rounded-xl text-sm font-bold transition-colors border border-transparent dark:border-strong-dark shadow-sm disabled:opacity-50">
-              <FileDown size={18}/> <span className="hidden sm:block">{t('export_pdf', 'Export PDF')}</span>
-            </button>
-            <button type="button" onClick={() => setIsFairnessModalOpen(true)} className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-xl border border-subtle bg-surface px-4 py-2.5 text-sm font-bold text-primary transition-colors hover:bg-muted dark:border-subtle-dark dark:bg-surface-dark dark:text-primary-dark dark:hover:bg-elevated-dark">
-              <CircleHelp size={17} /> <span className="hidden sm:block">{t('fairness_insights')}</span>
-            </button>
+            ))}
           </div>
         </div>
+
+        <div className={`sm:hidden sticky top-16 z-20 px-4 py-3 bg-surface dark:bg-surface-dark border-b border-subtle dark:border-subtle-dark shadow-sm ${isSimpleMode ? 'hidden' : ''}`}>
+          <div className="relative">
+            <select value={activeTab} onChange={(e) => setActiveTab(e.target.value)} className="w-full appearance-none bg-app dark:bg-elevated-dark border border-subtle dark:border-strong-dark text-primary dark:text-primary-dark py-3 pl-11 pr-10 rounded-xl font-bold text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ink transition-all uppercase tracking-wide">
+              {TABS.map(tab => <option key={tab.id} value={tab.id}>{t(tab.label)}</option>)}
+            </select>
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-ink dark:text-ink pointer-events-none">{TABS.find(t => t.id === activeTab)?.icon}</div>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-faint pointer-events-none"><ChevronDown size={18} /></div>
+          </div>
+        </div>
+      </div>
+
+      {/* --- MAIN CONTENT AREA --- */}
+      <main className={`flex-1 p-4 sm:p-8 max-w-7xl w-full mx-auto ${activeTab === 'matches' && !isSimpleMode ? 'pb-24 lg:pb-8' : ''}`}>
         
-        {/* Desktop Tab Selector */}
-        <div className="hidden sm:flex max-w-7xl mx-auto px-8 overflow-x-auto scrollbar-hide">
-          {TABS.map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 px-5 py-3 border-b-2 text-sm font-semibold whitespace-nowrap transition-colors ${activeTab === tab.id ? 'border-ink text-ink dark:text-ink' : 'border-transparent text-muted-ink hover:text-primary dark:hover:text-muted-dark'}`}>
-              {tab.icon} {t(tab.label)}
-            </button>
-          ))}
+        {/* NORMAL MODE TABS (Kept mounted with CSS display to eliminate lag) */}
+        <div className={isSimpleMode ? 'hidden' : 'contents'}>
+          <div className={activeTab === 'attendance' ? 'block' : 'hidden'}>
+             <AttendanceTab visibleAttendances={visibleAttendances} session={session} communityData={communityData} attendanceTeamTab={attendanceTeamTab} setAttendanceTeamTab={setAttendanceTeamTab} attendanceSearch={attendanceSearch} setAttendanceSearch={setAttendanceSearch} openWalkInModal={openWalkInModal} openAttendeeModal={openAttendeeModal} setPlayerDetailModal={setPlayerDetailModal} handleUpdateGrade={handleUpdateGrade} updateAttendanceStatus={updateAttendanceStatus} isProcessing={isProcessing} t={t} />
+          </div>
+          <div className={activeTab === 'courts' ? 'block' : 'hidden'}>
+             <CourtsTab courts={courts} editCourtId={editCourtId} setEditCourtId={setEditCourtId} courtName={courtName} setCourtName={setCourtName} handleAddCourt={handleAddCourt} handleUpdateCourt={handleUpdateCourt} setConfirmDeleteCourtId={setConfirmDeleteCourtId} isProcessing={isProcessing} t={t} inputStyles={inputStyles} />
+          </div>
+          <div className={activeTab === 'matches' ? 'block' : 'hidden'}>
+             <MatchesTab session={session} communityData={communityData} courts={courts} matches={matches} activeMatches={activeMatches} queuedMatchesList={queuedMatchesList} finishedMatches={finishedMatches} waitingListPlayers={waitingListPlayers} maxSets={maxSets} isProcessing={isProcessing} getMemberData={getMemberData} getInitialCourtName={getInitialCourtName} openEditMatchModal={openEditMatchModal} openEditHistoryModal={openEditHistoryModal} handleAutoGenerateCourt={handleAutoGenerateCourt} setSwapCourtModal={setSwapCourtModal} setConfirmDeleteMatchId={setConfirmDeleteMatchId} setConfirmResetMatchId={setConfirmResetMatchId} handleStartMatch={handleStartMatch} handleFinishMatch={handleFinishMatch} handleReorderQueue={handleReorderQueue} handleQueueMatch={handleQueueMatch} handleAutoFillAllCourts={handleAutoFillAllCourts} handleUpdateSparringMatch={handleUpdateSparringMatch} updateAttendanceStatus={updateAttendanceStatus} isWaitingListOpen={isWaitingListOpen} setIsWaitingListOpen={setIsWaitingListOpen} handleUpdateSessionRule={handleUpdateSessionRule} t={t} />
+          </div>
+          <div className={activeTab === 'billing' ? 'block' : 'hidden'}>
+             <BillingTab billingAttendances={billingAttendances} totalIncome={totalIncome} totalExpense={totalExpense} netBalance={netBalance} defaultFee={defaultFee} setDefaultFee={setDefaultFee} memberDefaultFee={memberDefaultFee} setMemberDefaultFee={setMemberDefaultFee} billingSearch={billingSearch} setBillingSearch={setBillingSearch} editingPaymentId={editingPaymentId} setEditingPaymentId={setEditingPaymentId} editPaymentValue={editPaymentValue} setEditPaymentValue={setEditPaymentValue} isProcessing={isProcessing} handleOpenImportModal={handleOpenImportModal} handleUpdateDefaultFee={handleUpdateDefaultFee} handleResetBilling={handleResetBilling} savePaymentAmount={savePaymentAmount} handleStatusChange={handleStatusChange} expenses={expenses} expenseForm={expenseForm} setExpenseForm={setExpenseForm} handleAddExpense={handleAddExpense} handleDeleteExpense={handleDeleteExpense} t={t} inputStyles={inputStyles} />
+          </div>
+          <div className={activeTab === 'history' ? 'block' : 'hidden'}>
+             <HistoryTab historySearch={historySearch} setHistorySearch={setHistorySearch} filteredHistory={filteredHistory} maxSets={maxSets} getMemberData={getMemberData} getInitialCourtName={getInitialCourtName} openEditHistoryModal={openEditHistoryModal} setConfirmDeleteMatchId={setConfirmDeleteMatchId} isProcessing={isProcessing} t={t} />
+          </div>
+          <div className={activeTab === 'leaderboard' ? 'block' : 'hidden'}>
+             <LeaderboardTab session={session} communityData={communityData} leaderboardSearch={leaderboardSearch} setLeaderboardSearch={setLeaderboardSearch} lbLimitType={lbLimitType} setLbLimitType={setLbLimitType} lbCustomLimit={lbCustomLimit} setLbCustomLimit={setLbCustomLimit} sessionLeaderboardData={sessionLeaderboardData} sparringScore={sparringScore} t={t} inputStyles={inputStyles} />
+          </div>
+          <div className={activeTab === 'playtime' ? 'block' : 'hidden'}>
+             <PlaytimeTab playtimeSearch={playtimeSearch} setPlaytimeSearch={setPlaytimeSearch} playtimeData={playtimeData} setPlayerDetailModal={setPlayerDetailModal} t={t} inputStyles={inputStyles} />
+          </div>
+          <div className={activeTab === 'settings' ? 'block' : 'hidden'}>
+             <SettingsTab settingsForm={settingsForm} setSettingsForm={setSettingsForm} settingsLimitType={settingsLimitType} handleSaveSettings={handleSaveSettings} handleDeleteSession={handleDeleteSession} isProcessing={isProcessing} t={t} inputStyles={inputStyles} />
+          </div>
         </div>
-      </div>
 
-      {/* Mobile Tab Selector */}
-      <div className="sm:hidden sticky top-16 z-20 px-4 py-3 bg-surface dark:bg-surface-dark border-b border-subtle dark:border-subtle-dark shadow-sm">
-        <div className="relative">
-          <select value={activeTab} onChange={(e) => setActiveTab(e.target.value)} className="w-full appearance-none bg-app dark:bg-elevated-dark border border-subtle dark:border-strong-dark text-primary dark:text-primary-dark py-3 pl-11 pr-10 rounded-xl font-bold text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ink transition-all uppercase tracking-wide">
-            {TABS.map(tab => <option key={tab.id} value={tab.id}>{t(tab.label)}</option>)}
-          </select>
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-ink dark:text-ink pointer-events-none">{TABS.find(t => t.id === activeTab)?.icon}</div>
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-faint pointer-events-none"><ChevronDown size={18} /></div>
+        {/* SIMPLE MODE RENDERING */}
+        <div className={!isSimpleMode ? 'hidden' : 'animate-in fade-in flex flex-col gap-6'}>
+          {/* Simple Mode Header Card */}
+          <div className="bg-surface dark:bg-surface-dark border border-subtle dark:border-subtle-dark rounded-2xl p-4 sm:p-6 mb-2 shadow-sm">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-subtle dark:border-subtle-dark pb-4 mb-4">
+               <div>
+                  <h2 className="text-2xl sm:text-3xl font-black text-primary dark:text-primary-dark flex items-center gap-2"><Zap size={28} className="text-amber-500 fill-amber-500"/> Simple Mode</h2>
+                  <p className="text-muted-ink dark:text-faint font-medium mt-1 tracking-wide uppercase text-xs">Temporary Scorer View • {session?.name}</p>
+               </div>
+               <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <button onClick={() => {setShowSimpleTutorial(true); setTutorialStep(1)}} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-muted dark:bg-elevated-dark hover:bg-muted dark:hover:bg-strong-dark text-primary dark:text-primary-dark px-5 py-2.5 rounded-xl font-bold transition-colors">
+                    <Info size={18} /> Tutorial
+                  </button>
+                  <button onClick={() => setShowSimpleExit(true)} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-rose-500/10 border border-rose-500/20 text-rose-500 px-5 py-2.5 rounded-xl font-bold transition-colors hover:bg-rose-500/20">
+                    <Lock size={18} /> Exit
+                  </button>
+               </div>
+            </div>
+            
+            {/* Polished Segmented Control for Simple Mode Tabs */}
+            <div className="flex bg-app dark:bg-app-dark p-1 rounded-xl border border-subtle dark:border-subtle-dark">
+               <button onClick={() => setActiveTab('matches')} className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'matches' ? 'bg-surface dark:bg-surface-dark text-primary dark:text-primary-dark shadow' : 'text-muted-ink hover:text-primary dark:hover:text-primary-dark'}`}>Matches & Queue</button>
+               <button onClick={() => setActiveTab('attendance')} className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'attendance' ? 'bg-surface dark:bg-surface-dark text-primary dark:text-primary-dark shadow' : 'text-muted-ink hover:text-primary dark:hover:text-primary-dark'}`}>Attendance</button>
+            </div>
+          </div>
+
+          {/* Matches & Queue View */}
+          <div className={`${activeTab === 'matches' ? 'flex' : 'hidden'} flex-col gap-6`}>
+            {/* High Priority Actions */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <button 
+                 onClick={handleAutoFillAllCourts} 
+                 disabled={isProcessing} 
+                 className="flex-[2] bg-emerald-600 hover:bg-emerald-500 text-white py-4 sm:py-5 rounded-2xl text-lg sm:text-xl font-black shadow-lg shadow-emerald-900/20 active:scale-[0.98] transition-transform flex justify-center items-center gap-3 disabled:opacity-50"
+              >
+                <PlayCircle size={28} /> {String(t('auto_fill', { defaultValue: 'AUTO FILL COURTS' }))}
+              </button>
+              <button 
+                 onClick={handleQueueMatch} 
+                 disabled={isProcessing} 
+                 className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-4 sm:py-5 rounded-2xl text-lg sm:text-xl font-black shadow-lg shadow-blue-900/20 active:scale-[0.98] transition-transform flex justify-center items-center gap-3 disabled:opacity-50"
+              >
+                <ListOrdered size={28} /> {String(t('queue_match', { defaultValue: 'QUEUE MATCH' }))}
+              </button>
+            </div>
+
+            <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
+               {/* Left: Active Courts & Queue Grid */}
+               <div className="flex-1 w-full flex flex-col gap-4">
+                  <h3 className="text-xl font-bold text-primary dark:text-primary-dark flex items-center gap-2">
+                    <SquareStack size={20} className="text-muted-ink" /> Active Courts
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {courts.filter(c => c.isActive).map(court => {
+                       const match = activeMatches.find(m => m.courtId === court.id) || queuedMatchesList.find(m => m.courtId === court.id);
+                       return (
+                         <MatchCard 
+                           key={court.id} 
+                           match={match} 
+                           court={court} 
+                           maxSets={maxSets}
+                           sessionStatus={session?.status}
+                           isProcessing={isProcessing}
+                           getMemberData={getMemberData}
+                           openEditMatchModal={openEditMatchModal}
+                           handleFinishMatch={handleFinishMatch}
+                           setConfirmDeleteMatchId={setConfirmDeleteMatchId}
+                           setConfirmResetMatchId={setConfirmResetMatchId}
+                           setSwapCourtModal={setSwapCourtModal}
+                           handleStartMatch={handleStartMatch}
+                           handleAutoGenerateCourt={handleAutoGenerateCourt}
+                           t={t}
+                         />
+                       )
+                    })}
+                  </div>
+
+                  {/* Queued Matches Stacked below Courts on Desktop */}
+                  <h3 className="text-xl font-bold text-primary dark:text-primary-dark flex items-center gap-2 mt-4">
+                    <ListOrdered size={20} className="text-muted-ink" /> Queued Matches <span className="bg-muted dark:bg-elevated-dark text-muted-ink px-2 py-0.5 rounded text-sm">{queuedMatchesList.length}</span>
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {queuedMatchesList.length === 0 && (
+                      <div className="col-span-full p-8 border border-dashed border-subtle dark:border-strong-dark rounded-xl text-center text-muted-ink font-medium">Queue is empty</div>
+                    )}
+                    {queuedMatchesList.map(match => (
+                       <MatchCard 
+                         key={match.id} 
+                         match={match} 
+                         court={null} 
+                         maxSets={maxSets} 
+                         sessionStatus={session?.status} 
+                         isProcessing={isProcessing} 
+                         getMemberData={getMemberData} 
+                         openEditMatchModal={openEditMatchModal} 
+                         handleFinishMatch={handleFinishMatch} 
+                         setConfirmDeleteMatchId={setConfirmDeleteMatchId} 
+                         setConfirmResetMatchId={setConfirmResetMatchId}
+                         setSwapCourtModal={setSwapCourtModal} 
+                         handleStartMatch={handleStartMatch} 
+                         handleAutoGenerateCourt={handleAutoGenerateCourt} 
+                         t={t} 
+                       />
+                    ))}
+                  </div>
+               </div>
+               
+               {/* Right: Waiting List Panel (Desktop Only - Matches Standard View) */}
+               <div className="hidden lg:flex w-80 shrink-0 flex-col gap-4">
+                  <h3 className="text-xl font-bold text-primary dark:text-primary-dark flex items-center gap-2">
+                    <Users size={20} className="text-muted-ink" /> Waiting List <span className="bg-muted dark:bg-elevated-dark text-muted-ink px-2 py-0.5 rounded text-sm">{waitingListPlayers.length}</span>
+                  </h3>
+                  <div className="bg-surface dark:bg-surface-dark border border-subtle dark:border-subtle-dark rounded-2xl overflow-hidden flex flex-col max-h-[calc(100vh-280px)] sticky top-24 shadow-sm">
+                    {renderWaitingListContent()}
+                  </div>
+               </div>
+            </div>
+          </div>
+
+          {/* Attendance View inside Simple Mode */}
+          <div className={`${activeTab === 'attendance' ? 'block' : 'hidden'} bg-surface dark:bg-surface-dark p-4 sm:p-6 rounded-2xl border border-subtle dark:border-subtle-dark shadow-sm`}>
+             <AttendanceTab visibleAttendances={visibleAttendances} session={session} communityData={communityData} attendanceTeamTab={attendanceTeamTab} setAttendanceTeamTab={setAttendanceTeamTab} attendanceSearch={attendanceSearch} setAttendanceSearch={setAttendanceSearch} openWalkInModal={openWalkInModal} openAttendeeModal={openAttendeeModal} setPlayerDetailModal={setPlayerDetailModal} handleUpdateGrade={handleUpdateGrade} updateAttendanceStatus={updateAttendanceStatus} isProcessing={isProcessing} t={t} />
+          </div>
         </div>
-      </div>
-
-      <main className={`flex-1 p-4 sm:p-8 max-w-7xl w-full mx-auto ${activeTab === 'matches' ? 'pb-24 lg:pb-8' : ''}`}>
-        {activeTab === 'attendance' && (
-           <AttendanceTab visibleAttendances={visibleAttendances} session={session} communityData={communityData} attendanceTeamTab={attendanceTeamTab} setAttendanceTeamTab={setAttendanceTeamTab} attendanceSearch={attendanceSearch} setAttendanceSearch={setAttendanceSearch} openWalkInModal={openWalkInModal} openAttendeeModal={openAttendeeModal} setPlayerDetailModal={setPlayerDetailModal} handleUpdateGrade={handleUpdateGrade} updateAttendanceStatus={updateAttendanceStatus} isProcessing={isProcessing} t={t} />
-        )}
-        {activeTab === 'courts' && (
-           <CourtsTab courts={courts} editCourtId={editCourtId} setEditCourtId={setEditCourtId} courtName={courtName} setCourtName={setCourtName} handleAddCourt={handleAddCourt} handleUpdateCourt={handleUpdateCourt} setConfirmDeleteCourtId={setConfirmDeleteCourtId} isProcessing={isProcessing} t={t} inputStyles={inputStyles} />
-        )}
-        {activeTab === 'matches' && (
-           <MatchesTab session={session} communityData={communityData} courts={courts} matches={matches} activeMatches={activeMatches} queuedMatchesList={queuedMatchesList} finishedMatches={finishedMatches} waitingListPlayers={waitingListPlayers} maxSets={maxSets} isProcessing={isProcessing} getMemberData={getMemberData} getInitialCourtName={getInitialCourtName} openEditMatchModal={openEditMatchModal} openEditHistoryModal={openEditHistoryModal} handleAutoGenerateCourt={handleAutoGenerateCourt} setSwapCourtModal={setSwapCourtModal} setConfirmDeleteMatchId={setConfirmDeleteMatchId} setConfirmResetMatchId={setConfirmResetMatchId} handleStartMatch={handleStartMatch} handleFinishMatch={handleFinishMatch} handleReorderQueue={handleReorderQueue} handleQueueMatch={handleQueueMatch} handleAutoFillAllCourts={handleAutoFillAllCourts} handleUpdateSparringMatch={handleUpdateSparringMatch} updateAttendanceStatus={updateAttendanceStatus} isWaitingListOpen={isWaitingListOpen} setIsWaitingListOpen={setIsWaitingListOpen} t={t} />
-        )}
-        {activeTab === 'billing' && (
-           <BillingTab billingAttendances={billingAttendances} totalIncome={totalIncome} totalExpense={totalExpense} netBalance={netBalance} defaultFee={defaultFee} setDefaultFee={setDefaultFee} memberDefaultFee={memberDefaultFee} setMemberDefaultFee={setMemberDefaultFee} billingSearch={billingSearch} setBillingSearch={setBillingSearch} editingPaymentId={editingPaymentId} setEditingPaymentId={setEditingPaymentId} editPaymentValue={editPaymentValue} setEditPaymentValue={setEditPaymentValue} isProcessing={isProcessing} handleOpenImportModal={handleOpenImportModal} handleUpdateDefaultFee={handleUpdateDefaultFee} handleResetBilling={handleResetBilling} savePaymentAmount={savePaymentAmount} handleStatusChange={handleStatusChange} expenses={expenses} expenseForm={expenseForm} setExpenseForm={setExpenseForm} handleAddExpense={handleAddExpense} handleDeleteExpense={handleDeleteExpense} t={t} inputStyles={inputStyles} />
-        )}
-        {activeTab === 'history' && (
-           <HistoryTab historySearch={historySearch} setHistorySearch={setHistorySearch} filteredHistory={filteredHistory} maxSets={maxSets} getMemberData={getMemberData} getInitialCourtName={getInitialCourtName} openEditHistoryModal={openEditHistoryModal} setConfirmDeleteMatchId={setConfirmDeleteMatchId} isProcessing={isProcessing} t={t} />
-        )}
-        {activeTab === 'leaderboard' && (
-           <LeaderboardTab session={session} communityData={communityData} leaderboardSearch={leaderboardSearch} setLeaderboardSearch={setLeaderboardSearch} lbLimitType={lbLimitType} setLbLimitType={setLbLimitType} lbCustomLimit={lbCustomLimit} setLbCustomLimit={setLbCustomLimit} sessionLeaderboardData={sessionLeaderboardData} sparringScore={sparringScore} t={t} inputStyles={inputStyles} />
-        )}
-        {activeTab === 'playtime' && (
-           <PlaytimeTab playtimeSearch={playtimeSearch} setPlaytimeSearch={setPlaytimeSearch} playtimeData={playtimeData} setPlayerDetailModal={setPlayerDetailModal} t={t} inputStyles={inputStyles} />
-        )}
-        {activeTab === 'settings' && (
-           <SettingsTab settingsForm={settingsForm} setSettingsForm={setSettingsForm} settingsLimitType={settingsLimitType} handleSaveSettings={handleSaveSettings} handleDeleteSession={handleDeleteSession} isProcessing={isProcessing} t={t} inputStyles={inputStyles} />
-        )}
       </main>
+
+      {/* --- SHARED MOBILE DRAWER --- */}
+      {/* Works seamlessly for Normal Mode AND Simple Mode matches view! */}
+      {activeTab === 'matches' && session?.sessionType !== 'sparring' && (
+        <div className="fixed bottom-6 left-0 right-0 z-40 flex justify-center lg:hidden pointer-events-none">
+          <button 
+            onClick={() => setIsWaitingListOpen(true)} 
+            className="pointer-events-auto bg-ink shadow-xl shadow-blue-600/30 text-white px-6 py-3.5 rounded-full font-bold flex items-center gap-3 transition-transform active:scale-95"
+          >
+            <Users size={18} />
+            {String(t('waiting_list', { defaultValue: 'Waiting List' }))}
+            <span className="bg-surface text-ink px-2.5 py-0.5 rounded-full text-xs font-black">{waitingListPlayers.length}</span>
+          </button>
+        </div>
+      )}
+
+      <div className={`fixed inset-0 z-[100] bg-ink/60 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${isWaitingListOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsWaitingListOpen(false)} />
+      <div className={`fixed inset-y-0 right-0 z-[110] w-full max-w-[320px] bg-surface dark:bg-surface-dark shadow-2xl transform transition-transform duration-300 ease-in-out lg:hidden flex flex-col border-l border-subtle dark:border-strong-dark ${isWaitingListOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+         <div className="p-4 border-b border-subtle dark:border-strong-dark bg-surface dark:bg-app-dark flex justify-between items-center shrink-0 mt-safe">
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-sm tracking-wide text-primary dark:text-primary-dark uppercase">{String(t('available_players', { defaultValue: 'Available Players' }))}</h3>
+              <span className="bg-accent-soft text-ink dark:bg-accent-soft-dark dark:text-ink-dark font-bold px-2 py-0.5 rounded-full text-xs">{waitingListPlayers.length}</span>
+            </div>
+            <button onClick={() => setIsWaitingListOpen(false)} className="p-2 text-faint hover:text-muted-ink bg-muted dark:bg-elevated-dark rounded-full"><X size={18}/></button>
+         </div>
+         {renderWaitingListContent()}
+      </div>
 
       {/* ALL FIXED MODALS ARE PLACED HERE AT THE ROOT WITH z-[9999] */}
       
+      {/* --- SIMPLE MODE SPECIFIC MODALS --- */}
+
+      {/* Enter Simple Mode Prompt */}
+      {isEnterSimpleModeOpen && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-surface dark:bg-surface-dark w-full max-w-md rounded-2xl shadow-2xl border border-subtle dark:border-subtle-dark p-6 text-center flex flex-col items-center">
+             <div className="w-16 h-16 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-500 flex items-center justify-center mb-4">
+               <Zap size={32} />
+             </div>
+             <h3 className="text-xl font-bold mb-2 text-primary dark:text-primary-dark">Enter Simple Mode?</h3>
+             <p className="text-muted-ink dark:text-faint text-sm mb-6">
+               This will hide all advanced settings and display a simplified scorer interface. Perfect for handing a tablet to a temporary umpire.
+             </p>
+             
+             <div className="w-full text-left bg-app dark:bg-elevated-dark/50 border border-subtle dark:border-subtle-dark p-4 rounded-xl mb-6">
+                <label className="block text-xs font-semibold mb-2 text-primary-soft dark:text-faint uppercase tracking-wider">Set Exit PIN</label>
+                <input 
+                  type="password" 
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={4}
+                  value={tempPin} 
+                  onChange={e => setTempPin(e.target.value.replace(/[^0-9]/g, ''))} 
+                  className="w-full px-4 py-3 bg-surface dark:bg-app-dark border border-subtle dark:border-strong-dark rounded-xl text-center text-xl tracking-[0.5em] font-black outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all text-primary dark:text-primary-dark"
+                />
+                <p className="text-[10px] text-muted-ink mt-2 text-center">You will need this PIN to return to the admin view.</p>
+             </div>
+
+             <div className="flex gap-3 w-full">
+               <button onClick={() => setIsEnterSimpleModeOpen(false)} className="flex-1 py-3 bg-muted dark:bg-elevated-dark hover:bg-muted dark:hover:bg-strong-dark rounded-xl font-bold transition-colors text-primary dark:text-primary-dark">Cancel</button>
+               <button onClick={confirmEnterSimpleMode} className="flex-1 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold transition-colors">Enter Mode</button>
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Exit Simple Mode Prompt (Supports Both PIN and Password API Check) */}
+      {showSimpleExit && (
+        <div className="fixed inset-0 z-[99999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-surface dark:bg-surface-dark border border-subtle dark:border-strong-dark w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl p-6">
+             <div className="w-16 h-16 bg-rose-500/10 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4">
+               <Lock size={32} />
+             </div>
+             <h2 className="text-2xl font-black text-primary dark:text-primary-dark text-center mb-2">Admin Lock</h2>
+             <p className="text-muted-ink dark:text-faint text-center text-sm mb-6">
+               {unlockMethod === 'pin' ? 'Enter PIN to exit Simple Mode.' : 'Enter your account password.'}
+             </p>
+             
+             <form onSubmit={attemptExitSimpleMode} className="flex flex-col gap-4">
+               {unlockMethod === 'pin' ? (
+                 <input 
+                   type="password" 
+                   inputMode="numeric"
+                   autoFocus
+                   placeholder="PIN Code"
+                   maxLength={4}
+                   value={simplePin}
+                   onChange={e => setSimplePin(e.target.value.replace(/[^0-9]/g, ''))}
+                   className="w-full bg-app dark:bg-app-dark border border-subtle dark:border-strong-dark text-primary dark:text-primary-dark text-center text-2xl tracking-[0.5em] font-black py-4 rounded-xl outline-none focus:border-rose-500 transition-all"
+                 />
+               ) : (
+                 <input 
+                   type="password" 
+                   autoFocus
+                   placeholder="Account Password"
+                   value={simplePin}
+                   onChange={e => setSimplePin(e.target.value)}
+                   className="w-full bg-app dark:bg-app-dark border border-subtle dark:border-strong-dark text-primary dark:text-primary-dark text-center text-xl font-bold py-4 rounded-xl outline-none focus:border-rose-500 transition-all"
+                 />
+               )}
+               
+               <button 
+                 type="button" 
+                 onClick={() => {
+                   setUnlockMethod(unlockMethod === 'pin' ? 'password' : 'pin');
+                   setSimplePin('');
+                 }} 
+                 className="text-xs font-bold text-rose-500 hover:text-rose-400 transition-colors text-right"
+               >
+                 {unlockMethod === 'pin' ? 'Use Account Password instead' : 'Use PIN instead'}
+               </button>
+
+               <div className="flex gap-3 mt-2">
+                 <button type="button" onClick={() => {setShowSimpleExit(false); setSimplePin(''); setUnlockMethod('pin');}} className="flex-1 py-3 text-muted-ink font-bold hover:text-primary transition-colors bg-muted dark:bg-elevated-dark rounded-xl">Cancel</button>
+                 <button type="submit" disabled={isProcessing || !simplePin} className="flex-1 py-3 bg-ink text-white font-black rounded-xl hover:bg-ink-soft transition-colors flex justify-center items-center gap-2 disabled:opacity-50">
+                   <Unlock size={18} /> {isProcessing ? 'Verifying...' : 'Unlock'}
+                 </button>
+               </div>
+             </form>
+          </div>
+        </div>
+      )}
+
+      {showSimpleTutorial && (
+        <div className="fixed inset-0 z-[99999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-surface dark:bg-surface-dark border border-subtle dark:border-strong-dark w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl">
+            <div className="p-8 text-center flex flex-col items-center">
+               
+               {tutorialStep === 1 && (
+                 <>
+                   <div className="w-20 h-20 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center mb-6">
+                     <Zap size={40} />
+                   </div>
+                   <h2 className="text-3xl font-black text-primary dark:text-primary-dark mb-4">Welcome to Simple Mode</h2>
+                   <p className="text-muted-ink dark:text-faint text-lg leading-relaxed">
+                     This view is designed for anyone to easily help manage matches while the admin is busy playing. You only need to focus on two things: <strong className="text-primary dark:text-white">Generating Matches</strong> and <strong className="text-primary dark:text-white">Inputting Scores</strong>.
+                   </p>
+                 </>
+               )}
+
+               {tutorialStep === 2 && (
+                 <>
+                   <div className="w-20 h-20 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mb-6">
+                     <PlayCircle size={40} />
+                   </div>
+                   <h2 className="text-3xl font-black text-primary dark:text-primary-dark mb-4">Step 1: Auto Fill</h2>
+                   <p className="text-muted-ink dark:text-faint text-lg leading-relaxed">
+                     Press the giant Green <strong className="text-emerald-400">AUTO FILL</strong> button. The system will automatically pull the fairest pairings from the waiting list and assign them to any empty courts.
+                   </p>
+                 </>
+               )}
+
+               {tutorialStep === 3 && (
+                 <>
+                   <div className="w-20 h-20 bg-blue-500/10 text-blue-500 rounded-full flex items-center justify-center mb-6">
+                     <Check size={40} />
+                   </div>
+                   <h2 className="text-3xl font-black text-primary dark:text-primary-dark mb-4">Step 2: Start & Finish</h2>
+                   <p className="text-muted-ink dark:text-faint text-lg leading-relaxed mb-4">
+                     When players walk onto the court, click <strong className="text-primary dark:text-white bg-app dark:bg-app-dark px-2 py-1 rounded">Start</strong>.
+                   </p>
+                   <p className="text-muted-ink dark:text-faint text-lg leading-relaxed">
+                     When they finish playing, click <strong className="text-white bg-emerald-600 px-2 py-1 rounded">Finish</strong> to input their score. The court will then be empty and ready for the next Auto Fill!
+                   </p>
+                 </>
+               )}
+
+            </div>
+            <div className="p-4 bg-app dark:bg-app-dark border-t border-subtle dark:border-strong-dark flex justify-between items-center gap-4">
+               {tutorialStep > 1 ? (
+                 <button onClick={() => setTutorialStep(s => s - 1)} className="px-6 py-3 text-muted-ink font-bold hover:text-primary">Back</button>
+               ) : (
+                 <button onClick={() => setShowSimpleTutorial(false)} className="px-6 py-3 text-faint font-bold hover:text-muted-ink">Skip</button>
+               )}
+               
+               {tutorialStep < 3 ? (
+                 <button onClick={() => setTutorialStep(s => s + 1)} className="px-8 py-3 bg-ink text-white font-black rounded-xl">Next</button>
+               ) : (
+                 <button onClick={() => setShowSimpleTutorial(false)} className="px-8 py-3 bg-amber-500 text-white font-black rounded-xl hover:bg-amber-600">Got it!</button>
+               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* -------------------------------------- */}
+
+
       {/* Import Members Modal */}
       {isImportModalOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in">
@@ -934,6 +1390,7 @@ export default function SessionDetails() {
                   <h3 className="font-bold text-lg leading-tight">{selectedDetailPlayer?.name}</h3>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold ${getGradeColor(selectedDetailPlayer?.skillLevel)}`}>{selectedDetailPlayer?.skillLevel}</span>
+                    <span className="text-[10px] bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400 border border-purple-200 dark:border-purple-800 px-1.5 py-0.5 rounded font-mono font-bold">MMR: {selectedDetailPlayer?.hiddenMmr ?? 1200}</span>
                     <span className="text-xs text-muted-ink font-medium capitalize">{selectedDetailPlayer?.gender}</span>
                   </div>
                 </div>

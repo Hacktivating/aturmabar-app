@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Plus, ListOrdered, Zap, AlertTriangle, ArrowRightLeft, Pause, Users, X, RotateCcw } from 'lucide-react';
 import { MatchCard } from '../components/MatchCard';
-import { MatchTimer, getGradeColor, getMatchTypeColor } from '../utils';
+import { MatchTimer, getGradeColor } from '../utils';
 
 export const MatchesTab = ({
   session, communityData, courts, matches, activeMatches, queuedMatchesList, finishedMatches,
@@ -9,7 +9,7 @@ export const MatchesTab = ({
   openEditMatchModal, openEditHistoryModal, handleAutoGenerateCourt, setSwapCourtModal,
   setConfirmDeleteMatchId, setConfirmResetMatchId, handleStartMatch, handleFinishMatch,
   handleReorderQueue, handleQueueMatch, handleAutoFillAllCourts, handleUpdateSparringMatch,
-  updateAttendanceStatus, isWaitingListOpen, setIsWaitingListOpen, t
+  updateAttendanceStatus, isWaitingListOpen, setIsWaitingListOpen, handleUpdateSessionRule, t
 }: any) => {
 
   const sparringScore = useMemo(() => {
@@ -58,7 +58,7 @@ export const MatchesTab = ({
             <div className="flex items-center gap-2 shrink-0">
               <div className="flex flex-col items-center group relative cursor-help px-2 border-x border-subtle dark:border-subtle-dark">
                 <span className="font-black text-xl leading-none text-ink dark:text-ink-dark">{p.gamesPlayed}</span>
-                <span className="text-[8px] font-bold text-faint uppercase tracking-widest mt-1">{t('played', 'Played')}</span>
+                <span className="text-[8px] font-bold text-faint uppercase tracking-widest mt-1">{String(t('played', { defaultValue: 'Played' }))}</span>
                 <div className="hidden group-hover:block absolute bottom-full mb-2 right-0 bg-elevated dark:bg-strong-dark text-white p-2.5 rounded-lg shadow-xl text-xs z-50 whitespace-nowrap border dark:border-default-dark dark:border-strong-dark">
                   <div className="font-bold mb-1 border-b dark:border-strong-dark pb-1">{p.name}</div>
                   <div className="flex justify-between gap-4"><span>Finished:</span> <span>{p.finishedCount}</span></div>
@@ -69,7 +69,7 @@ export const MatchesTab = ({
                 disabled={isProcessing}
                 onClick={() => updateAttendanceStatus(p.attendanceId, 'resting')}
                 className="w-8 h-8 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-600 hover:bg-amber-100 transition-colors flex items-center justify-center disabled:opacity-50"
-                title={t('set_resting', 'Set to Resting')}
+                title={String(t('set_resting', { defaultValue: 'Set to Resting' }))}
               >
                 <Pause size={14} fill="currentColor" />
               </button>
@@ -217,25 +217,43 @@ export const MatchesTab = ({
     <div className="animate-in fade-in duration-200 relative">
       {session?.status !== 'active' && (
         <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/50 text-amber-700 dark:text-amber-500 p-4 rounded-xl mb-6 font-bold flex items-center justify-center shadow-sm">
-          <AlertTriangle size={18} className="mr-2" /> {t('session_not_started', 'Start the session to enable matchmaking.')}
+          <AlertTriangle size={18} className="mr-2" /> {String(t('session_not_started', { defaultValue: 'Start the session to enable matchmaking.' }))}
         </div>
       )}
       
       <div className="flex flex-col lg:flex-row gap-6 items-start">
         <div className="flex-1 w-full flex flex-col gap-8">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <h2 className="text-lg font-bold">{t('matches')}</h2>
+            
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-bold">{String(t('matches', { defaultValue: 'Matches' }))}</h2>
+              {/* NEW ON-THE-FLY STRICTNESS DROPDOWN */}
+              {session?.sessionType !== 'sparring' && session?.status === 'active' && (
+                <select 
+                  value={session?.pairingRule || 'strict'} 
+                  onChange={(e) => handleUpdateSessionRule(e.target.value)}
+                  disabled={isProcessing}
+                  className="px-3 py-1.5 bg-app dark:bg-elevated-dark border border-subtle dark:border-strong-dark rounded-lg text-xs font-bold text-muted-ink dark:text-muted-dark outline-none cursor-pointer hover:border-ink transition-colors disabled:opacity-50"
+                  title="Matchmaking Strictness"
+                >
+                  <option value="very_strict">Very Strict</option>
+                  <option value="strict">Strict</option>
+                  <option value="moderate">Moderate</option>
+                  <option value="randomize">Randomize</option>
+                </select>
+              )}
+            </div>
 
             {session?.sessionType !== 'sparring' && (
               <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                 <button disabled={session?.status !== 'active' || isProcessing} onClick={() => openEditMatchModal({ courtId: null, matchType: 'MD' })} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-surface dark:bg-elevated-dark hover:bg-app dark:hover:bg-strong-dark border border-subtle dark:border-strong-dark text-primary dark:text-primary-dark px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                  <Plus size={16}/> {t('manual_match', 'Manual Match')}
+                  <Plus size={16}/> {String(t('manual_match', { defaultValue: 'Manual Match' }))}
                 </button>
                 <button disabled={session?.status !== 'active' || isProcessing} onClick={handleQueueMatch} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-muted dark:bg-elevated-dark hover:bg-elevated dark:hover:bg-strong-dark text-primary dark:text-primary-dark px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                  <ListOrdered size={16}/> {t('queue_match')}
+                  <ListOrdered size={16}/> {String(t('queue_match', { defaultValue: 'Queue Match' }))}
                 </button>
                 <button disabled={session?.status !== 'active' || isProcessing} onClick={handleAutoFillAllCourts} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-lg bg-ink px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-ink-soft disabled:cursor-not-allowed disabled:opacity-50 dark:bg-ink-dark dark:text-white dark:hover:bg-primary-dark">
-                  <Zap size={16}/> {t('auto_fill')}
+                  <Zap size={16}/> {String(t('auto_fill', { defaultValue: 'Auto Fill' }))}
                 </button>
               </div>
             )}
@@ -296,7 +314,7 @@ export const MatchesTab = ({
               
               {queuedMatchesList.length > 0 && (
                 <div className="animate-in fade-in">
-                  <h3 className="text-lg font-bold mb-4 flex items-center gap-2">Waiting List <span className="bg-muted dark:bg-elevated-dark text-muted-ink dark:text-muted-dark text-xs px-2.5 py-0.5 rounded-full font-bold">{queuedMatchesList.length}</span></h3>
+                  <h3 className="text-lg font-bold mb-4 flex items-center gap-2">{String(t('waiting_list', { defaultValue: 'Waiting List' }))} <span className="bg-muted dark:bg-elevated-dark text-muted-ink dark:text-muted-dark text-xs px-2.5 py-0.5 rounded-full font-bold">{queuedMatchesList.length}</span></h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {queuedMatchesList.map((match: any, index: number) => (
                       <MatchCard 
@@ -330,7 +348,7 @@ export const MatchesTab = ({
         {session?.sessionType !== 'sparring' && (
           <div className="hidden lg:flex w-80 shrink-0 bg-surface dark:bg-surface-dark border border-subtle dark:border-subtle-dark rounded-2xl shadow-sm flex-col h-[calc(100vh-140px)] sticky top-24 overflow-hidden">
             <div className="p-4 border-b border-subtle dark:border-subtle-dark bg-app dark:bg-app-dark flex justify-between items-center shrink-0">
-              <h3 className="font-bold text-sm tracking-wide text-primary dark:text-primary-dark uppercase">{t('available_players', 'Available Players')}</h3>
+              <h3 className="font-bold text-sm tracking-wide text-primary dark:text-primary-dark uppercase">{String(t('available_players', { defaultValue: 'Available Players' }))}</h3>
               <span className="bg-accent-soft text-ink dark:bg-accent-soft-dark dark:text-ink-dark font-bold px-2 py-0.5 rounded-full text-xs">{waitingListPlayers.length}</span>
             </div>
             {renderWaitingListContent()}
@@ -344,7 +362,7 @@ export const MatchesTab = ({
               className="pointer-events-auto bg-ink shadow-xl shadow-blue-600/30 text-white px-6 py-3.5 rounded-full font-bold flex items-center gap-3 transition-transform active:scale-95"
             >
               <Users size={18} />
-              {t('waiting_list', 'Waiting List')}
+              {String(t('waiting_list', { defaultValue: 'Waiting List' }))}
               <span className="bg-surface text-ink px-2.5 py-0.5 rounded-full text-xs font-black">{waitingListPlayers.length}</span>
             </button>
           </div>
@@ -354,7 +372,7 @@ export const MatchesTab = ({
         <div className={`fixed inset-y-0 right-0 z-[110] w-full max-w-[320px] bg-app dark:bg-surface-dark shadow-2xl transform transition-transform duration-300 ease-in-out lg:hidden flex flex-col border-l border-subtle dark:border-subtle-dark ${isWaitingListOpen ? 'translate-x-0' : 'translate-x-full'}`}>
            <div className="p-4 border-b border-subtle dark:border-subtle-dark bg-surface dark:bg-app-dark flex justify-between items-center shrink-0 mt-safe">
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-sm tracking-wide text-primary dark:text-primary-dark uppercase">{t('available_players', 'Available')}</h3>
+                <h3 className="font-bold text-sm tracking-wide text-primary dark:text-primary-dark uppercase">{String(t('available_players', { defaultValue: 'Available Players' }))}</h3>
                 <span className="bg-accent-soft text-ink dark:bg-accent-soft-dark dark:text-ink-dark font-bold px-2 py-0.5 rounded-full text-xs">{waitingListPlayers.length}</span>
               </div>
               <button onClick={() => setIsWaitingListOpen(false)} className="p-2 text-faint hover:text-muted-ink bg-muted dark:bg-elevated-dark rounded-full"><X size={18}/></button>

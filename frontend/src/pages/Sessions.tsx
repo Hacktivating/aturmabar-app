@@ -1,11 +1,124 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, X, Search, Calendar, Trash2, ChevronLeft, ChevronRight, SlidersHorizontal, Banknote, Zap, Globe, Sun, Moon, Settings, LogOut, ArrowLeft, PlayCircle, CalendarDays, ShieldAlert } from 'lucide-react';
+import { Plus, X, Search, Calendar, Trash2, ChevronLeft, ChevronRight, SlidersHorizontal, Banknote, Zap, Globe, Sun, Moon, Settings, LogOut, ArrowLeft, PlayCircle, CalendarDays, ShieldAlert, Sparkles, Wand2 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../api/axios';
-
-// Import your custom picker
 import { CustomDateTimePicker } from '../components/CustomDateTimePicker';
+
+// --- DYNAMIC TOUR OVERLAY ENGINE ---
+const TourOverlay = ({ step, currentStep, targetId, title, content, onNext, nextText, actionButton, hideNext, onCancel, allowClick, hideTooltip }: any) => {
+  const [rect, setRect] = useState<DOMRect | null>(null);
+
+  useEffect(() => {
+    if (step !== currentStep) return;
+    if (!targetId) { setRect(null); return; }
+    
+    const updateRect = () => {
+      const el = document.getElementById(targetId);
+      if (el) setRect(el.getBoundingClientRect());
+    };
+    updateRect();
+    
+    const i1 = setTimeout(updateRect, 100);
+    const i2 = setTimeout(updateRect, 300);
+    const interval = setInterval(updateRect, 500); 
+    
+    window.addEventListener('resize', updateRect);
+    window.addEventListener('scroll', updateRect, true);
+    return () => {
+      clearTimeout(i1); clearTimeout(i2); clearInterval(interval);
+      window.removeEventListener('resize', updateRect);
+      window.removeEventListener('scroll', updateRect, true);
+    }
+  }, [step, currentStep, targetId]);
+
+  if (step !== currentStep) return null;
+  const hasButtons = !hideNext || !!onCancel || !!actionButton;
+
+  if (!targetId) {
+    return (
+      <div className="fixed inset-0 z-[2147483647] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 animate-in fade-in pointer-events-auto">
+         <div className="bg-surface dark:bg-zinc-900 border border-amber-500/50 p-6 sm:p-8 rounded-3xl w-full max-w-lg shadow-[0_20px_50px_-12px_rgba(245,158,11,0.25)] relative text-center animate-in zoom-in-95 fade-in duration-300">
+            <div className="w-16 h-16 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4"><Wand2 size={32} /></div>
+            <h3 className="text-2xl font-black text-primary dark:text-white mb-4">{title}</h3>
+            <div className="text-muted-ink dark:text-zinc-400 text-sm sm:text-base mb-8 leading-relaxed">{content}</div>
+            <div className="flex flex-col-reverse sm:flex-row justify-center gap-3 sm:gap-4">
+              {onCancel && <button onClick={onCancel} className="px-6 py-3 font-bold text-faint hover:text-primary dark:hover:text-white transition-colors">Cancel Tour</button>}
+              {actionButton}
+              {!hideNext && onNext && <button onClick={onNext} className="px-8 py-3 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-xl shadow-lg transition-colors">{nextText || 'Next'}</button>}
+            </div>
+         </div>
+      </div>
+    );
+  }
+
+  if (!rect) return null;
+
+  const padding = 12;
+  const topH = Math.max(0, rect.top - padding);
+  const leftW = Math.max(0, rect.left - padding);
+  const targetW = rect.width + padding * 2;
+  const targetH = rect.height + padding * 2;
+  const bottomH = Math.max(0, window.innerHeight - topH - targetH);
+  const rightW = Math.max(0, window.innerWidth - leftW - targetW);
+
+  let tooltipTop = topH + targetH + 16;
+  let isAbove = false;
+  let hideArrow = false;
+
+  if (tooltipTop + 200 > window.innerHeight) {
+     tooltipTop = topH - 220;
+     isAbove = true;
+  }
+  
+  if (tooltipTop < 16) {
+     tooltipTop = 32; 
+     hideArrow = true;
+  }
+
+  let tooltipLeft = leftW + (targetW / 2) - 160; 
+  tooltipLeft = Math.max(16, Math.min(tooltipLeft, window.innerWidth - 320 - 16)); 
+
+  return (
+    <div className="fixed inset-0 z-[2147483647] pointer-events-none animate-in fade-in duration-300">
+      {/* PERFECT BLACKOUT MASKS */}
+      <div className="absolute top-0 left-0 right-0 bg-black/85 pointer-events-auto transition-all duration-300 ease-out" style={{ height: topH }} />
+      <div className="absolute bottom-0 left-0 right-0 bg-black/85 pointer-events-auto transition-all duration-300 ease-out" style={{ height: bottomH }} />
+      <div className="absolute left-0 bg-black/85 pointer-events-auto transition-all duration-300 ease-out" style={{ top: topH, height: targetH, width: leftW }} />
+      <div className="absolute right-0 bg-black/85 pointer-events-auto transition-all duration-300 ease-out" style={{ top: topH, height: targetH, width: rightW }} />
+
+      {/* Target Outline & Click Blocker */}
+      <div className="absolute border-4 border-amber-500 rounded-2xl shadow-[0_0_30px_rgba(245,158,11,0.4)] transition-all duration-300 ease-out pointer-events-none" style={{ top: topH, left: leftW, width: targetW, height: targetH }}>
+         {!allowClick && <div className="w-full h-full pointer-events-auto cursor-not-allowed" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} />}
+      </div>
+
+      {/* Floating Tooltip */}
+      {!hideTooltip && (
+        <div 
+          className={`absolute ${hasButtons ? 'pointer-events-auto' : 'pointer-events-none'} bg-surface dark:bg-zinc-900 border border-amber-500/30 p-5 sm:p-6 rounded-2xl shadow-2xl flex flex-col transition-all duration-300 ease-out`}
+          style={{ top: tooltipTop, left: tooltipLeft, width: Math.min(320, window.innerWidth - 32) }}
+        >
+           {!hideArrow && (
+             <div className={`absolute left-1/2 -translate-x-1/2 w-4 h-4 bg-surface dark:bg-zinc-900 border-amber-500/30 rotate-45 transition-all duration-300 ${isAbove ? 'bottom-[-9px] border-b border-r' : 'top-[-9px] border-t border-l'}`} />
+           )}
+           <h4 className="text-lg font-black text-primary dark:text-white mb-2 flex items-center gap-2 relative z-10">
+             <Sparkles size={18} className="text-amber-500 shrink-0"/> {title}
+           </h4>
+           <p className={`text-sm text-muted-ink dark:text-zinc-400 leading-relaxed relative z-10 ${hasButtons ? 'mb-6' : 'mb-0'}`}>{content}</p>
+           
+           {hasButtons && (
+             <div className="flex justify-between items-center mt-auto relative z-10">
+               {onCancel && <button onClick={onCancel} className="text-xs font-bold text-faint hover:text-rose-500 transition-colors">End Tour</button>}
+               {actionButton}
+               {!hideNext && onNext && <button onClick={onNext} className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-lg text-sm shadow-md transition-colors">{nextText || 'Next'}</button>}
+             </div>
+           )}
+        </div>
+      )}
+    </div>
+  );
+}
+// ----------------------------------------
 
 interface Session {
   id: number;
@@ -55,6 +168,24 @@ export default function Sessions() {
   const [wizardMemberIds, setWizardMemberIds] = useState<number[]>([]);
   const [wizardMembers, setWizardMembers] = useState<Array<{ id: number; name: string; gender?: string; skillLevel?: string }>>([]);
 
+  // --- TOUR STATE SYNC ---
+  const [tourStep, setTourStep] = useState(() => parseInt(localStorage.getItem('app_tour_step') || '0', 10) || 0);
+  
+  const advanceTour = (step: number) => {
+    setTourStep(step);
+    localStorage.setItem('app_tour_step', step.toString());
+    window.dispatchEvent(new Event('storage'));
+  };
+
+  const endTour = () => { advanceTour(0); setIsModalOpen(false); };
+
+  useEffect(() => {
+    const handleStorage = () => setTourStep(parseInt(localStorage.getItem('app_tour_step') || '0', 10) || 0);
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+  // ------------------------
+
   useEffect(() => {
     if (isDark) { document.documentElement.classList.add('dark'); localStorage.setItem('theme', 'dark'); }
     else { document.documentElement.classList.remove('dark'); localStorage.setItem('theme', 'light'); }
@@ -89,7 +220,19 @@ export default function Sessions() {
 
   useEffect(() => { fetchInitializationData(); }, []);
 
-  const processedSessions = sessions.filter(s => {
+  // --- SANDBOX FILTERING ---
+  // During the tour, hide the real database completely. Only show sandbox session.
+  const getActiveSessionsList = () => {
+    if (tourStep > 0) {
+      const dummyId = parseInt(localStorage.getItem('tour_dummy_session') || '0', 10);
+      return sessions.filter(s => s.id === dummyId);
+    }
+    return sessions;
+  };
+
+  const activeSessionsList = getActiveSessionsList();
+
+  const processedSessions = activeSessionsList.filter(s => {
     const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesDate = dateFilter ? s.date.startsWith(dateFilter) : true;
     return matchesSearch && matchesDate;
@@ -99,6 +242,9 @@ export default function Sessions() {
   const paginatedSessions = processedSessions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const openCreateModal = async () => {
+    if (tourStep === 10) {
+      advanceTour(11); // Advance tour to form overlay
+    }
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(18, 0, 0, 0);
@@ -117,15 +263,20 @@ export default function Sessions() {
     setWizardStep(1);
     setWizardMemberIds([]);
     try {
+      // During tour, only pull the dummy members for the roster selection
       const membersRes = await api.get('/members');
-      setWizardMembers(membersRes.data);
+      if (tourStep > 0) {
+         const dummyIds = JSON.parse(localStorage.getItem('tour_dummy_members') || '[]');
+         setWizardMembers(membersRes.data.filter((m: any) => dummyIds.includes(m.id)));
+      } else {
+         setWizardMembers(membersRes.data);
+      }
     } catch (err) {
       setWizardMembers([]);
     }
     setIsModalOpen(true);
   };
 
-  // --- NEW UNIFIED ACTION HANDLER ---
   const executeSubmit = async () => {
     if (isProcessing) return;
     setIsProcessing(true);
@@ -147,6 +298,13 @@ export default function Sessions() {
         await Promise.all(wizardMemberIds.map(memberId => api.post(`/sessions/${sessionId}/attendances`, { memberId, team: 'home' })));
       }
       setIsModalOpen(false);
+
+      // Save dummy session ID for the tour
+      if (tourStep === 11 && sessionId) {
+         localStorage.setItem('tour_dummy_session', sessionId.toString());
+         advanceTour(12); // Go to final click-session step
+      }
+
       fetchInitializationData();
     } catch (err: any) {
       alert(err.response?.data?.error || String(t('op_failed', { defaultValue: 'Operation failed' })));
@@ -158,7 +316,6 @@ export default function Sessions() {
   const handleNextOrSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     
-    // Check native HTML5 form validation (required fields)
     const form = document.getElementById('session-form') as HTMLFormElement;
     if (form && !form.checkValidity()) {
       form.reportValidity();
@@ -171,7 +328,6 @@ export default function Sessions() {
       executeSubmit();
     }
   };
-  // ----------------------------------
 
   const handleDelete = async (id: number) => {
     if (!window.confirm(String(t('delete_confirm', { defaultValue: 'Delete this session?' })))) return;
@@ -202,6 +358,14 @@ export default function Sessions() {
 
   return (
     <div className="min-h-screen bg-app dark:bg-app-dark text-primary dark:text-primary-dark font-sans flex flex-col">
+
+      {/* --- TOUR OVERLAYS (Sessions Steps 10 to 12) --- */}
+      <TourOverlay step={10} currentStep={tourStep} targetId="tour-create-session" title="Create Session" content="Click here to build a new session and configure your matchmaking rules." allowClick={true} hideNext={true} onCancel={endTour} />
+      
+      <TourOverlay step={11} currentStep={tourStep} targetId="tour-session-wizard-modal" hideTooltip={true} allowClick={true} />
+
+      <TourOverlay step={12} currentStep={tourStep} targetId="tour-demo-session-card" title="Session Ready!" content="You did it! Click on your new session to enter the admin dashboard and start playing." allowClick={true} hideNext={true} onCancel={endTour} />
+      {/* ------------------------------------------- */}
 
       <nav className="h-16 border-b border-subtle dark:border-subtle-dark bg-surface dark:bg-surface-dark sticky top-0 z-30 shrink-0">
         <div className="max-w-7xl mx-auto w-full h-full flex justify-between items-center px-4 sm:px-8">
@@ -236,7 +400,7 @@ export default function Sessions() {
         </div>
       </nav>
 
-      <main className="flex-1 p-4 sm:p-8 max-w-7xl w-full mx-auto flex flex-col relative">
+      <main className="flex-1 p-4 sm:p-8 max-w-7xl w-full mx-auto flex flex-col relative z-10">
         <div className="flex items-center gap-4 mb-6 sm:mb-8 shrink-0">
           <Link to="/dashboard" className="p-2 sm:p-2.5 bg-app dark:bg-elevated-dark border border-subtle dark:border-strong-dark rounded-xl hover:bg-muted dark:hover:bg-strong-dark/80 transition-colors shrink-0">
             <ArrowLeft size={20} />
@@ -257,7 +421,8 @@ export default function Sessions() {
               <input type="date" value={dateFilter} onChange={(e) => { setDateFilter(e.target.value); setCurrentPage(1); }} className={`w-full pl-11 pr-4 py-3 bg-surface dark:bg-surface-dark border border-subtle dark:border-subtle-dark rounded-xl shadow-sm outline-none focus:ring-2 focus:ring-ink text-sm font-medium text-muted-ink dark:text-faint [&::-webkit-calendar-picker-indicator]:dark:invert`}/>
             </div>
           </div>
-          <button onClick={openCreateModal} className="flex items-center justify-center gap-2 bg-ink hover:bg-ink-soft text-white px-6 py-3 rounded-xl text-sm font-bold transition-colors shadow-sm shrink-0">
+          
+          <button id="tour-create-session" onClick={openCreateModal} className="flex items-center justify-center gap-2 bg-ink hover:bg-ink-soft text-white px-6 py-3 rounded-xl text-sm font-bold transition-colors shadow-sm shrink-0">
             <Plus size={18} /> {String(t('create_session', { defaultValue: 'Create Session' }))}
           </button>
         </div>
@@ -283,58 +448,64 @@ export default function Sessions() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-[#1E293B]">
-                    {paginatedSessions.map((session) => (
-                      <tr key={session.id} onClick={() => navigate(`/sessions/${session.id}`)} className="hover:bg-app dark:hover:bg-elevated-dark/30 transition-colors cursor-pointer group">
-                        <td className="p-5 font-bold text-base dark:text-primary-dark group-hover:text-ink dark:group-hover:text-ink-dark transition-colors flex items-center gap-2">
-                          {session.name}
-                          {session.sessionType === 'sparring' && <span className="bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400 px-2 py-0.5 rounded text-[10px] font-bold tracking-widest uppercase">SPARRING</span>}
-                        </td>
-                        <td className="p-5 text-sm font-medium text-muted-ink dark:text-faint">
-                          {new Date(session.date).toLocaleString(i18n.language, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
-                        </td>
-                        <td className="p-5">{getStatusBadge(session.status || 'scheduled')}</td>
-                        <td className="p-5">
-                          <div className="flex items-center justify-end gap-3">
-                            {(!session.status || session.status === 'scheduled') && (
-                              <button onClick={(e) => { e.stopPropagation(); handleStartSession(session.id); }} className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-1.5 rounded-lg transition-colors">
-                                <PlayCircle size={16} /> {String(t('start_session', { defaultValue: 'Start Session' }))}
-                              </button>
-                            )}
-                            <button onClick={(e) => { e.stopPropagation(); handleDelete(session.id); }} className="p-1.5 text-faint hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors"><Trash2 size={18}/></button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                    {paginatedSessions.map((session) => {
+                      const isTutorialCard = tourStep === 12 && session.id === parseInt(localStorage.getItem('tour_dummy_session') || '0');
+                      return (
+                        <tr id={isTutorialCard ? "tour-demo-session-card" : undefined} key={session.id} onClick={() => navigate(`/sessions/${session.id}`)} className="hover:bg-app dark:hover:bg-elevated-dark/30 transition-colors cursor-pointer group">
+                          <td className="p-5 font-bold text-base dark:text-primary-dark group-hover:text-ink dark:group-hover:text-ink-dark transition-colors flex items-center gap-2">
+                            {session.name}
+                            {session.sessionType === 'sparring' && <span className="bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400 px-2 py-0.5 rounded text-[10px] font-bold tracking-widest uppercase">SPARRING</span>}
+                          </td>
+                          <td className="p-5 text-sm font-medium text-muted-ink dark:text-faint">
+                            {new Date(session.date).toLocaleString(i18n.language, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                          </td>
+                          <td className="p-5">{getStatusBadge(session.status || 'scheduled')}</td>
+                          <td className="p-5">
+                            <div className="flex items-center justify-end gap-3">
+                              {(!session.status || session.status === 'scheduled') && (
+                                <button onClick={(e) => { e.stopPropagation(); handleStartSession(session.id); }} className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-1.5 rounded-lg transition-colors">
+                                  <PlayCircle size={16} /> {String(t('start_session', { defaultValue: 'Start Session' }))}
+                                </button>
+                              )}
+                              <button onClick={(e) => { e.stopPropagation(); handleDelete(session.id); }} className="p-1.5 text-faint hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors"><Trash2 size={18}/></button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
 
               <div className="sm:hidden flex flex-col flex-1 divide-y divide-slate-100 dark:divide-[#1E293B] overflow-y-auto">
-                {paginatedSessions.map((session) => (
-                  <div key={session.id} onClick={() => navigate(`/sessions/${session.id}`)} className="p-4 flex flex-col gap-3 hover:bg-app dark:hover:bg-elevated-dark/30 transition-colors cursor-pointer">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="font-bold text-base mb-1 flex items-center gap-2">
-                          {session.name}
-                          {session.sessionType === 'sparring' && <span className="bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400 px-1.5 py-0.5 rounded text-[9px] font-bold tracking-widest uppercase">SPARRING</span>}
+                {paginatedSessions.map((session) => {
+                  const isTutorialCard = tourStep === 12 && session.id === parseInt(localStorage.getItem('tour_dummy_session') || '0');
+                  return (
+                    <div id={isTutorialCard ? "tour-demo-session-card" : undefined} key={session.id} onClick={() => navigate(`/sessions/${session.id}`)} className="p-4 flex flex-col gap-3 hover:bg-app dark:hover:bg-elevated-dark/30 transition-colors cursor-pointer">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="font-bold text-base mb-1 flex items-center gap-2">
+                            {session.name}
+                            {session.sessionType === 'sparring' && <span className="bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400 px-1.5 py-0.5 rounded text-[9px] font-bold tracking-widest uppercase">SPARRING</span>}
+                          </div>
+                          <div className="text-xs font-medium text-muted-ink">
+                            {new Date(session.date).toLocaleString(i18n.language, { dateStyle: 'medium', timeStyle: 'short' })}
+                          </div>
                         </div>
-                        <div className="text-xs font-medium text-muted-ink">
-                          {new Date(session.date).toLocaleString(i18n.language, { dateStyle: 'medium', timeStyle: 'short' })}
-                        </div>
+                        {getStatusBadge(session.status || 'scheduled')}
                       </div>
-                      {getStatusBadge(session.status || 'scheduled')}
-                    </div>
 
-                    <div className="flex items-center justify-between mt-2 pt-3 border-t border-subtle dark:border-subtle-dark">
-                      <button onClick={(e) => { e.stopPropagation(); handleDelete(session.id); }} className="p-2 text-faint hover:text-rose-600 bg-app dark:bg-elevated-dark rounded-lg transition-colors"><Trash2 size={16}/></button>
-                      {(!session.status || session.status === 'scheduled') && (
-                        <button onClick={(e) => { e.stopPropagation(); handleStartSession(session.id); }} className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2 rounded-lg transition-colors">
-                          <PlayCircle size={16} /> {String(t('start_session', { defaultValue: 'Start Session' }))}
-                        </button>
-                      )}
+                      <div className="flex items-center justify-between mt-2 pt-3 border-t border-subtle dark:border-subtle-dark">
+                        <button onClick={(e) => { e.stopPropagation(); handleDelete(session.id); }} className="p-2 text-faint hover:text-rose-600 bg-app dark:bg-elevated-dark rounded-lg transition-colors"><Trash2 size={16}/></button>
+                        {(!session.status || session.status === 'scheduled') && (
+                          <button onClick={(e) => { e.stopPropagation(); handleStartSession(session.id); }} className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2 rounded-lg transition-colors">
+                            <PlayCircle size={16} /> {String(t('start_session', { defaultValue: 'Start Session' }))}
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </>
           )}
@@ -353,15 +524,28 @@ export default function Sessions() {
 
       {/* Create Session Wizard */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-ink/80 p-3 backdrop-blur-sm sm:p-6">
-          <div className="flex max-h-[94dvh] w-full max-w-2xl flex-col rounded-2xl border border-subtle bg-surface shadow-2xl dark:border-subtle-dark dark:bg-surface-dark relative">
+        <div className={`fixed inset-0 flex items-center justify-center bg-ink/80 p-3 backdrop-blur-sm sm:p-6 animate-in fade-in duration-200 ${tourStep === 11 ? 'z-[2147483647]' : 'z-[999]'}`}>
+          <div id="tour-session-wizard-modal" className="flex max-h-[94dvh] w-full max-w-2xl flex-col rounded-2xl border border-subtle bg-surface shadow-2xl dark:border-subtle-dark dark:bg-surface-dark relative overflow-hidden">
+            
+            {tourStep === 11 && (
+               <div className="bg-amber-500/10 border-b border-amber-500/30 p-4 text-amber-600 dark:text-amber-400 flex items-start gap-3">
+                 <Sparkles className="shrink-0 mt-0.5" size={18} />
+                 <div className="text-sm leading-relaxed">
+                   <strong className="font-bold text-amber-700 dark:text-amber-300">Create a Session</strong><br/>
+                   Fill out a Name for the session. Click <strong>Next</strong> on each step to see the rules you can configure. On the final tab, click <strong>Create Session</strong> to finish!
+                 </div>
+               </div>
+            )}
+
             <div className="border-b border-subtle bg-surface px-5 py-5 dark:border-subtle-dark dark:bg-surface-dark sm:px-7 rounded-t-2xl shrink-0">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-ink dark:text-muted-dark">{String(t('session_setup', { defaultValue: 'SESSION SETUP' }))}</p>
                   <h3 className="mt-1 text-xl font-bold tracking-tight text-primary dark:text-primary-dark">{String(t('create_session', { defaultValue: 'Create Session' }))}</h3>
                 </div>
-                <button type="button" onClick={() => setIsModalOpen(false)} aria-label={String(t('cancel', { defaultValue: 'Cancel' }))} className="rounded-lg p-2 text-muted-ink transition-colors hover:bg-muted hover:text-ink dark:text-muted-dark dark:hover:bg-elevated-dark dark:hover:text-primary-dark"><X size={18} /></button>
+                {tourStep !== 11 && (
+                  <button type="button" onClick={() => setIsModalOpen(false)} aria-label={String(t('cancel', { defaultValue: 'Cancel' }))} className="rounded-lg p-2 text-muted-ink transition-colors hover:bg-muted hover:text-ink dark:text-muted-dark dark:hover:bg-elevated-dark dark:hover:text-primary-dark"><X size={18} /></button>
+                )}
               </div>
 
               <div className="mt-6 grid grid-cols-5 gap-2" aria-label={String(t('session_setup_progress', { defaultValue: 'Session Setup Progress' }))}>
@@ -461,6 +645,13 @@ export default function Sessions() {
                       <h4 className="text-lg font-bold text-primary dark:text-primary-dark">{String(t('session_setup_roster', { defaultValue: 'Roster' }))}</h4>
                       <p className="mt-1 text-sm text-muted-ink dark:text-muted-dark">{String(t('session_setup_roster_desc', { defaultValue: 'Select initial members.' }))}</p>
                     </div>
+                    
+                    {tourStep === 11 && (
+                      <div className="rounded-xl border border-amber-500/50 bg-amber-500/10 p-3 text-xs font-bold text-amber-600 dark:text-amber-400">
+                        <Sparkles size={14} className="inline mr-1 -mt-0.5" /> Notice how only our 20 dummy players are here!
+                      </div>
+                    )}
+
                     <div className="rounded-xl border border-subtle dark:border-subtle-dark">
                       {wizardMembers.length === 0 ? (
                         <div className="p-6 text-center text-sm text-muted-ink dark:text-muted-dark">{String(t('session_setup_no_members', { defaultValue: 'No members available.' }))}</div>
@@ -479,7 +670,10 @@ export default function Sessions() {
                         </div>
                       )}
                     </div>
-                    <p className="text-xs font-medium text-muted-ink dark:text-muted-dark">{String(t('session_setup_selected_members', { defaultValue: 'Selected: {{count}}' })).replace('{{count}}', wizardMemberIds.length.toString())}</p>
+                    <div className="flex justify-between items-center">
+                      <p className="text-xs font-medium text-muted-ink dark:text-muted-dark">{String(t('session_setup_selected_members', { defaultValue: 'Selected: {{count}}' })).replace('{{count}}', wizardMemberIds.length.toString())}</p>
+                      <button type="button" onClick={() => setWizardMemberIds(wizardMembers.map(m => m.id))} className="text-xs font-bold text-ink dark:text-ink-dark hover:underline">Select All Dummy Players</button>
+                    </div>
                   </div>
                 )}
 
@@ -558,17 +752,20 @@ export default function Sessions() {
               </form>
             </div>
 
-            {/* UNIFIED BUTTON HANDLER: No "type=submit" ghost click vulnerability */}
-            <div className="flex items-center justify-between gap-3 border-t border-subtle bg-surface px-5 py-4 dark:border-subtle-dark dark:bg-surface-dark sm:px-7 rounded-b-2xl shrink-0">
-              <button type="button" onClick={() => wizardStep === 1 ? setIsModalOpen(false) : setWizardStep(step => step - 1)} className="rounded-lg px-4 py-2.5 text-sm font-semibold text-muted-ink transition-colors hover:bg-muted dark:text-muted-dark dark:hover:bg-elevated-dark">{wizardStep === 1 ? String(t('cancel', { defaultValue: 'Cancel' })) : String(t('back', { defaultValue: 'Back' }))}</button>
-              <button 
-                type="button" 
-                onClick={() => handleNextOrSubmit()} 
-                disabled={isProcessing} 
-                className="rounded-lg bg-ink px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-ink-soft disabled:cursor-not-allowed disabled:opacity-50 dark:bg-ink-dark dark:text-white dark:hover:bg-primary-dark"
-              >
-                {isProcessing ? String(t('saving', { defaultValue: 'Saving...' })) : wizardStep < 5 ? String(t('next', { defaultValue: 'Next' })) : String(t('create_session', { defaultValue: 'Create' }))}
-              </button>
+            <div className="flex items-center justify-between gap-3 border-t border-subtle bg-surface px-5 py-4 dark:border-subtle-dark dark:bg-surface-dark sm:px-7 rounded-b-2xl shrink-0 z-10 relative">
+              {tourStep !== 11 && (
+                <button type="button" onClick={() => wizardStep === 1 ? setIsModalOpen(false) : setWizardStep(step => step - 1)} className="rounded-lg px-4 py-2.5 text-sm font-semibold text-muted-ink transition-colors hover:bg-muted dark:text-muted-dark dark:hover:bg-elevated-dark">{wizardStep === 1 ? String(t('cancel', { defaultValue: 'Cancel' })) : String(t('back', { defaultValue: 'Back' }))}</button>
+              )}
+              <div className={tourStep === 11 ? 'w-full flex justify-end' : ''}>
+                <button 
+                  type="button" 
+                  onClick={() => handleNextOrSubmit()} 
+                  disabled={isProcessing} 
+                  className="rounded-lg bg-ink px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-ink-soft disabled:cursor-not-allowed disabled:opacity-50 dark:bg-ink-dark dark:text-white dark:hover:bg-primary-dark"
+                >
+                  {isProcessing ? String(t('saving', { defaultValue: 'Saving...' })) : wizardStep < 5 ? String(t('next', { defaultValue: 'Next' })) : String(t('create_session', { defaultValue: 'Create' }))}
+                </button>
+              </div>
             </div>
           </div>
         </div>

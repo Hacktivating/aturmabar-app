@@ -1,8 +1,128 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, X, Search, Edit2, Trash2, ChevronLeft, ChevronRight, Check, ArrowUpDown, Zap, Globe, Sun, Moon, Settings, LogOut, ArrowLeft, Phone, Calendar, Users } from 'lucide-react';
+import { 
+  Plus, X, Search, Edit2, Trash2, ChevronLeft, ChevronRight, Check, ArrowUpDown, 
+  Zap, Globe, Sun, Moon, Settings, LogOut, ArrowLeft, Phone, Calendar, Users,
+  Sparkles, Wand2, CheckCircle, AlertCircle, Play, CalendarDays
+} from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../api/axios';
+
+// --- DYNAMIC TOUR OVERLAY ENGINE ---
+const TourOverlay = ({ step, currentStep, targetId, title, content, onNext, nextText, actionButton, hideNext, onCancel, allowClick, hideTooltip }: any) => {
+  const [rect, setRect] = useState<DOMRect | null>(null);
+
+  useEffect(() => {
+    if (step !== currentStep) return;
+    if (!targetId) { setRect(null); return; }
+    
+    const updateRect = () => {
+      const el = document.getElementById(targetId);
+      if (el) setRect(el.getBoundingClientRect());
+    };
+    
+    updateRect();
+    const i1 = setTimeout(updateRect, 100);
+    const i2 = setTimeout(updateRect, 300);
+    const interval = setInterval(updateRect, 500); 
+    
+    window.addEventListener('resize', updateRect);
+    window.addEventListener('scroll', updateRect, true);
+    return () => {
+      clearTimeout(i1); clearTimeout(i2); clearInterval(interval);
+      window.removeEventListener('resize', updateRect);
+      window.removeEventListener('scroll', updateRect, true);
+    }
+  }, [step, currentStep, targetId]);
+
+  if (step !== currentStep) return null;
+  const hasButtons = !hideNext || !!onCancel || !!actionButton;
+
+  if (!targetId) {
+    return (
+      <div className="fixed inset-0 z-[2147483647] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 animate-in fade-in pointer-events-auto">
+         <div className="bg-surface dark:bg-zinc-900 border border-amber-500/50 p-6 sm:p-8 rounded-3xl w-full max-w-lg shadow-[0_20px_50px_-12px_rgba(245,158,11,0.25)] relative text-center animate-in zoom-in-95 fade-in duration-300">
+            <div className="w-16 h-16 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4"><Users size={32} /></div>
+            <h3 className="text-xl font-black text-amber-500 mb-1 uppercase tracking-widest text-xs">Step 1: Members</h3>
+            <h3 className="text-2xl font-black text-primary dark:text-white mb-4">{title}</h3>
+            <div className="text-muted-ink dark:text-zinc-400 text-sm sm:text-base mb-8 leading-relaxed">{content}</div>
+            <div className="flex flex-col-reverse sm:flex-row justify-center gap-3 sm:gap-4">
+              {onCancel && <button onClick={onCancel} className="px-6 py-3 font-bold text-faint hover:text-primary dark:hover:text-white transition-colors">Cancel Tour</button>}
+              {actionButton}
+              {!hideNext && onNext && <button onClick={onNext} className="px-8 py-3 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-xl shadow-lg transition-colors">{nextText || 'Next'}</button>}
+            </div>
+         </div>
+      </div>
+    );
+  }
+
+  if (!rect) return null;
+
+  const padding = 12;
+  const topH = Math.max(0, rect.top - padding);
+  const leftW = Math.max(0, rect.left - padding);
+  const targetW = rect.width + padding * 2;
+  const targetH = rect.height + padding * 2;
+  const bottomH = Math.max(0, window.innerHeight - topH - targetH);
+  const rightW = Math.max(0, window.innerWidth - leftW - targetW);
+
+  let tooltipTop = topH + targetH + 16;
+  let isAbove = false;
+  let hideArrow = false;
+
+  if (tooltipTop + 200 > window.innerHeight) {
+     tooltipTop = topH - 220;
+     isAbove = true;
+  }
+  
+  if (tooltipTop < 16) {
+     tooltipTop = 32; 
+     hideArrow = true;
+  }
+
+  let tooltipLeft = leftW + (targetW / 2) - 160; 
+  tooltipLeft = Math.max(16, Math.min(tooltipLeft, window.innerWidth - 320 - 16)); 
+
+  return (
+    <div className="fixed inset-0 z-[2147483647] pointer-events-none animate-in fade-in duration-300">
+      {/* PERFECT BLACKOUT MASKS */}
+      <div className="absolute top-0 left-0 right-0 bg-black/85 pointer-events-auto transition-all duration-300 ease-out" style={{ height: topH }} />
+      <div className="absolute bottom-0 left-0 right-0 bg-black/85 pointer-events-auto transition-all duration-300 ease-out" style={{ height: bottomH }} />
+      <div className="absolute left-0 bg-black/85 pointer-events-auto transition-all duration-300 ease-out" style={{ top: topH, height: targetH, width: leftW }} />
+      <div className="absolute right-0 bg-black/85 pointer-events-auto transition-all duration-300 ease-out" style={{ top: topH, height: targetH, width: rightW }} />
+
+      {/* Target Outline & Click Blocker */}
+      <div className="absolute border-4 border-amber-500 rounded-2xl shadow-[0_0_30px_rgba(245,158,11,0.4)] transition-all duration-300 ease-out pointer-events-none" style={{ top: topH, left: leftW, width: targetW, height: targetH }}>
+         {!allowClick && <div className="w-full h-full pointer-events-auto cursor-not-allowed" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} />}
+      </div>
+
+      {/* Floating Tooltip */}
+      {!hideTooltip && (
+        <div 
+          className={`absolute ${hasButtons ? 'pointer-events-auto' : 'pointer-events-none'} bg-surface dark:bg-zinc-900 border border-amber-500/30 p-5 sm:p-6 rounded-2xl shadow-2xl flex flex-col transition-all duration-300 ease-out`}
+          style={{ top: tooltipTop, left: tooltipLeft, width: Math.min(320, window.innerWidth - 32) }}
+        >
+           {!hideArrow && (
+             <div className={`absolute left-1/2 -translate-x-1/2 w-4 h-4 bg-surface dark:bg-zinc-900 border-amber-500/30 rotate-45 transition-all duration-300 ${isAbove ? 'bottom-[-9px] border-b border-r' : 'top-[-9px] border-t border-l'}`} />
+           )}
+           <h4 className="text-lg font-black text-primary dark:text-white mb-2 flex items-center gap-2 relative z-10">
+             <Sparkles size={18} className="text-amber-500 shrink-0"/> {title}
+           </h4>
+           <p className={`text-sm text-muted-ink dark:text-zinc-400 leading-relaxed relative z-10 ${hasButtons ? 'mb-6' : 'mb-0'}`}>{content}</p>
+           
+           {hasButtons && (
+             <div className="flex justify-between items-center mt-auto relative z-10">
+               {onCancel && <button onClick={onCancel} className="text-xs font-bold text-faint hover:text-rose-500 transition-colors">End Tour</button>}
+               {actionButton}
+               {!hideNext && onNext && <button onClick={onNext} className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-lg text-sm shadow-md transition-colors">{nextText || 'Next'}</button>}
+             </div>
+           )}
+        </div>
+      )}
+    </div>
+  );
+}
+// ----------------------------------------
 
 interface Member {
   id: number;
@@ -91,6 +211,31 @@ export default function Members() {
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const [toasts, setToasts] = useState<{id: number, message: string, type: 'success'|'error'}[]>([]);
+
+  const addToast = (msg: string, type: 'success'|'error' = 'success') => {
+    const toastId = Date.now();
+    setToasts(prev => [...prev, { id: toastId, message: msg, type }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== toastId)), 4000);
+  };
+
+  // --- TOUR STATE SYNC ---
+  const [tourStep, setTourStep] = useState(() => parseInt(localStorage.getItem('app_tour_step') || '0', 10) || 0);
+  
+  const advanceTour = (step: number) => {
+    setTourStep(step);
+    localStorage.setItem('app_tour_step', step.toString());
+    window.dispatchEvent(new Event('storage'));
+  };
+
+  const endTour = () => { advanceTour(0); };
+
+  useEffect(() => {
+    const handleStorage = () => setTourStep(parseInt(localStorage.getItem('app_tour_step') || '0', 10) || 0);
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
   // Roster States
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLevel, setFilterLevel] = useState<string>('all');
@@ -159,8 +304,18 @@ export default function Members() {
 
   useEffect(() => { fetchInitializationData(); fetchPeriods(); }, []);
 
-  // Roster logic
-  let processedMembers = members.filter(m =>
+  // --- SANDBOX FILTERING ---
+  const getActiveMembersList = () => {
+    if (tourStep > 0) {
+      const dummyIds = JSON.parse(localStorage.getItem('tour_dummy_members') || '[]');
+      return members.filter(m => dummyIds.includes(m.id));
+    }
+    return members;
+  };
+
+  const activeMembersList = getActiveMembersList();
+
+  let processedMembers = activeMembersList.filter(m =>
     (m.name.toLowerCase().includes(searchQuery.toLowerCase()) || (m.phone && m.phone.includes(searchQuery))) &&
     (filterLevel === 'all' || m.skillLevel === filterLevel)
   );
@@ -184,6 +339,9 @@ export default function Members() {
 
   // Forms & Actions
   const openCreateModal = () => {
+    if (tourStep === 3) {
+      advanceTour(4); // Advance tour to form overlay
+    }
     setIsEditMode(false); setTargetId(null);
     setFormData({ name: '', phone: '', gender: 'male', skillLevel: 'C1', avoidPartnerIds: [], avoidOpponentIds: [], status: 'active' });
     setIsModalOpen(true);
@@ -203,21 +361,74 @@ export default function Members() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      if (isEditMode && targetId) await api.put(`/members/${targetId}`, formData);
-      else await api.post('/members', formData);
+      let createdId = null;
+      if (isEditMode && targetId) {
+         await api.put(`/members/${targetId}`, formData);
+      } else {
+         const res = await api.post('/members', formData);
+         createdId = res.data.member?.id || res.data.id;
+      }
       setIsModalOpen(false);
+
+      // Handle Tutorial Auto-Generation
+      if (tourStep === 4 && createdId) {
+         setIsProcessing(true);
+         addToast('Generating 19 additional test players...', 'success');
+         try {
+            const dummies = [
+              { name: 'Demo Budi', gender: 'male', skillLevel: 'A2' },
+              { name: 'Demo Citra', gender: 'female', skillLevel: 'B1' },
+              { name: 'Demo Dian', gender: 'female', skillLevel: 'B2' },
+              { name: 'Demo Eko', gender: 'male', skillLevel: 'C1' },
+              { name: 'Demo Fajar', gender: 'male', skillLevel: 'C2' },
+              { name: 'Demo Gita', gender: 'female', skillLevel: 'A1' },
+              { name: 'Demo Hadi', gender: 'male', skillLevel: 'B1' },
+              { name: 'Demo Indah', gender: 'female', skillLevel: 'B2' },
+              { name: 'Demo Joko', gender: 'male', skillLevel: 'C1' },
+              { name: 'Demo Kiki', gender: 'female', skillLevel: 'C2' },
+              { name: 'Demo Lukman', gender: 'male', skillLevel: 'A2' },
+              { name: 'Demo Maya', gender: 'female', skillLevel: 'B1' },
+              { name: 'Demo Nina', gender: 'female', skillLevel: 'A1' },
+              { name: 'Demo Oscar', gender: 'male', skillLevel: 'C1' },
+              { name: 'Demo Putri', gender: 'female', skillLevel: 'B2' },
+              { name: 'Demo Qori', gender: 'male', skillLevel: 'A2' },
+              { name: 'Demo Rendi', gender: 'male', skillLevel: 'C2' },
+              { name: 'Demo Siska', gender: 'female', skillLevel: 'B1' },
+              { name: 'Demo Tio', gender: 'male', skillLevel: 'C1' }
+            ];
+            const createdIds = [createdId];
+            for(const m of dummies) {
+              const res = await api.post('/members', m);
+              createdIds.push(res.data.member?.id || res.data.id);
+            }
+            localStorage.setItem('tour_dummy_members', JSON.stringify(createdIds));
+            
+            // Set the search bar to the exact name they typed so they ONLY see their player!
+            setSearchQuery(formData.name);
+            
+            addToast('Roster updated with 20 players!', 'success');
+            advanceTour(5); // Go to memberships tab step
+         } catch (err) {
+            addToast('Error generating additional members', 'error');
+         }
+         setIsProcessing(false);
+      } else {
+         addToast(t('save_changes') + ' Successful', 'success');
+      }
+
       const res = await api.get('/members');
       setMembers(res.data);
-    } catch (err: any) { alert(err.response?.data?.error || t('op_failed')); }
+    } catch (err: any) { addToast(err.response?.data?.error || t('op_failed'), 'error'); }
   };
 
   const handleDelete = async (id: number) => {
     if (!window.confirm(t('del_member_confirm'))) return;
     try {
       await api.delete(`/members/${id}`);
+      addToast(t('delete_success', 'Player deleted'), 'success');
       const res = await api.get('/members');
       setMembers(res.data);
-    } catch (err) { alert(t('delete_failed')); }
+    } catch (err) { addToast(t('delete_failed'), 'error'); }
   };
 
   // Membership Period Actions
@@ -226,12 +437,15 @@ export default function Members() {
     await api.post('/members/periods', periodForm);
     setIsPeriodModalOpen(false);
     setPeriodForm({ name: '', startDate: '', endDate: '' });
+    addToast('Period created successfully', 'success');
     fetchPeriods();
+    if (tourStep === 7) advanceTour(8);
   };
 
   const handleDeletePeriod = async (id: number) => {
     if (!window.confirm("Delete this membership period?")) return;
     await api.delete(`/members/periods/${id}`);
+    addToast('Period deleted successfully', 'success');
     if (selectedPeriod?.id === id) {
       setSelectedPeriod(null);
       setPeriodPayments([]);
@@ -259,8 +473,9 @@ export default function Members() {
       ));
       await fetchPeriodPayments(selectedPeriod);
       setAddPeriodMemberModalOpen(false);
+      addToast('Members added to period', 'success');
     } catch (err) {
-      alert("Error adding members to period");
+      addToast("Error adding members to period", 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -283,7 +498,33 @@ export default function Members() {
   const filteredPeriodPayments = periodPayments.filter(p => p.memberName.toLowerCase().includes(membershipSearch.toLowerCase()));
 
   return (
-    <div className="min-h-screen bg-app dark:bg-app-dark text-primary dark:text-primary-dark font-sans flex flex-col">
+    <div className="min-h-screen bg-app dark:bg-app-dark text-primary dark:text-primary-dark font-sans flex flex-col relative">
+      
+      {/* Toast Container */}
+      <div className="fixed top-20 right-4 z-[100001] flex flex-col gap-3 pointer-events-none">
+        {toasts.map(toastItem => (
+          <div key={toastItem.id} className={`pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl text-sm font-bold animate-in slide-in-from-top-5 fade-in duration-300 border ${toastItem.type === 'success' ? 'bg-ink border-ink text-white' : 'bg-rose-600 border-rose-700 text-white'}`}>
+            {toastItem.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+            {toastItem.message}
+            <button onClick={() => setToasts(prev => prev.filter(t => t.id !== toastItem.id))} className="ml-4 hover:opacity-75"><X size={16}/></button>
+          </div>
+        ))}
+      </div>
+
+      {/* --- TOUR OVERLAYS (Members Steps 3 to 8) --- */}
+      <TourOverlay step={3} currentStep={tourStep} targetId="tour-add-player" title="Add Players" content="Click here to add yourself or a player to the roster." allowClick={true} hideNext={true} onCancel={endTour} />
+      
+      <TourOverlay step={4} currentStep={tourStep} targetId="tour-add-player-modal" hideTooltip={true} allowClick={true} />
+
+      <TourOverlay step={5} currentStep={tourStep} targetId="tour-memberships-tab" title="Billing Cycles" content="Awesome! Now let's track their payments. Click the 'Memberships' tab." allowClick={true} hideNext={true} onCancel={endTour} />
+      
+      <TourOverlay step={6} currentStep={tourStep} targetId="tour-create-period" title="Create Periods" content="Click here to establish a new billing cycle (e.g. September 2026)." allowClick={true} hideNext={true} onCancel={endTour} />
+      
+      <TourOverlay step={7} currentStep={tourStep} targetId="tour-period-form-modal" hideTooltip={true} allowClick={true} />
+      
+      <TourOverlay step={8} currentStep={tourStep} targetId="tour-back-btn" title="Next Up: Matchmaking!" content="Now that we have our dummy members, click here to head back to the dashboard. We'll set up a session next!" allowClick={true} hideNext={true} onCancel={endTour} />
+      {/* ------------------------------------------- */}
+
       <nav className="border-b border-subtle dark:border-subtle-dark bg-surface dark:bg-surface-dark sticky top-0 z-20 shrink-0">
         <div className="max-w-7xl mx-auto w-full flex justify-between items-center px-4 sm:px-8 py-4">
           <div className="flex items-center gap-2">
@@ -319,14 +560,28 @@ export default function Members() {
         </div>
       </nav>
 
-      <main className="flex-1 p-4 sm:p-8 max-w-7xl w-full mx-auto flex flex-col relative">
+      <main className="flex-1 p-4 sm:p-8 max-w-7xl w-full mx-auto flex flex-col relative z-10">
         <div className="flex items-center gap-4 mb-6 sm:mb-8 shrink-0">
-          <Link to="/dashboard" className="p-2 bg-surface dark:bg-surface-dark border border-subtle dark:border-subtle-dark rounded-lg hover:bg-app dark:hover:bg-elevated transition-colors shadow-sm">
+          
+          <Link 
+            id="tour-back-btn" 
+            to="/dashboard" 
+            onClick={() => { if (tourStep === 8) advanceTour(9); }} 
+            className="block p-2 bg-surface dark:bg-surface-dark border border-subtle dark:border-subtle-dark rounded-lg hover:bg-app dark:hover:bg-elevated transition-colors shadow-sm"
+          >
             <ArrowLeft size={20} />
           </Link>
+          
           <div className="flex gap-6 border-b border-transparent">
              <button onClick={() => setActiveTab('roster')} className={`text-xl font-bold tracking-tight pb-2 border-b-2 transition-colors ${activeTab === 'roster' ? 'border-ink text-primary dark:text-primary-dark' : 'border-transparent text-faint hover:text-muted-ink dark:hover:text-muted-dark'}`}>Roster</button>
-             <button onClick={() => setActiveTab('memberships')} className={`text-xl font-bold tracking-tight pb-2 border-b-2 transition-colors ${activeTab === 'memberships' ? 'border-ink text-primary dark:text-primary-dark' : 'border-transparent text-faint hover:text-muted-ink dark:hover:text-muted-dark'}`}>Memberships</button>
+             
+             <button 
+               id="tour-memberships-tab" 
+               onClick={() => { setActiveTab('memberships'); if (tourStep === 5) advanceTour(6); }} 
+               className={`text-xl font-bold tracking-tight pb-2 border-b-2 transition-colors ${activeTab === 'memberships' ? 'border-ink text-primary dark:text-primary-dark' : 'border-transparent text-faint hover:text-muted-ink dark:hover:text-muted-dark'}`}
+             >
+               Memberships
+             </button>
           </div>
         </div>
 
@@ -343,7 +598,12 @@ export default function Members() {
                   {SKILL_LEVELS.map(lvl => <option key={lvl.id} value={lvl.id}>{lvl.label}</option>)}
                 </select>
               </div>
-              <button onClick={openCreateModal} className="flex items-center justify-center gap-2 bg-ink hover:bg-ink-soft text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm shrink-0">
+              
+              <button 
+                id="tour-add-player" 
+                onClick={openCreateModal} 
+                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-ink hover:bg-ink-soft text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-all shadow-sm shrink-0"
+              >
                 <Plus size={16} /> {t('add_player')}
               </button>
             </div>
@@ -460,9 +720,14 @@ export default function Members() {
           <div className="flex flex-col lg:flex-row gap-6 flex-1 items-start animate-in fade-in">
             {/* Sidebar: Periods */}
             <div className="w-full lg:w-80 flex flex-col gap-4">
-              <button onClick={() => setIsPeriodModalOpen(true)} className="w-full bg-ink hover:bg-ink-soft text-white font-bold rounded-xl p-4 flex items-center justify-center gap-2 shadow-sm transition-colors">
+              <button 
+                id="tour-create-period" 
+                onClick={() => { if(tourStep === 6) { advanceTour(7); setIsPeriodModalOpen(true); } else { setIsPeriodModalOpen(true); } }} 
+                className="w-full bg-ink hover:bg-ink-soft text-white font-bold rounded-xl p-4 flex items-center justify-center gap-2 shadow-sm transition-all"
+              >
                 <Plus size={18} /> Create Membership Period
               </button>
+              
               <div className="flex flex-col gap-3">
                 {periods.length === 0 ? <p className="text-muted-ink text-sm text-center py-4">No periods found.</p> :
                   periods.map(period => (
@@ -497,9 +762,9 @@ export default function Members() {
                     </div>
                   </div>
                   <div className="p-4 border-b border-subtle dark:border-subtle-dark bg-surface dark:bg-surface-dark">
-                     <button onClick={openAddPeriodMemberModal} className="flex items-center gap-2 bg-muted hover:bg-muted dark:bg-elevated-dark dark:hover:bg-strong-dark text-primary dark:text-primary-dark px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm w-full sm:w-auto justify-center">
-                       <Users size={16} /> Add Members to Period
-                     </button>
+                      <button onClick={openAddPeriodMemberModal} className="flex items-center gap-2 bg-muted hover:bg-muted dark:bg-elevated-dark dark:hover:bg-strong-dark text-primary dark:text-primary-dark px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm w-full sm:w-auto justify-center">
+                        <Users size={16} /> Add Members to Period
+                      </button>
                   </div>
                   <div className="flex-1 overflow-y-auto">
                     <table className="w-full text-left">
@@ -530,15 +795,28 @@ export default function Members() {
 
       {/* Roster Add/Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-surface dark:bg-surface-dark w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90dvh]">
+        <div className="fixed inset-0 z-[2147483647] flex items-center justify-center p-4 bg-ink/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div id="tour-add-player-modal" className="bg-surface dark:bg-surface-dark w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90dvh] relative">
+            
+            {tourStep === 4 && (
+               <div className="bg-amber-500/10 border-b border-amber-500/30 p-4 text-amber-600 dark:text-amber-400 flex items-start gap-3">
+                 <Sparkles className="shrink-0 mt-0.5" size={18} />
+                 <div className="text-sm leading-relaxed">
+                   <strong className="font-bold text-amber-700 dark:text-amber-300">Create Your Player</strong><br/>
+                   Type any name, select their details, and hit <strong className="font-bold text-amber-700 dark:text-amber-300">Save Player</strong>. The cancel button is disabled so you have to finish this step! We will auto-generate 19 extra players to complete your 20-player roster.
+                 </div>
+               </div>
+            )}
+
             <div className="flex justify-between items-center p-5 border-b border-subtle dark:border-subtle-dark">
               <h3 className="font-bold text-lg">{isEditMode ? t('edit_player') : t('add_player')}</h3>
-              <button onClick={() => setIsModalOpen(false)} className="p-1.5 text-faint hover:bg-muted dark:hover:bg-elevated rounded-full transition-colors"><X size={18} /></button>
+              {tourStep !== 4 && (
+                <button onClick={() => setIsModalOpen(false)} className="p-1.5 text-faint hover:bg-muted dark:hover:bg-elevated rounded-full transition-colors"><X size={18} /></button>
+              )}
             </div>
 
             <div className="p-6 overflow-y-auto">
-              <form id="member-form" onSubmit={handleSubmit} className="flex flex-col gap-5">
+              <form id="member-form" onSubmit={handleSubmit} className="flex flex-col gap-5 relative">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className={labelStyles}>{t('name')}</label>
@@ -577,11 +855,11 @@ export default function Members() {
                   <div className="flex flex-col gap-4">
                     <div>
                       <label className={labelStyles}>{t('avoid_partner')}</label>
-                      <SearchableMultiSelect options={members.filter(m => m.id !== targetId)} value={formData.avoidPartnerIds} onChange={(val: number[]) => setFormData({...formData, avoidPartnerIds: val})} placeholder={t('search_restrict')} />
+                      <SearchableMultiSelect options={activeMembersList.filter(m => m.id !== targetId)} value={formData.avoidPartnerIds} onChange={(val: number[]) => setFormData({...formData, avoidPartnerIds: val})} placeholder={t('search_restrict')} />
                     </div>
                     <div>
                       <label className={labelStyles}>{t('avoid_opponent')}</label>
-                      <SearchableMultiSelect options={members.filter(m => m.id !== targetId)} value={formData.avoidOpponentIds} onChange={(val: number[]) => setFormData({...formData, avoidOpponentIds: val})} placeholder={t('search_restrict')} />
+                      <SearchableMultiSelect options={activeMembersList.filter(m => m.id !== targetId)} value={formData.avoidOpponentIds} onChange={(val: number[]) => setFormData({...formData, avoidOpponentIds: val})} placeholder={t('search_restrict')} />
                     </div>
                   </div>
                 </div>
@@ -589,8 +867,12 @@ export default function Members() {
             </div>
 
             <div className="p-5 border-t border-subtle dark:border-subtle-dark bg-app dark:bg-app-dark flex justify-end gap-3 shrink-0">
-              <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-sm font-medium text-muted-ink dark:text-muted-dark hover:bg-muted dark:hover:bg-elevated-dark rounded-lg transition-colors">{t('cancel')}</button>
-              <button type="submit" form="member-form" className="px-6 py-2.5 text-sm font-medium bg-ink hover:bg-ink-soft text-white rounded-lg shadow-sm transition-colors">{t('save_player')}</button>
+              {tourStep !== 4 && (
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-sm font-medium text-muted-ink dark:text-muted-dark hover:bg-muted dark:hover:bg-elevated-dark rounded-lg transition-colors">{t('cancel')}</button>
+              )}
+              <button disabled={isProcessing} type="submit" form="member-form" className="px-6 py-2.5 text-sm font-medium bg-ink hover:bg-ink-soft text-white rounded-lg shadow-sm transition-colors disabled:opacity-50">
+                 {isProcessing ? 'Generating...' : t('save_player')}
+              </button>
             </div>
           </div>
         </div>
@@ -598,11 +880,24 @@ export default function Members() {
 
       {/* Period Creation Modal */}
       {isPeriodModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-surface dark:bg-surface-dark w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-subtle dark:border-subtle-dark">
+        <div className="fixed inset-0 z-[2147483647] flex items-center justify-center p-4 bg-ink/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div id="tour-period-form-modal" className="bg-surface dark:bg-surface-dark w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-subtle dark:border-subtle-dark relative">
+            
+            {tourStep === 7 && (
+               <div className="bg-amber-500/10 border-b border-amber-500/30 p-4 text-amber-600 dark:text-amber-400 flex items-start gap-3">
+                 <Sparkles className="shrink-0 mt-0.5" size={18} />
+                 <div className="text-sm leading-relaxed">
+                   <strong className="font-bold text-amber-700 dark:text-amber-300">Set Up Details</strong><br/>
+                   Enter a Period Name (like "September 2026") and select the start and end dates, then click <strong>Create</strong> to continue.
+                 </div>
+               </div>
+            )}
+
             <div className="flex justify-between items-center p-5 border-b border-subtle dark:border-subtle-dark bg-app dark:bg-app-dark">
               <h3 className="font-bold text-lg">Create Period</h3>
-              <button onClick={() => setIsPeriodModalOpen(false)} className="p-1.5 text-faint hover:bg-muted dark:hover:bg-elevated-dark rounded-full transition-colors"><X size={18} /></button>
+              {tourStep !== 7 && (
+                <button onClick={() => setIsPeriodModalOpen(false)} className="p-1.5 text-faint hover:bg-muted dark:hover:bg-elevated-dark rounded-full transition-colors"><X size={18} /></button>
+              )}
             </div>
             <div className="p-6">
               <form id="period-form" onSubmit={handleCreatePeriod} className="flex flex-col gap-4">
@@ -620,9 +915,13 @@ export default function Members() {
                 </div>
               </form>
             </div>
-            <div className="p-5 border-t border-subtle dark:border-subtle-dark bg-app dark:bg-app-dark flex justify-end gap-3">
-              <button type="button" onClick={() => setIsPeriodModalOpen(false)} className="px-4 py-2 text-sm font-medium text-muted-ink dark:text-muted-dark hover:bg-muted dark:hover:bg-elevated-dark rounded-lg transition-colors">Cancel</button>
-              <button type="submit" form="period-form" className="px-5 py-2 text-sm font-medium bg-ink hover:bg-ink-soft text-white rounded-lg shadow-sm transition-colors">Create</button>
+            <div className="p-5 border-t border-subtle dark:border-subtle-dark bg-app dark:bg-app-dark flex justify-end gap-3 z-10 relative">
+              {tourStep !== 7 && (
+                <button type="button" onClick={() => setIsPeriodModalOpen(false)} className="px-4 py-2 text-sm font-medium text-muted-ink dark:text-muted-dark hover:bg-muted dark:hover:bg-elevated-dark rounded-lg transition-colors">Cancel</button>
+              )}
+              <button disabled={isProcessing} type="submit" form="period-form" className="px-5 py-2 text-sm font-medium bg-ink hover:bg-ink-soft text-white rounded-lg shadow-sm transition-colors disabled:opacity-50">
+                {isProcessing ? 'Generating...' : 'Create'}
+              </button>
             </div>
           </div>
         </div>
@@ -630,7 +929,7 @@ export default function Members() {
 
       {/* Add Member to Period Modal */}
       {isAddPeriodMemberModalOpen && selectedPeriod && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in">
+        <div className="fixed inset-0 z-[2147483647] flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in">
           <div className="bg-surface dark:bg-surface-dark w-full max-w-md rounded-2xl shadow-2xl flex flex-col max-h-[85dvh] overflow-hidden border border-subtle dark:border-subtle-dark">
             <div className="flex justify-between items-center p-5 border-b border-subtle dark:border-subtle-dark bg-app dark:bg-app-dark">
               <h3 className="font-bold text-lg">Add Members to Period</h3>

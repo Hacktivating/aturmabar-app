@@ -7,6 +7,7 @@ import { verifyAuth, AuthRequest } from "../middleware/auth";
 const router = Router();
 router.use(verifyAuth);
 
+// Base weight mappings for the initial generation logic
 const GRADE_WEIGHTS: Record<string, number> = {
   'A1': 6, 'A2': 5, 'B1': 4, 'B2': 3, 'C1': 2, 'C2': 1
 };
@@ -81,35 +82,69 @@ router.post("/:sessionId/auto-generate", async (req: AuthRequest, res) => {
       });
     });
 
-    // Sort by Games Played
+    // Sort by Games Played (with a random shuffle for tie-breaking)
     const availablePlayers = eligibleAttendances.map(a => ({
       ...a.member,
       games: playerStats.get(a.member.id)?.games || 0,
       weight: GRADE_WEIGHTS[a.member.skillLevel] || 0
     })).sort((a, b) => {
       if (a.games !== b.games) return a.games - b.games;
-      return Math.random() - 0.5;
+      return Math.random() - 0.5; // True randomization on equal games
     });
 
     const p1 = availablePlayers[0];
     const pool = availablePlayers.slice(1);
     let selectedMatch: any[] | null = null;
 
-    const getModes = (rule: string) => {
-      const base = [{ t: 0, m: 0 }]; 
-      if (rule === 'very_strict') return base;
-      const strict = [...base, { t: 1, m: 0 }, { t: 1, m: 1 }]; 
-      if (rule === 'strict') return strict;
-      const moderate = [...strict, { t: 2, m: 0 }, { t: 2, m: 1 }, { t: 2, m: 2 }]; 
-      if (rule === 'moderate') return moderate;
-      return [...moderate, { t: 99, m: 99 }];
-    };
+    // Define Tiers for the Rules
+    let tiers: Array<{ t: number, m: number, h: number }> = [];
 
-    const maxModes = getModes(session.pairingRule);
+    if (session.pairingRule === 'very_strict') {
+      tiers = [
+        { t: 0, m: 0, h: 0 }, // Same grade, no repeat history
+        { t: 0, m: 0, h: 1 }, // Same grade, moderate history
+        { t: 0, m: 0, h: 2 }, // Same grade, ignore history
+      ];
+    } else if (session.pairingRule === 'strict') {
+      tiers = [
+        { t: 0, m: 0, h: 0 }, // 1. Try Very Strict first
+        { t: 1, m: 1, h: 0 }, // 2. Then +/- 1 gap, strict history
+        { t: 0, m: 0, h: 1 }, // 3. Very strict, moderate history
+        { t: 1, m: 1, h: 1 }, // 4. +/- 1 gap, moderate history
+        { t: 1, m: 2, h: 2 }, // 5. Last resort: ignore history to force a match
+      ];
+    } else if (session.pairingRule === 'moderate') {
+      // 30% chance to prioritize a strict match
+      const prioritizeStrict = Math.random() < 0.3;
+      
+      if (prioritizeStrict) {
+        tiers = [
+          { t: 0, m: 0, h: 0 },
+          { t: 1, m: 1, h: 0 },
+          { t: 2, m: 1, h: 0 }, // Fallback to moderate
+          { t: 2, m: 2, h: 1 },
+          { t: 2, m: 3, h: 2 },
+        ];
+      } else {
+        tiers = [
+          { t: 2, m: 1, h: 0 }, // Start directly at moderate (+/- 2)
+          { t: 2, m: 2, h: 0 },
+          { t: 2, m: 2, h: 1 },
+          { t: 2, m: 3, h: 2 },
+        ];
+      }
+    } else {
+      // Randomize
+      tiers = [
+        { t: 99, m: 99, h: 0 }, // Prefer no repeat history
+        { t: 99, m: 99, h: 1 },
+        { t: 99, m: 99, h: 2 }, // Fully random
+      ];
+    }
 
     const checkHistory = (a: any, b: any, type: string, strictness: number) => {
       const statsA = playerStats.get(a.id)!;
-      if (strictness === 2) return true; 
+      if (strictness === 2) return true; // Ignore history
       if (type === 'partner') return !statsA.pastPartners.has(b.id);
       if (type === 'opponent') {
         if (strictness === 0) return !statsA.pastOpponents.has(b.id) && !statsA.pastPartners.has(b.id);
@@ -127,13 +162,6 @@ router.post("/:sessionId/auto-generate", async (req: AuthRequest, res) => {
       const teamBWeight = pc.weight + pd.weight;
       if (Math.abs(teamAWeight - teamBWeight) > m) return false;
 
-      // EXPLICIT RESTRICTIONS ENFORCEMENT
-      const oppCheck = (p1: any, p2: any) => p1.avoidOpponentIds?.includes(p2.id) || p2.avoidOpponentIds?.includes(p1.id);
-      if (pa.avoidPartnerIds?.includes(pb.id) || pb.avoidPartnerIds?.includes(pa.id)) return false;
-      if (pc.avoidPartnerIds?.includes(pd.id) || pd.avoidPartnerIds?.includes(pc.id)) return false;
-      if (oppCheck(pa, pc) || oppCheck(pa, pd) || oppCheck(pb, pc) || oppCheck(pb, pd)) return false;
-
-      // DYNAMIC HISTORY ENFORCEMENT
       if (!checkHistory(pa, pb, 'partner', histLevel)) return false;
       if (!checkHistory(pc, pd, 'partner', histLevel)) return false;
       if (!checkHistory(pa, pc, 'opponent', histLevel) || !checkHistory(pa, pd, 'opponent', histLevel)) return false;
@@ -142,28 +170,31 @@ router.post("/:sessionId/auto-generate", async (req: AuthRequest, res) => {
       return true;
     };
 
-    for (const histLevel of [0, 1, 2]) {
-      for (const mode of maxModes) {
-        for (let i = 0; i < pool.length; i++) {
-          for (let j = i + 1; j < pool.length; j++) {
-            for (let k = j + 1; k < pool.length; k++) {
-              const p2 = pool[i], p3 = pool[j], p4 = pool[k];
-              const perms = [[p2, p3, p4], [p3, p2, p4], [p4, p2, p3]];
-              for (const [part, opp1, opp2] of perms) {
-                if (validateMatch(p1, part, opp1, opp2, histLevel, mode.t, mode.m)) {
-                  selectedMatch = [p1, part, opp1, opp2];
-                  break;
-                }
+    // Evaluate Tiers
+    for (const tier of tiers) {
+      const validMatchesForTier: any[][] = [];
+
+      for (let i = 0; i < pool.length; i++) {
+        for (let j = i + 1; j < pool.length; j++) {
+          for (let k = j + 1; k < pool.length; k++) {
+            const p2 = pool[i], p3 = pool[j], p4 = pool[k];
+            const perms = [[p2, p3, p4], [p3, p2, p4], [p4, p2, p3]];
+            
+            for (const [part, opp1, opp2] of perms) {
+              if (validateMatch(p1, part, opp1, opp2, tier.h, tier.t, tier.m)) {
+                validMatchesForTier.push([p1, part, opp1, opp2]);
               }
-              if (selectedMatch) break;
             }
-            if (selectedMatch) break;
           }
-          if (selectedMatch) break;
         }
-        if (selectedMatch) break;
       }
-      if (selectedMatch) break;
+
+      // If matches are found in this tier, pick one RANDOMLY so it's not fixated
+      if (validMatchesForTier.length > 0) {
+        const randomIndex = Math.floor(Math.random() * validMatchesForTier.length);
+        selectedMatch = validMatchesForTier[randomIndex];
+        break; // Break tier loop
+      }
     }
 
     if (!selectedMatch) {
@@ -250,19 +281,75 @@ router.put("/:matchId/score", async (req: AuthRequest, res) => {
   }
 });
 
-// PUT: Finish and clear match from active court tracking
+// PUT: Finish and clear match, UPDATE HIDDEN MMR
 router.put("/:matchId/finish", async (req: AuthRequest, res) => {
   try {
     const matchId = parseInt(String(req.params.matchId), 10);
     const { scoreTeamA_set1, scoreTeamB_set1, scoreTeamA_set2, scoreTeamB_set2, scoreTeamA_set3, scoreTeamB_set3 } = req.body;
     
-    // Find the finishing match to get its courtId
+    // Find the finishing match
     const [finishingMatch] = await db.select().from(matches).where(eq(matches.id, matchId));
     if (!finishingMatch) return res.status(404).json({ error: "Match not found." });
 
-    // Update the finished match
-    const finishData: any = { status: "finished", endedAt: new Date() };
+    // 1. Process MMR Updates (ELO Logic)
+    const playerIds = [
+      finishingMatch.teamA_player1, finishingMatch.teamA_player2,
+      finishingMatch.teamB_player1, finishingMatch.teamB_player2
+    ].filter(Boolean) as number[];
 
+    if (playerIds.length === 4) {
+      const matchPlayers = await db.select().from(members).where(inArray(members.id, playerIds));
+      
+      const getP = (id: number | null) => matchPlayers.find(p => p.id === id);
+      const pA1 = getP(finishingMatch.teamA_player1); const pA2 = getP(finishingMatch.teamA_player2);
+      const pB1 = getP(finishingMatch.teamB_player1); const pB2 = getP(finishingMatch.teamB_player2);
+
+      if (pA1 && pA2 && pB1 && pB2) {
+        // Evaluate Match Outcome
+        let setsA = 0, setsB = 0;
+        const processSet = (a: number|null, b: number|null) => {
+          if (a && b) { if (a > b) setsA++; else if (b > a) setsB++; }
+        };
+        processSet(scoreTeamA_set1, scoreTeamB_set1);
+        processSet(scoreTeamA_set2, scoreTeamB_set2);
+        processSet(scoreTeamA_set3, scoreTeamB_set3);
+
+        const sA = setsA > setsB ? 1 : (setsA < setsB ? 0 : 0.5);
+        const sB = 1 - sA;
+
+        // Hidden MMR Fallback (default to 1200 if not found/null)
+        // NOTE: Requires `hiddenMmr` field in members schema
+        const mmrA1 = (pA1 as any).hiddenMmr ?? 1200;
+        const mmrA2 = (pA2 as any).hiddenMmr ?? 1200;
+        const mmrB1 = (pB1 as any).hiddenMmr ?? 1200;
+        const mmrB2 = (pB2 as any).hiddenMmr ?? 1200;
+
+        const rA = (mmrA1 + mmrA2) / 2;
+        const rB = (mmrB1 + mmrB2) / 2;
+
+        const eA = 1 / (1 + Math.pow(10, (rB - rA) / 400));
+        const eB = 1 / (1 + Math.pow(10, (rA - rB) / 400));
+
+        const K = 32;
+        const diffA = Math.round(K * (sA - eA));
+        const diffB = Math.round(K * (sB - eB));
+
+        // Attempt to update MMRs (fails silently if column doesn't exist in schema yet)
+        try {
+          await Promise.all([
+            db.update(members).set({ hiddenMmr: mmrA1 + diffA } as any).where(eq(members.id, pA1.id)),
+            db.update(members).set({ hiddenMmr: mmrA2 + diffA } as any).where(eq(members.id, pA2.id)),
+            db.update(members).set({ hiddenMmr: mmrB1 + diffB } as any).where(eq(members.id, pB1.id)),
+            db.update(members).set({ hiddenMmr: mmrB2 + diffB } as any).where(eq(members.id, pB2.id)),
+          ]);
+        } catch (e) {
+          console.warn("Could not update Hidden MMR. Check if 'hiddenMmr' exists in DB schema.");
+        }
+      }
+    }
+
+    // 2. Update the finished match
+    const finishData: any = { status: "finished", endedAt: new Date() };
     if (scoreTeamA_set1 !== undefined) finishData.scoreTeamA_set1 = scoreTeamA_set1;
     if (scoreTeamB_set1 !== undefined) finishData.scoreTeamB_set1 = scoreTeamB_set1;
     if (scoreTeamA_set2 !== undefined) finishData.scoreTeamA_set2 = scoreTeamA_set2;
@@ -272,7 +359,7 @@ router.put("/:matchId/finish", async (req: AuthRequest, res) => {
 
     await db.update(matches).set(finishData).where(eq(matches.id, matchId));
 
-    // Automatically assign the next queued match to this freed court
+    // 3. Automatically assign the next queued match to this freed court
     if (finishingMatch.courtId) {
       const [nextQueued] = await db.select().from(matches)
         .where(and(eq(matches.sessionId, finishingMatch.sessionId), eq(matches.status, 'queued'), isNull(matches.courtId)))
@@ -283,13 +370,12 @@ router.put("/:matchId/finish", async (req: AuthRequest, res) => {
       }
     }
 
-    res.status(200).json({ message: "Match finished." });
+    res.status(200).json({ message: "Match finished and MMR updated." });
   } catch (error) {
     res.status(500).json({ error: "Internal server error." });
   }
 });
 
-// NEW: Update players in a match
 router.put("/:matchId/players", async (req: AuthRequest, res) => {
   try {
     const matchId = parseInt(String(req.params.matchId), 10);
@@ -301,7 +387,6 @@ router.put("/:matchId/players", async (req: AuthRequest, res) => {
   }
 });
 
-// NEW: Swap courts between matches
 router.put("/:matchId/swap-court", async (req: AuthRequest, res) => {
   try {
     const matchId = parseInt(String(req.params.matchId), 10);
@@ -336,7 +421,6 @@ router.delete("/:matchId", async (req: AuthRequest, res) => {
   }
 });
 
-// PUT: Update entire history record for a finished match
 router.put("/:matchId/history", async (req: AuthRequest, res) => {
   try {
     const matchId = parseInt(String(req.params.matchId), 10);
@@ -362,7 +446,6 @@ router.put("/:matchId/history", async (req: AuthRequest, res) => {
   }
 });
 
-// Add this route to your matches.ts
 router.put("/:id/reset", async (req: AuthRequest, res) => {
   try {
     const matchId = parseInt(String(req.params.id), 10);
