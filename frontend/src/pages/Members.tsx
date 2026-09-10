@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { 
   Plus, X, Search, Edit2, Trash2, ChevronLeft, ChevronRight, Check, ArrowUpDown, 
   Zap, Globe, Sun, Moon, Settings, LogOut, ArrowLeft, Phone, Calendar, Users,
-  Sparkles, Wand2, CheckCircle, AlertCircle, Play, CalendarDays
+  Sparkles, CheckCircle, AlertCircle
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../api/axios';

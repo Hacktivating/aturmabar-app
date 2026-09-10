@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Maximize, Minimize, RotateCcw, ArrowRightLeft, Settings, Minus, ChevronLeft, Save, History, X, Trash2, Smartphone } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -336,18 +336,18 @@ export default function Scoreboard() {
                   
                   <div>
                     <label className="block text-xs font-bold text-zinc-400 mb-2">Points Per Set</label>
-                    <input type="number" value={settings.pointsPerSet} onChange={e => setSettings(prev => ({...prev, pointsPerSet: parseInt(e.target.value) || 21}))} className="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 text-white font-bold outline-none focus:border-blue-500" />
+                    <input type="number" value={settings.pointsPerSet} onChange={e => setSettings((prev: typeof settings) => ({...prev, pointsPerSet: parseInt(e.target.value) || 21}))} className="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 text-white font-bold outline-none focus:border-blue-500" />
                   </div>
                   
                   <div>
                     <label className="block text-xs font-bold text-zinc-400 mb-2">Maximum Sets (Best of)</label>
-                    <input type="number" value={settings.maxSets} onChange={e => setSettings(prev => ({...prev, maxSets: parseInt(e.target.value) || 3}))} className="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 text-white font-bold outline-none focus:border-blue-500" />
+                    <input type="number" value={settings.maxSets} onChange={e => setSettings((prev: typeof settings) => ({...prev, maxSets: parseInt(e.target.value) || 3}))} className="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 text-white font-bold outline-none focus:border-blue-500" />
                   </div>
 
                   <div className="flex items-center justify-between p-4 bg-black border border-zinc-800 rounded-xl">
                     <span className="font-bold text-sm text-zinc-300">Require Win by 2 Points (Deuce)</span>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" className="sr-only peer" checked={settings.winByTwo} onChange={() => setSettings(prev => ({...prev, winByTwo: !prev.winByTwo}))} />
+                      <input type="checkbox" className="sr-only peer" checked={settings.winByTwo} onChange={() => setSettings((prev: typeof settings) => ({...prev, winByTwo: !prev.winByTwo}))} />
                       <div className="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
                     </label>
                   </div>
@@ -355,7 +355,7 @@ export default function Scoreboard() {
                   {settings.winByTwo && (
                     <div>
                       <label className="block text-xs font-bold text-zinc-400 mb-2">Maximum Deuce Point Cap (e.g. 30)</label>
-                      <input type="number" value={settings.maxDeucePoint} onChange={e => setSettings(prev => ({...prev, maxDeucePoint: parseInt(e.target.value) || 30}))} className="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 text-white font-bold outline-none focus:border-amber-500" />
+                      <input type="number" value={settings.maxDeucePoint} onChange={e => setSettings((prev: typeof settings) => ({...prev, maxDeucePoint: parseInt(e.target.value) || 30}))} className="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 text-white font-bold outline-none focus:border-amber-500" />
                     </div>
                   )}
                 </div>

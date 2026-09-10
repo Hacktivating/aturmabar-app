@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, X, Search, Calendar, Trash2, ChevronLeft, ChevronRight, SlidersHorizontal, Banknote, Zap, Globe, Sun, Moon, Settings, LogOut, ArrowLeft, PlayCircle, CalendarDays, ShieldAlert, Sparkles, Wand2 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';

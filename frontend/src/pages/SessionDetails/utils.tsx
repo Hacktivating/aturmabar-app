@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export const useSafeTimer = (startedAt: string | null | undefined) => {
   const [elapsed, setElapsed] = useState(0);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Play, Settings as SettingsIcon, Trash2, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ArrowRightLeft } from 'lucide-react';
 import { MatchTimer, getGradeColor } from '../utils';
 

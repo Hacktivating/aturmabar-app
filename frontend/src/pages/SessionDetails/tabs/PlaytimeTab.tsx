@@ -1,8 +1,7 @@
-import React from 'react';
 import { Search } from 'lucide-react';
 import { getGradeColor, getMatchTypeColor } from '../utils';
 
-export const PlaytimeTab = ({ playtimeSearch, setPlaytimeSearch, playtimeData, setPlayerDetailModal, t, inputStyles }: any) => {
+export const PlaytimeTab = ({ playtimeSearch, setPlaytimeSearch, playtimeData, setPlayerDetailModal, t }: any) => {
   return (
     <div className="animate-in fade-in duration-200 max-w-5xl mx-auto">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">

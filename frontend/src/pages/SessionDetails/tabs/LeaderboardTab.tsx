@@ -1,10 +1,9 @@
-import React from 'react';
 import { Search, Medal } from 'lucide-react';
 import { getGradeColor } from '../utils';
 
 export const LeaderboardTab = ({
   session, communityData, leaderboardSearch, setLeaderboardSearch, lbLimitType, setLbLimitType,
-  lbCustomLimit, setLbCustomLimit, sessionLeaderboardData, sparringScore, t, inputStyles
+  lbCustomLimit, setLbCustomLimit, sessionLeaderboardData, sparringScore, t
 }: any) => {
   return (
     <div className="animate-in fade-in duration-200 max-w-5xl mx-auto">

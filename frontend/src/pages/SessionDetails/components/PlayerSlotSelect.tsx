@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Plus, ChevronDown, Search, ArrowRightLeft } from 'lucide-react';
 import { getGradeColor } from '../utils';
 

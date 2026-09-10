@@ -1,4 +1,3 @@
-import React from 'react';
 import { DollarSign, Users, RotateCcw, Search, TrendingUp, TrendingDown, Wallet, Check, X, Edit2, Plus, Trash2 } from 'lucide-react';
 import { formatCurrency } from '../utils';
 

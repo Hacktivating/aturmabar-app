@@ -1,6 +1,4 @@
-import React from 'react';
-import { Search, Edit2, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { getMatchTypeColor } from '../utils';
+import { Search, Edit2, Trash2 } from 'lucide-react';
 
 export const HistoryTab = ({
   historySearch, setHistorySearch, filteredHistory, maxSets, getMemberData, 

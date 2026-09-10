@@ -1,31 +1,29 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { lazy, Suspense, useEffect, useState, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Users, SquareStack, Play, History, Clock, Settings as SettingsIcon,
-  Plus, Check, Pause, X, Edit2, Zap, Globe, Sun, Moon, LogOut, ChevronDown, Search, 
-  Trash2, ArrowRightLeft, ListOrdered, AlertCircle, AlertTriangle, FileDown, Square, 
-  Trophy, Medal, Wallet, TrendingUp, TrendingDown, DollarSign, RotateCcw, CircleHelp,
+  Check, Pause, X, Zap, Globe, Sun, Moon, LogOut, ChevronDown, Search,
+  ArrowRightLeft, ListOrdered, AlertCircle, AlertTriangle, FileDown, Square,
+  Trophy, Wallet, RotateCcw, CircleHelp,
   ChevronLeft, ChevronRight, Lock, Unlock, Info, PlayCircle
 } from 'lucide-react';
 import api from '../../api/axios';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-import { SessionGlobalTimer, getGradeColor, getMatchTypeColor, formatCurrency } from './utils';
+import { SessionGlobalTimer, getGradeColor, getMatchTypeColor } from './utils';
 import { PlayerSlotSelect } from './components/PlayerSlotSelect';
 import { MatchCard } from './components/MatchCard'; 
 
-// Import Tabs
-import { AttendanceTab } from './tabs/AttendanceTab';
-import { CourtsTab } from './tabs/CourtsTab';
-import { MatchesTab } from './tabs/MatchesTab';
-import { BillingTab } from './tabs/BillingTab';
-import { HistoryTab } from './tabs/HistoryTab';
-import { LeaderboardTab } from './tabs/LeaderboardTab';
-import { PlaytimeTab } from './tabs/PlaytimeTab';
-import { SettingsTab } from './tabs/SettingsTab';
-import { CustomDateTimePicker } from '../../components/CustomDateTimePicker';
+const AttendanceTab = lazy(() => import('./tabs/AttendanceTab').then(module => ({ default: module.AttendanceTab })));
+const CourtsTab = lazy(() => import('./tabs/CourtsTab').then(module => ({ default: module.CourtsTab })));
+const MatchesTab = lazy(() => import('./tabs/MatchesTab').then(module => ({ default: module.MatchesTab })));
+const BillingTab = lazy(() => import('./tabs/BillingTab').then(module => ({ default: module.BillingTab })));
+const HistoryTab = lazy(() => import('./tabs/HistoryTab').then(module => ({ default: module.HistoryTab })));
+const LeaderboardTab = lazy(() => import('./tabs/LeaderboardTab').then(module => ({ default: module.LeaderboardTab })));
+const PlaytimeTab = lazy(() => import('./tabs/PlaytimeTab').then(module => ({ default: module.PlaytimeTab })));
+const SettingsTab = lazy(() => import('./tabs/SettingsTab').then(module => ({ default: module.SettingsTab })));
 
 const TABS = [
   { id: 'attendance', label: 'attendance', icon: <Users size={18} /> },
@@ -713,32 +711,34 @@ export default function SessionDetails() {
       <main className={`flex-1 p-4 sm:p-8 max-w-7xl w-full mx-auto ${activeTab === 'matches' && !isSimpleMode ? 'pb-24 lg:pb-8' : ''}`}>
         
         {/* NORMAL MODE TABS (Kept mounted with CSS display to eliminate lag) */}
-        <div className={isSimpleMode ? 'hidden' : 'contents'}>
-          <div className={activeTab === 'attendance' ? 'block' : 'hidden'}>
+        <Suspense fallback={<div className="rounded-2xl border border-subtle bg-surface p-8 text-center text-sm text-muted-ink dark:border-subtle-dark dark:bg-surface-dark dark:text-muted-dark">Loading tab…</div>}>
+          <div className={isSimpleMode ? 'hidden' : 'contents'}>
+          {activeTab === 'attendance' && (
              <AttendanceTab visibleAttendances={visibleAttendances} session={session} communityData={communityData} attendanceTeamTab={attendanceTeamTab} setAttendanceTeamTab={setAttendanceTeamTab} attendanceSearch={attendanceSearch} setAttendanceSearch={setAttendanceSearch} openWalkInModal={openWalkInModal} openAttendeeModal={openAttendeeModal} setPlayerDetailModal={setPlayerDetailModal} handleUpdateGrade={handleUpdateGrade} updateAttendanceStatus={updateAttendanceStatus} isProcessing={isProcessing} t={t} />
-          </div>
-          <div className={activeTab === 'courts' ? 'block' : 'hidden'}>
+          )}
+          {activeTab === 'courts' && (
              <CourtsTab courts={courts} editCourtId={editCourtId} setEditCourtId={setEditCourtId} courtName={courtName} setCourtName={setCourtName} handleAddCourt={handleAddCourt} handleUpdateCourt={handleUpdateCourt} setConfirmDeleteCourtId={setConfirmDeleteCourtId} isProcessing={isProcessing} t={t} inputStyles={inputStyles} />
-          </div>
-          <div className={activeTab === 'matches' ? 'block' : 'hidden'}>
+          )}
+          {activeTab === 'matches' && (
              <MatchesTab session={session} communityData={communityData} courts={courts} matches={matches} activeMatches={activeMatches} queuedMatchesList={queuedMatchesList} finishedMatches={finishedMatches} waitingListPlayers={waitingListPlayers} maxSets={maxSets} isProcessing={isProcessing} getMemberData={getMemberData} getInitialCourtName={getInitialCourtName} openEditMatchModal={openEditMatchModal} openEditHistoryModal={openEditHistoryModal} handleAutoGenerateCourt={handleAutoGenerateCourt} setSwapCourtModal={setSwapCourtModal} setConfirmDeleteMatchId={setConfirmDeleteMatchId} setConfirmResetMatchId={setConfirmResetMatchId} handleStartMatch={handleStartMatch} handleFinishMatch={handleFinishMatch} handleReorderQueue={handleReorderQueue} handleQueueMatch={handleQueueMatch} handleAutoFillAllCourts={handleAutoFillAllCourts} handleUpdateSparringMatch={handleUpdateSparringMatch} updateAttendanceStatus={updateAttendanceStatus} isWaitingListOpen={isWaitingListOpen} setIsWaitingListOpen={setIsWaitingListOpen} handleUpdateSessionRule={handleUpdateSessionRule} t={t} />
-          </div>
-          <div className={activeTab === 'billing' ? 'block' : 'hidden'}>
+          )}
+          {activeTab === 'billing' && (
              <BillingTab billingAttendances={billingAttendances} totalIncome={totalIncome} totalExpense={totalExpense} netBalance={netBalance} defaultFee={defaultFee} setDefaultFee={setDefaultFee} memberDefaultFee={memberDefaultFee} setMemberDefaultFee={setMemberDefaultFee} billingSearch={billingSearch} setBillingSearch={setBillingSearch} editingPaymentId={editingPaymentId} setEditingPaymentId={setEditingPaymentId} editPaymentValue={editPaymentValue} setEditPaymentValue={setEditPaymentValue} isProcessing={isProcessing} handleOpenImportModal={handleOpenImportModal} handleUpdateDefaultFee={handleUpdateDefaultFee} handleResetBilling={handleResetBilling} savePaymentAmount={savePaymentAmount} handleStatusChange={handleStatusChange} expenses={expenses} expenseForm={expenseForm} setExpenseForm={setExpenseForm} handleAddExpense={handleAddExpense} handleDeleteExpense={handleDeleteExpense} t={t} inputStyles={inputStyles} />
-          </div>
-          <div className={activeTab === 'history' ? 'block' : 'hidden'}>
+          )}
+          {activeTab === 'history' && (
              <HistoryTab historySearch={historySearch} setHistorySearch={setHistorySearch} filteredHistory={filteredHistory} maxSets={maxSets} getMemberData={getMemberData} getInitialCourtName={getInitialCourtName} openEditHistoryModal={openEditHistoryModal} setConfirmDeleteMatchId={setConfirmDeleteMatchId} isProcessing={isProcessing} t={t} />
-          </div>
-          <div className={activeTab === 'leaderboard' ? 'block' : 'hidden'}>
+          )}
+          {activeTab === 'leaderboard' && (
              <LeaderboardTab session={session} communityData={communityData} leaderboardSearch={leaderboardSearch} setLeaderboardSearch={setLeaderboardSearch} lbLimitType={lbLimitType} setLbLimitType={setLbLimitType} lbCustomLimit={lbCustomLimit} setLbCustomLimit={setLbCustomLimit} sessionLeaderboardData={sessionLeaderboardData} sparringScore={sparringScore} t={t} inputStyles={inputStyles} />
-          </div>
-          <div className={activeTab === 'playtime' ? 'block' : 'hidden'}>
+          )}
+          {activeTab === 'playtime' && (
              <PlaytimeTab playtimeSearch={playtimeSearch} setPlaytimeSearch={setPlaytimeSearch} playtimeData={playtimeData} setPlayerDetailModal={setPlayerDetailModal} t={t} inputStyles={inputStyles} />
-          </div>
-          <div className={activeTab === 'settings' ? 'block' : 'hidden'}>
+          )}
+          {activeTab === 'settings' && (
              <SettingsTab settingsForm={settingsForm} setSettingsForm={setSettingsForm} settingsLimitType={settingsLimitType} handleSaveSettings={handleSaveSettings} handleDeleteSession={handleDeleteSession} isProcessing={isProcessing} t={t} inputStyles={inputStyles} />
+          )}
           </div>
-        </div>
+        </Suspense>
 
         {/* SIMPLE MODE RENDERING */}
         <div className={!isSimpleMode ? 'hidden' : 'animate-in fade-in flex flex-col gap-6'}>

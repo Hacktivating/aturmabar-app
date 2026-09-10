@@ -1,45 +1,15 @@
-import React, { useMemo } from 'react';
-import { Plus, ListOrdered, Zap, AlertTriangle, ArrowRightLeft, Pause, Users, X, RotateCcw } from 'lucide-react';
+import { Plus, ListOrdered, Zap, AlertTriangle, Pause, Users, X, RotateCcw } from 'lucide-react';
 import { MatchCard } from '../components/MatchCard';
 import { MatchTimer, getGradeColor } from '../utils';
 
 export const MatchesTab = ({
-  session, communityData, courts, matches, activeMatches, queuedMatchesList, finishedMatches,
+  session, courts, matches, activeMatches, queuedMatchesList, finishedMatches,
   waitingListPlayers, maxSets, isProcessing, getMemberData, getInitialCourtName,
   openEditMatchModal, openEditHistoryModal, handleAutoGenerateCourt, setSwapCourtModal,
   setConfirmDeleteMatchId, setConfirmResetMatchId, handleStartMatch, handleFinishMatch,
   handleReorderQueue, handleQueueMatch, handleAutoFillAllCourts, handleUpdateSparringMatch,
   updateAttendanceStatus, isWaitingListOpen, setIsWaitingListOpen, handleUpdateSessionRule, t
 }: any) => {
-
-  const sparringScore = useMemo(() => {
-    let homeMatches = 0, awayMatches = 0;
-    let homeSets = 0, awaySets = 0;
-    let homePoints = 0, awayPoints = 0;
-
-    finishedMatches.forEach((m: any) => {
-      let hSets = 0, aSets = 0;
-      let hPts = 0, aPts = 0;
-
-      for (let i = 1; i <= maxSets; i++) {
-        const sa = m[`scoreTeamA_set${i}`] || 0; 
-        const sb = m[`scoreTeamB_set${i}`] || 0; 
-        if (sa > 0 || sb > 0 || i === 1) {
-          hPts += sa; aPts += sb;
-          if (sa > sb) hSets++;
-          else if (sb > sa) aSets++;
-        }
-      }
-      
-      homeSets += hSets; awaySets += aSets;
-      homePoints += hPts; awayPoints += aPts;
-
-      if (hSets > aSets) homeMatches++;
-      else if (aSets > hSets) awayMatches++;
-    });
-
-    return { homeMatches, awayMatches, homeSets, awaySets, homePoints, awayPoints };
-  }, [finishedMatches, maxSets]);
 
   const renderWaitingListContent = () => (
     <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">

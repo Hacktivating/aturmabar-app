@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Zap, LogOut, Settings, X, ShieldAlert, User, Lock, Globe, Image as ImageIcon,
   Upload, Sun, Moon, Users, CalendarDays, Trophy, ChevronRight, AlertCircle,
-  Calendar, Clock, Play, CheckCircle, Info, Sparkles, Wand2, Trash2
+  Calendar, Clock, Play, CheckCircle, Sparkles, Wand2, Trash2
 } from 'lucide-react';
 import api from '../api/axios';
 

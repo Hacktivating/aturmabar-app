@@ -1,4 +1,3 @@
-import React from 'react';
 import { Plus, GripVertical, Check, X, Edit2, Trash2 } from 'lucide-react';
 
 export const CourtsTab = ({

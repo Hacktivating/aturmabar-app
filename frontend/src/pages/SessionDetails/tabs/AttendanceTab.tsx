@@ -1,4 +1,3 @@
-import React from 'react';
 import { Search, UserPlus, Plus, Info, Pause, Check, X } from 'lucide-react';
 import { getGradeColor } from '../utils';
 
