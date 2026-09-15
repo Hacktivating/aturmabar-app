@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Play, Settings as SettingsIcon, Trash2, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ArrowRightLeft } from 'lucide-react';
-import { MatchTimer, getGradeColor } from '../utils';
+import { MatchTimer } from '../utils';
 
 export const MatchCard = ({ match, court, sessionStatus, maxSets, isProcessing, getMemberData, openEditMatchModal, handleAutoGenerateCourt, setSwapCourtModal, setConfirmDeleteMatchId, setConfirmResetMatchId, handleStartMatch, handleFinishMatch, handleReorderQueue, queueIndex, totalQueued, t }: any) => {
   const [currentSet, setCurrentSet] = useState(1);
@@ -41,8 +41,13 @@ export const MatchCard = ({ match, court, sessionStatus, maxSets, isProcessing, 
   const numA = parseInt(scores[`a${currentSet}` as keyof typeof scores]) || 0;
   const numB = parseInt(scores[`b${currentSet}` as keyof typeof scores]) || 0;
 
+  const tAName1 = getMemberData(match.teamA_player1)?.name?.split(' ')[0] || 'TBD';
+  const tAName2 = getMemberData(match.teamA_player2)?.name?.split(' ')[0] || '';
+  const tBName1 = getMemberData(match.teamB_player1)?.name?.split(' ')[0] || 'TBD';
+  const tBName2 = getMemberData(match.teamB_player2)?.name?.split(' ')[0] || '';
+
   return (
-    <div className={`bg-surface dark:bg-surface-dark border ${isActive ? 'border-emerald-200 dark:border-emerald-900/50 shadow-md ring-1 ring-emerald-500/20' : 'border-subtle dark:border-subtle-dark shadow-sm'} rounded-xl overflow-hidden flex flex-col h-full transition-all`}>
+    <div className={`bg-surface dark:bg-surface-dark border ${isActive ? 'border-emerald-300 dark:border-emerald-700 shadow-md ring-2 ring-emerald-500/20' : 'border-subtle dark:border-subtle-dark shadow-sm'} rounded-xl overflow-hidden flex flex-col h-full transition-all`}>
       <div className="p-3 flex justify-between items-center border-b border-subtle dark:border-subtle-dark bg-app dark:bg-app-dark">
         <div className="flex items-center gap-2">
           <h3 className="font-bold text-sm text-primary dark:text-primary-dark tracking-wide">{court ? court.name : 'Queued'}</h3>
@@ -74,31 +79,41 @@ export const MatchCard = ({ match, court, sessionStatus, maxSets, isProcessing, 
           </div>
         )}
         
-        <div className="flex flex-col gap-3 mb-4">
+        <div className="flex flex-col mb-4">
           <div className="relative mt-1">
-            <div className="absolute -top-2 left-2 bg-surface dark:bg-surface-dark px-1 text-[9px] text-muted-ink font-bold uppercase z-10">{match.matchType}</div>
-            <div className="flex border border-subtle dark:border-subtle-dark rounded-lg overflow-hidden bg-app dark:bg-app-dark">
-              <div className="flex-1 p-2.5 flex items-center justify-between border-r border-subtle dark:border-subtle-dark">
-                <span className="font-semibold text-xs truncate dark:text-primary-dark">{getMemberData(match.teamA_player1)?.name || 'TBD'}</span>
-                <span className={`text-[9px] border px-1 py-0.5 rounded font-mono font-bold ${getGradeColor(getMemberData(match.teamA_player1)?.skillLevel)}`}>{getMemberData(match.teamA_player1)?.skillLevel || '-'}</span>
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-surface dark:bg-surface-dark px-2 text-[10px] text-muted-ink font-black uppercase tracking-widest z-10 border border-subtle dark:border-subtle-dark rounded-full shadow-sm">{match.matchType}</div>
+            
+            <div className="flex border border-subtle dark:border-subtle-dark rounded-xl overflow-hidden shadow-sm">
+              {/* Team A Badge - Highly Visible Blue */}
+              <div className="flex-1 p-2.5 sm:p-3 flex flex-col justify-center border-r border-blue-200 dark:border-blue-800 bg-blue-100 dark:bg-blue-900/40">
+                <div className="flex justify-between items-center mb-1.5 gap-2">
+                  <span className="font-bold text-xs sm:text-sm truncate text-blue-900 dark:text-blue-100">{getMemberData(match.teamA_player1)?.name || 'TBD'}</span>
+                  <span className="text-[9px] border px-1.5 py-0.5 rounded font-mono font-bold bg-white/60 dark:bg-black/30 border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-200 shrink-0">
+                    {getMemberData(match.teamA_player1)?.skillLevel || '-'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center gap-2">
+                  <span className="font-bold text-xs sm:text-sm truncate text-blue-900 dark:text-blue-100">{getMemberData(match.teamA_player2)?.name || 'TBD'}</span>
+                  <span className="text-[9px] border px-1.5 py-0.5 rounded font-mono font-bold bg-white/60 dark:bg-black/30 border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-200 shrink-0">
+                    {getMemberData(match.teamA_player2)?.skillLevel || '-'}
+                  </span>
+                </div>
               </div>
-              <div className="flex-1 p-2.5 flex items-center justify-between">
-                <span className="font-semibold text-xs truncate dark:text-primary-dark">{getMemberData(match.teamA_player2)?.name || 'TBD'}</span>
-                <span className={`text-[9px] border px-1 py-0.5 rounded font-mono font-bold ${getGradeColor(getMemberData(match.teamA_player2)?.skillLevel)}`}>{getMemberData(match.teamA_player2)?.skillLevel || '-'}</span>
-              </div>
-            </div>
-          </div>
-          <div className="text-center text-faint dark:text-muted-dark text-[9px] font-bold tracking-widest uppercase -my-1">{t('vs', 'VS')}</div>
-          <div className="relative">
-            <div className="absolute -top-2 left-2 bg-surface dark:bg-surface-dark px-1 text-[9px] text-muted-ink font-bold uppercase z-10">{match.matchType}</div>
-            <div className="flex border border-subtle dark:border-subtle-dark rounded-lg overflow-hidden bg-app dark:bg-app-dark">
-              <div className="flex-1 p-2.5 flex items-center justify-between border-r border-subtle dark:border-subtle-dark">
-                <span className="font-semibold text-xs truncate dark:text-primary-dark">{getMemberData(match.teamB_player1)?.name || 'TBD'}</span>
-                <span className={`text-[9px] border px-1 py-0.5 rounded font-mono font-bold ${getGradeColor(getMemberData(match.teamB_player1)?.skillLevel)}`}>{getMemberData(match.teamB_player1)?.skillLevel || '-'}</span>
-              </div>
-              <div className="flex-1 p-2.5 flex items-center justify-between">
-                <span className="font-semibold text-xs truncate dark:text-primary-dark">{getMemberData(match.teamB_player2)?.name || 'TBD'}</span>
-                <span className={`text-[9px] border px-1 py-0.5 rounded font-mono font-bold ${getGradeColor(getMemberData(match.teamB_player2)?.skillLevel)}`}>{getMemberData(match.teamB_player2)?.skillLevel || '-'}</span>
+              
+              {/* Team B Badge - Highly Visible Rose */}
+              <div className="flex-1 p-2.5 sm:p-3 flex flex-col justify-center bg-rose-100 dark:bg-rose-900/40">
+                <div className="flex justify-between items-center mb-1.5 gap-2">
+                  <span className="font-bold text-xs sm:text-sm truncate text-rose-900 dark:text-rose-100">{getMemberData(match.teamB_player1)?.name || 'TBD'}</span>
+                  <span className="text-[9px] border px-1.5 py-0.5 rounded font-mono font-bold bg-white/60 dark:bg-black/30 border-rose-200 dark:border-rose-700 text-rose-800 dark:text-rose-200 shrink-0">
+                    {getMemberData(match.teamB_player1)?.skillLevel || '-'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center gap-2">
+                  <span className="font-bold text-xs sm:text-sm truncate text-rose-900 dark:text-rose-100">{getMemberData(match.teamB_player2)?.name || 'TBD'}</span>
+                  <span className="text-[9px] border px-1.5 py-0.5 rounded font-mono font-bold bg-white/60 dark:bg-black/30 border-rose-200 dark:border-rose-700 text-rose-800 dark:text-rose-200 shrink-0">
+                    {getMemberData(match.teamB_player2)?.skillLevel || '-'}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -106,7 +121,7 @@ export const MatchCard = ({ match, court, sessionStatus, maxSets, isProcessing, 
 
         <div className="mt-auto flex gap-2">
           {isActive ? (
-            <form onSubmit={(e) => { e.preventDefault(); if(!isProcessing) handleFinishMatch(match.id, true, scores); }} className="w-full flex flex-col gap-2 mt-auto">
+            <form onSubmit={(e) => { e.preventDefault(); if(!isProcessing) handleFinishMatch(match.id, true, scores, court?.id); }} className="w-full flex flex-col gap-2 mt-auto">
               <div className="bg-app dark:bg-app-dark border border-subtle dark:border-subtle-dark p-3 rounded-xl relative">
                 {maxSets > 1 && (
                   <div className="flex items-center justify-between mb-3 bg-surface dark:bg-surface-dark rounded-md p-1 border border-subtle dark:border-subtle-dark">
@@ -115,27 +130,40 @@ export const MatchCard = ({ match, court, sessionStatus, maxSets, isProcessing, 
                     <button type="button" onClick={() => setCurrentSet(c => c + 1)} disabled={currentSet >= maxSets || isProcessing} className="p-1 text-muted-ink hover:text-ink disabled:opacity-30 transition-colors"><ChevronRight size={14}/></button>
                   </div>
                 )}
-                <div className="flex justify-between items-center mb-2 text-[9px] font-bold text-faint uppercase tracking-widest px-1">
-                  <span className="truncate max-w-[100px]">{getMemberData(match.teamA_player1)?.name?.split(' ')[0]} & {getMemberData(match.teamA_player2)?.name?.split(' ')[0]}</span>
-                  <span className="truncate max-w-[100px] text-right">{getMemberData(match.teamB_player1)?.name?.split(' ')[0]} & {getMemberData(match.teamB_player2)?.name?.split(' ')[0]}</span>
+                
+                {/* Visual UI scoring enhancement! */}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 flex flex-col items-center bg-blue-50/80 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3 shadow-inner">
+                    <span className="text-[10px] font-bold text-blue-800 dark:text-blue-300 mb-2 truncate w-full text-center tracking-wide uppercase">
+                      {tAName1} {match.teamA_player2 && `& ${tAName2}`}
+                    </span>
+                    <input 
+                      type="number" placeholder="0" disabled={isProcessing}
+                      onWheel={(e) => e.currentTarget.blur()}
+                      value={scores[`a${currentSet}` as keyof typeof scores]} 
+                      onChange={(e) => setScores(p => ({...p, [`a${currentSet}`]: e.target.value}))} 
+                      className={`w-full bg-white dark:bg-app-dark border-2 ${numA > numB && numA > 0 ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-blue-100 dark:border-blue-900/50 text-blue-900 dark:text-blue-100 focus:border-blue-400'} rounded-lg py-3 sm:py-4 text-center font-black text-3xl outline-none transition-all disabled:opacity-50 shadow-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`} 
+                    />
+                  </div>
+
+                  <div className="text-faint dark:text-muted-dark font-black text-sm uppercase tracking-widest shrink-0">VS</div>
+
+                  <div className="flex-1 flex flex-col items-center bg-rose-50/80 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-xl p-3 shadow-inner">
+                    <span className="text-[10px] font-bold text-rose-800 dark:text-rose-300 mb-2 truncate w-full text-center tracking-wide uppercase">
+                      {tBName1} {match.teamB_player2 && `& ${tBName2}`}
+                    </span>
+                    <input 
+                      type="number" placeholder="0" disabled={isProcessing}
+                      onWheel={(e) => e.currentTarget.blur()}
+                      value={scores[`b${currentSet}` as keyof typeof scores]} 
+                      onChange={(e) => setScores(p => ({...p, [`b${currentSet}`]: e.target.value}))} 
+                      className={`w-full bg-white dark:bg-app-dark border-2 ${numB > numA && numB > 0 ? 'border-rose-500 text-rose-600 dark:text-rose-400' : 'border-rose-100 dark:border-rose-900/50 text-rose-900 dark:text-rose-100 focus:border-rose-400'} rounded-lg py-3 sm:py-4 text-center font-black text-3xl outline-none transition-all disabled:opacity-50 shadow-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`} 
+                    />
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <input 
-                    type="number" placeholder="0" disabled={isProcessing}
-                    value={scores[`a${currentSet}` as keyof typeof scores]} 
-                    onChange={(e) => setScores(p => ({...p, [`a${currentSet}`]: e.target.value}))} 
-                    className={`flex-1 w-full bg-surface dark:bg-surface-dark border-2 ${numA > numB && numA > 0 ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'border-subtle dark:border-subtle-dark text-primary dark:text-primary-dark focus:border-ink'} rounded-lg py-3 text-center font-bold text-2xl outline-none transition-colors disabled:opacity-50`} 
-                  />
-                  <span className="text-faint dark:text-muted-dark font-black text-sm">-</span>
-                  <input 
-                    type="number" placeholder="0" disabled={isProcessing}
-                    value={scores[`b${currentSet}` as keyof typeof scores]} 
-                    onChange={(e) => setScores(p => ({...p, [`b${currentSet}`]: e.target.value}))} 
-                    className={`flex-1 w-full bg-surface dark:bg-surface-dark border-2 ${numB > numA && numB > 0 ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'border-subtle dark:border-subtle-dark text-primary dark:text-primary-dark focus:border-ink'} rounded-lg py-3 text-center font-bold text-2xl outline-none transition-colors disabled:opacity-50`} 
-                  />
-                </div>
+
               </div>
-              <button type="submit" disabled={isProcessing} className="w-full bg-ink hover:bg-ink-soft text-white py-2.5 rounded-lg text-xs font-bold transition-colors shadow-sm mt-1 disabled:opacity-50">
+              <button type="submit" disabled={isProcessing} className="w-full bg-ink hover:bg-ink-soft text-white py-3 rounded-lg text-sm font-bold transition-colors shadow-sm mt-2 disabled:opacity-50">
                 {t('finish_free_court', 'Finish & Free Court')}
               </button>
               <button type="button" disabled={isProcessing} onClick={() => setConfirmResetMatchId(match.id)} className="w-full bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-500 py-2.5 rounded-lg text-xs font-bold transition-colors mt-1 disabled:opacity-50">

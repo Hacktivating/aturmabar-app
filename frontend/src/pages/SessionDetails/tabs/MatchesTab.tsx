@@ -82,21 +82,21 @@ export const MatchesTab = ({
                   <tr key={m.id} className={`hover:bg-app dark:hover:bg-elevated-dark/30 transition-colors ${m.status === 'on_court' ? 'bg-emerald-50/50 dark:bg-emerald-900/10' : ''}`}>
                     <td className="px-4 py-3 font-bold text-muted-ink dark:text-muted-dark whitespace-nowrap">{m.name}</td>
                     
-                    {/* Home Team */}
+                    {/* Home Team (Blue) */}
                     <td className="px-4 py-3">
                        <div onClick={() => openEditMatchModal(m)} className="cursor-pointer hover:opacity-80 transition-opacity">
                          {isTeamA ? (
                            <div className="flex flex-col gap-1">
-                             <span className="font-bold text-primary dark:text-white truncate">{getMemberData(m.teamA_player1)?.name || 'TBD'}</span>
-                             <span className="font-bold text-primary dark:text-white truncate">{getMemberData(m.teamA_player2)?.name || 'TBD'}</span>
+                             <span className="font-bold text-blue-600 dark:text-blue-400 truncate">{getMemberData(m.teamA_player1)?.name || 'TBD'}</span>
+                             <span className="font-bold text-blue-600 dark:text-blue-400 truncate">{getMemberData(m.teamA_player2)?.name || 'TBD'}</span>
                            </div>
                          ) : (
-                           <span className="text-xs font-bold text-ink dark:text-ink-dark flex items-center gap-1"><Plus size={14}/> Add Home</span>
+                           <span className="text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1"><Plus size={14}/> Add Home</span>
                          )}
                        </div>
                     </td>
 
-                    {/* Away Team */}
+                    {/* Away Team (Rose) */}
                     <td className="px-4 py-3">
                        <div onClick={() => openEditMatchModal(m)} className="cursor-pointer hover:opacity-80 transition-opacity">
                          {isTeamB ? (

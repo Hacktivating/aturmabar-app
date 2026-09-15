@@ -3,8 +3,8 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Users, SquareStack, Play, History, Clock, Settings as SettingsIcon,
-  Check, Pause, X, Zap, Globe, Sun, Moon, LogOut, ChevronDown, Search,
-  ArrowRightLeft, ListOrdered, AlertCircle, AlertTriangle, FileDown, Square,
+  Check, Pause, X, Zap, Globe, Sun, Moon, LogOut, ChevronDown, Search, 
+  ArrowRightLeft, ListOrdered, AlertCircle, AlertTriangle, FileDown, Square, 
   Trophy, Wallet, RotateCcw, CircleHelp,
   ChevronLeft, ChevronRight, Lock, Unlock, Info, PlayCircle
 } from 'lucide-react';
@@ -97,17 +97,13 @@ export default function SessionDetails() {
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== toastId)), 4000);
   };
 
-  // --- HARDENED "NO TRICKS" SIMPLE MODE TRAP ---
   useEffect(() => {
     if (isSimpleMode) {
-      // 1. Trap the Back Button (Swipes / Native Browser Back)
       window.history.pushState(null, '', window.location.href);
       const handlePopState = () => {
         window.history.pushState(null, '', window.location.href);
         addToast("Exit Simple Mode using your PIN to navigate away.", "error");
       };
-
-      // 2. Warn on Browser Refresh or Tab Close
       const handleBeforeUnload = (e: BeforeUnloadEvent) => {
         e.preventDefault();
         e.returnValue = 'Are you sure you want to leave? Simple Mode is still active.';
@@ -386,7 +382,7 @@ export default function SessionDetails() {
     }
     setAdminPin(tempPin);
     localStorage.setItem('simple_mode_pin', tempPin);
-    localStorage.setItem(`simple_mode_${id}`, 'true'); // Persist lock
+    localStorage.setItem(`simple_mode_${id}`, 'true'); 
     setIsEnterSimpleModeOpen(false);
     setIsSimpleMode(true);
     setShowSimpleTutorial(true);
@@ -401,7 +397,7 @@ export default function SessionDetails() {
         setIsSimpleMode(false);
         setShowSimpleExit(false);
         setSimplePin('');
-        localStorage.removeItem(`simple_mode_${id}`); // Remove lock
+        localStorage.removeItem(`simple_mode_${id}`); 
         addToast("Exited Simple Mode");
       } else {
         alert("Incorrect PIN.");
@@ -416,7 +412,7 @@ export default function SessionDetails() {
         setShowSimpleExit(false);
         setSimplePin('');
         setUnlockMethod('pin');
-        localStorage.removeItem(`simple_mode_${id}`); // Remove lock
+        localStorage.removeItem(`simple_mode_${id}`);
         addToast("Exited Simple Mode via Password");
       } catch (err: any) {
         const backendError = err.response?.data?.error;
@@ -480,17 +476,74 @@ export default function SessionDetails() {
   const handleAddCourt = async () => { if (isProcessing) return; setIsProcessing(true); try { await api.post(`/sessions/${id}/courts`, { name: `Court ${courts.length + 1}` }); await fetchSessionData(); addToast(String(t('court_added', { defaultValue: "Court added" }))); } catch (err) { addToast("Error adding court", "error"); } finally { setIsProcessing(false); } };
   const handleUpdateCourt = async (courtId: number, isActive: boolean, name?: string) => { if (isProcessing) return; setIsProcessing(true); try { await api.put(`/sessions/${id}/courts/${courtId}`, { isActive, name: name || courts.find(c => c.id === courtId)?.name }); setEditCourtId(null); await fetchSessionData(); addToast(String(t('court_updated', { defaultValue: "Court updated" }))); } catch (err) { addToast("Error updating court", "error"); } finally { setIsProcessing(false); } };
   const handleConfirmDeleteCourt = async () => { if (!confirmDeleteCourtId || isProcessing) return; setIsProcessing(true); try { await api.delete(`/sessions/${id}/courts/${confirmDeleteCourtId}`); await fetchSessionData(); addToast(String(t('court_deleted', { defaultValue: "Court deleted" }))); } catch (err) { addToast("Error deleting court", "error"); } finally { setConfirmDeleteCourtId(null); setIsProcessing(false); } };
-  const handleAutoGenerateCourt = async (courtId: number) => { if (isProcessing) return; setIsProcessing(true); try { await api.post(`/matches/${id}/auto-generate`, { courtId }); await fetchSessionData(); addToast("Match generated successfully"); } catch (err: any) { addToast(err.response?.data?.error || "Error generating match", "error"); } finally { setIsProcessing(false); } };
-  const handleAutoFillAllCourts = async () => { if (isProcessing) return; setIsProcessing(true); try { const emptyCourts = courts.filter(c => c.isActive && !matches.find(m => m.courtId === c.id && (m.status === 'on_court' || m.status === 'queued'))); let generated = 0; for (const court of emptyCourts) { try { await api.post(`/matches/${id}/auto-generate`, { courtId: court.id }); generated++; } catch (err) { break; } } await fetchSessionData(); if (generated > 0) addToast(`Successfully filled ${generated} court(s)`); else addToast("Not enough available players", "error"); } finally { setIsProcessing(false); } };
+  
+  // --- NATIVE QUEUE LOGIC UPGRADES ---
+  const handleAutoGenerateCourt = async (courtId: number) => { 
+    if (isProcessing) return; setIsProcessing(true); 
+    try { 
+      const queuedMatch = queuedMatchesList.find(m => m.courtId === null);
+      if (queuedMatch) {
+          await api.put(`/matches/${queuedMatch.id}/swap-court`, { targetCourtId: courtId });
+      } else {
+          await api.post(`/matches/${id}/auto-generate`, { courtId }); 
+      }
+      await fetchSessionData(); 
+      addToast("Match assigned to court successfully"); 
+    } catch (err: any) { addToast(err.response?.data?.error || "Error generating match", "error"); } 
+    finally { setIsProcessing(false); } 
+  };
+
+  const handleAutoFillAllCourts = async () => { 
+    if (isProcessing) return; setIsProcessing(true); 
+    try { 
+      const emptyCourts = courts.filter(c => c.isActive && !matches.find(m => m.courtId === c.id && (m.status === 'on_court' || m.status === 'queued'))); 
+      let generated = 0; 
+      let queueIndex = 0;
+      for (const court of emptyCourts) { 
+        try { 
+          if (queueIndex < queuedMatchesList.length) {
+             const queuedMatch = queuedMatchesList[queueIndex];
+             await api.put(`/matches/${queuedMatch.id}/swap-court`, { targetCourtId: court.id });
+             queueIndex++;
+             generated++;
+          } else {
+             await api.post(`/matches/${id}/auto-generate`, { courtId: court.id }); 
+             generated++;
+          }
+        } catch (err) { break; } 
+      } 
+      await fetchSessionData(); 
+      if (generated > 0) addToast(`Successfully filled ${generated} court(s)`); else addToast("Not enough available players", "error"); 
+    } finally { setIsProcessing(false); } 
+  };
+
   const handleQueueMatch = async () => { if (isProcessing) return; setIsProcessing(true); try { await api.post(`/matches/${id}/auto-generate`, { courtId: null }); await fetchSessionData(); addToast(String(t('match_queued', { defaultValue: "Match added to queue" }))); } catch (err: any) { addToast(err.response?.data?.error || "Error generating match", "error"); } finally { setIsProcessing(false); } };
   const handleStartMatch = async (matchId: number) => { if (isProcessing) return; setIsProcessing(true); try { await api.put(`/matches/${matchId}/start`); await fetchSessionData(); addToast(String(t('match_started', { defaultValue: "Match started" }))); } catch (err) { addToast("Error starting match", "error"); } finally { setIsProcessing(false); } };
   
-  const handleFinishMatch = async (matchId: number, saveScore: boolean, scores?: any) => {
+  const handleFinishMatch = async (matchId: number, saveScore: boolean, scores?: any, freedCourtId?: number) => {
     if (isProcessing) return; setIsProcessing(true);
     try {
       const payload: any = {};
-      if (saveScore && scores) { payload.scoreTeamA_set1 = parseInt(scores.a1) || 0; payload.scoreTeamB_set1 = parseInt(scores.b1) || 0; payload.scoreTeamA_set2 = parseInt(scores.a2) || 0; payload.scoreTeamB_set2 = parseInt(scores.b2) || 0; payload.scoreTeamA_set3 = parseInt(scores.a3) || 0; payload.scoreTeamB_set3 = parseInt(scores.b3) || 0; }
-      await api.put(`/matches/${matchId}/finish`, payload); await fetchSessionData(); addToast(String(t('match_finished', { defaultValue: "Match finished" })));
+      if (saveScore && scores) { 
+          payload.scoreTeamA_set1 = parseInt(scores.a1) || 0; 
+          payload.scoreTeamB_set1 = parseInt(scores.b1) || 0; 
+          payload.scoreTeamA_set2 = parseInt(scores.a2) || 0; 
+          payload.scoreTeamB_set2 = parseInt(scores.b2) || 0; 
+          payload.scoreTeamA_set3 = parseInt(scores.a3) || 0; 
+          payload.scoreTeamB_set3 = parseInt(scores.b3) || 0; 
+      }
+      await api.put(`/matches/${matchId}/finish`, payload); 
+      
+      // Auto-pull the very top of our visual queue into the freed court!
+      if (freedCourtId) {
+          const topQueued = queuedMatchesList[0];
+          if (topQueued) {
+              await api.put(`/matches/${topQueued.id}/swap-court`, { targetCourtId: freedCourtId });
+          }
+      }
+      
+      await fetchSessionData(); 
+      addToast(String(t('match_finished', { defaultValue: "Match finished" })));
     } catch (err) { addToast("Error finishing match", "error"); } finally { setIsProcessing(false); }
   };
 
@@ -506,10 +559,29 @@ export default function SessionDetails() {
   };
   
   const handleSwapCourt = async (matchId: number, targetCourtId: number | null) => { if (isProcessing) return; setIsProcessing(true); try { await api.put(`/matches/${matchId}/swap-court`, { targetCourtId }); setSwapCourtModal(null); await fetchSessionData(); addToast(String(t('court_swapped', { defaultValue: "Court swapped successfully" }))); } catch (err) { addToast("Error swapping courts", "error"); } finally { setIsProcessing(false); } };
+  
   const handleReorderQueue = async (currentIndex: number, direction: 'up'|'down') => {
-    if (isProcessing) return; const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1; if (targetIndex < 0 || targetIndex >= queuedMatchesList.length) return; setIsProcessing(true);
-    try { const m1 = queuedMatchesList[currentIndex]; const m2 = queuedMatchesList[targetIndex]; await Promise.all([ api.put(`/matches/${m1.id}/players`, { teamA_player1: m2.teamA_player1, teamA_player2: m2.teamA_player2, teamB_player1: m2.teamB_player1, teamB_player2: m2.teamB_player2 }), api.put(`/matches/${m2.id}/players`, { teamA_player1: m1.teamA_player1, teamA_player2: m1.teamA_player2, teamB_player1: m1.teamB_player1, teamB_player2: m1.teamB_player2 }) ]); await fetchSessionData(); } catch(e) { addToast("Failed to reorder queue", "error"); } finally { setIsProcessing(false); }
+    if (isProcessing) return; 
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1; 
+    if (targetIndex < 0 || targetIndex >= queuedMatchesList.length) return; 
+    setIsProcessing(true);
+    try { 
+      const m1 = queuedMatchesList[currentIndex]; 
+      const m2 = queuedMatchesList[targetIndex]; 
+      
+      const payload1 = { teamA_player1: m2.teamA_player1, teamA_player2: m2.teamA_player2, teamB_player1: m2.teamB_player1, teamB_player2: m2.teamB_player2, matchType: m2.matchType };
+      const payload2 = { teamA_player1: m1.teamA_player1, teamA_player2: m1.teamA_player2, teamB_player1: m1.teamB_player1, teamB_player2: m1.teamB_player2, matchType: m1.matchType };
+
+      if (session?.sessionType === 'sparring') {
+          await Promise.all([ api.put(`/matches/${m1.id}/sparring`, payload1), api.put(`/matches/${m2.id}/sparring`, payload2) ]); 
+      } else {
+          await Promise.all([ api.put(`/matches/${m1.id}/players`, payload1), api.put(`/matches/${m2.id}/players`, payload2) ]); 
+      }
+      await fetchSessionData(); 
+    } catch(e) { addToast("Failed to reorder queue", "error"); } 
+    finally { setIsProcessing(false); }
   };
+  // ----------------------------------------
   
   const openEditMatchModal = (match: any) => { setManualPlayers({ ta1: match.teamA_player1 || 0, ta2: match.teamA_player2 || 0, tb1: match.teamB_player1 || 0, tb2: match.teamB_player2 || 0 }); setEditMatchModal(match); };
   const handleSwapWithinMatch = (sourceKey: 'ta1'|'ta2'|'tb1'|'tb2', targetId: number) => { const targetKey = (Object.keys(manualPlayers) as Array<keyof typeof manualPlayers>).find(k => manualPlayers[k as keyof typeof manualPlayers] === targetId); if (targetKey) { setManualPlayers(prev => ({ ...prev, [sourceKey]: prev[targetKey as keyof typeof manualPlayers], [targetKey]: prev[sourceKey as keyof typeof manualPlayers] })); } };
@@ -825,7 +897,7 @@ export default function SessionDetails() {
                     {queuedMatchesList.length === 0 && (
                       <div className="col-span-full p-8 border border-dashed border-subtle dark:border-strong-dark rounded-xl text-center text-muted-ink font-medium">Queue is empty</div>
                     )}
-                    {queuedMatchesList.map(match => (
+                    {queuedMatchesList.map((match, index) => (
                        <MatchCard 
                          key={match.id} 
                          match={match} 
@@ -841,6 +913,9 @@ export default function SessionDetails() {
                          setSwapCourtModal={setSwapCourtModal} 
                          handleStartMatch={handleStartMatch} 
                          handleAutoGenerateCourt={handleAutoGenerateCourt} 
+                         handleReorderQueue={handleReorderQueue}
+                         queueIndex={index}
+                         totalQueued={queuedMatchesList.length}
                          t={t} 
                        />
                     ))}

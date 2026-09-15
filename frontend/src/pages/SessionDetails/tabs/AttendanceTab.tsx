@@ -1,4 +1,5 @@
-import { Search, UserPlus, Plus, Info, Pause, Check, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, UserPlus, Plus, Info, Pause, Check, X, ChevronDown } from 'lucide-react';
 import { getGradeColor } from '../utils';
 
 export const AttendanceTab = ({
@@ -17,6 +18,70 @@ export const AttendanceTab = ({
   isProcessing,
   t
 }: any) => {
+  
+  // Track which player's grade is currently being edited
+  const [editingGradeId, setEditingGradeId] = useState<number | null>(null);
+
+  // Custom Popover for Grade Selection
+  const renderGradePicker = (member: any, index: number, total: number) => {
+    // Smart positioning: If we are near the bottom of the list, open the menu UPWARDS so it doesn't get cut off
+    const isNearBottom = total > 3 && index >= total - 2;
+
+    return (
+      <div className="relative inline-block">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setEditingGradeId(editingGradeId === member.id ? null : member.id);
+          }}
+          disabled={isProcessing}
+          className={`flex items-center gap-1 text-[10px] border px-2 py-1 rounded-md font-mono font-bold cursor-pointer transition-all hover:scale-105 active:scale-95 disabled:opacity-50 ${getGradeColor(member.skillLevel)}`}
+          title="Click to edit grade"
+        >
+          {member.skillLevel}
+          <ChevronDown size={12} className="opacity-70" />
+        </button>
+
+        {editingGradeId === member.id && (
+          <>
+            {/* Invisible backdrop to catch outside clicks and close the menu */}
+            <div className="fixed inset-0 z-40" onClick={() => setEditingGradeId(null)}></div>
+            
+            {/* Floating Menu */}
+            <div 
+              className={`absolute ${isNearBottom ? 'bottom-full mb-2' : 'top-full mt-2'} left-0 sm:left-1/2 sm:-translate-x-1/2 w-36 bg-surface dark:bg-zinc-900 border border-subtle dark:border-zinc-700 rounded-xl shadow-2xl z-50 flex flex-col p-1.5 animate-in fade-in zoom-in-95 duration-200`}
+            >
+              <div className="px-2 py-1.5 text-[9px] font-bold text-muted-ink dark:text-zinc-400 uppercase tracking-widest border-b border-subtle dark:border-zinc-800 mb-1.5">
+                Update Grade
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                {['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map(lvl => {
+                  const isSelected = member.skillLevel === lvl;
+                  return (
+                    <button
+                      key={lvl}
+                      onClick={() => {
+                        handleUpdateGrade(member.id, lvl);
+                        setEditingGradeId(null);
+                      }}
+                      className={`py-1.5 text-xs font-black rounded-lg transition-colors flex items-center justify-center border ${
+                        isSelected 
+                          ? 'bg-ink border-ink text-white shadow-sm' 
+                          : 'bg-transparent border-transparent hover:bg-muted dark:hover:bg-zinc-800 text-primary dark:text-white'
+                      }`}
+                    >
+                      {lvl}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="animate-in fade-in duration-200">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -48,35 +113,28 @@ export const AttendanceTab = ({
         </div>
       )}
       
-      <div className="hidden sm:block bg-surface dark:bg-surface-dark border border-subtle dark:border-subtle-dark rounded-xl overflow-hidden shadow-sm">
+      {/* Desktop Table View */}
+      <div className="hidden sm:block bg-surface dark:bg-surface-dark border border-subtle dark:border-subtle-dark rounded-xl shadow-sm">
         <table className="w-full text-left border-collapse">
           <thead className="bg-app dark:bg-app-dark border-b border-subtle dark:border-subtle-dark text-xs uppercase text-muted-ink font-semibold">
-            <tr><th className="p-4">Player</th><th className="p-4">{t('arrived_at')}</th><th className="p-4">Status</th><th className="p-4 text-right">Actions</th></tr>
+            <tr>
+              <th className="p-4 rounded-tl-xl">Player</th>
+              <th className="p-4">{t('arrived_at')}</th>
+              <th className="p-4">Status</th>
+              <th className="p-4 text-right rounded-tr-xl">Actions</th>
+            </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-[#1E293B]">
             {visibleAttendances.length === 0 ? <tr><td colSpan={4} className="p-8 text-center text-muted-ink">{t('no_players')}</td></tr> : 
-             visibleAttendances.map(({ attendance, member }: any) => (
+             visibleAttendances.map(({ attendance, member }: any, index: number) => (
               <tr key={attendance.id} className="hover:bg-app dark:hover:bg-elevated-dark/30 group">
                 <td className="p-4">
                   <div className="font-medium text-sm flex items-center gap-2 hover:text-ink dark:hover:text-ink-dark transition-colors cursor-pointer w-max" onClick={() => setPlayerDetailModal(member.id)}>
                     {member.name} {attendance.isWalkIn && <span className="bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400 px-1.5 py-0.5 rounded text-[10px] font-bold">W-IN</span>}
                     <Info size={14} className="text-faint opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
-                  <div className="mt-1.5">
-                    <select 
-                      value={member.skillLevel} 
-                      disabled={isProcessing}
-                      onChange={(e) => handleUpdateGrade(member.id, e.target.value)}
-                      className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold cursor-pointer outline-none appearance-none text-center hover:opacity-80 transition-opacity disabled:opacity-50 ${getGradeColor(member.skillLevel)}`}
-                      title="Click to edit grade"
-                    >
-                      <option value="A1" className="bg-elevated text-white">A1</option>
-                      <option value="A2" className="bg-elevated text-white">A2</option>
-                      <option value="B1" className="bg-elevated text-white">B1</option>
-                      <option value="B2" className="bg-elevated text-white">B2</option>
-                      <option value="C1" className="bg-elevated text-white">C1</option>
-                      <option value="C2" className="bg-elevated text-white">C2</option>
-                    </select>
+                  <div className="mt-2">
+                    {renderGradePicker(member, index, visibleAttendances.length)}
                   </div>
                 </td>
                 <td className="p-4 text-sm text-muted-ink">{new Date(attendance.arrivedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
@@ -101,28 +159,17 @@ export const AttendanceTab = ({
         </table>
       </div>
 
+      {/* Mobile Card View */}
       <div className="sm:hidden flex flex-col gap-3">
         {visibleAttendances.length === 0 ? <div className="p-8 text-center text-muted-ink border border-subtle dark:border-subtle-dark rounded-xl">{t('no_players')}</div> : 
-         visibleAttendances.map(({ attendance, member }: any) => (
+         visibleAttendances.map(({ attendance, member }: any, index: number) => (
           <div key={attendance.id} className="bg-surface dark:bg-surface-dark border border-subtle dark:border-subtle-dark p-4 rounded-xl shadow-sm flex items-center justify-between">
             <div>
               <div className="font-bold text-sm flex items-center gap-2 hover:text-ink transition-colors cursor-pointer w-max" onClick={() => setPlayerDetailModal(member.id)}>
                 {member.name} {attendance.isWalkIn && <span className="bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400 px-1.5 py-0.5 rounded text-[10px] font-bold">W-IN</span>}
               </div>
-              <div className="flex items-center gap-2 mt-1.5">
-                <select 
-                  value={member.skillLevel} 
-                  disabled={isProcessing}
-                  onChange={(e) => handleUpdateGrade(member.id, e.target.value)}
-                  className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold cursor-pointer outline-none appearance-none text-center hover:opacity-80 transition-opacity disabled:opacity-50 ${getGradeColor(member.skillLevel)}`}
-                >
-                  <option value="A1" className="bg-elevated text-white">A1</option>
-                  <option value="A2" className="bg-elevated text-white">A2</option>
-                  <option value="B1" className="bg-elevated text-white">B1</option>
-                  <option value="B2" className="bg-elevated text-white">B2</option>
-                  <option value="C1" className="bg-elevated text-white">C1</option>
-                  <option value="C2" className="bg-elevated text-white">C2</option>
-                </select>
+              <div className="flex items-center gap-2 mt-2">
+                {renderGradePicker(member, index, visibleAttendances.length)}
                 <span className="text-xs text-muted-ink font-medium">• {t('arrived_at')} {new Date(attendance.arrivedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
               </div>
             </div>
