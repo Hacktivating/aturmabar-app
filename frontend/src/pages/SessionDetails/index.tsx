@@ -6,7 +6,7 @@ import {
   Check, Pause, X, Zap, Globe, Sun, Moon, LogOut, ChevronDown, Search, 
   ArrowRightLeft, ListOrdered, AlertCircle, AlertTriangle, FileDown, Square, 
   Trophy, Wallet, RotateCcw, CircleHelp,
-  ChevronLeft, ChevronRight, Lock, Unlock, Info, PlayCircle
+  ChevronLeft, ChevronRight, Lock, Unlock, Info, PlayCircle, StickyNote
 } from 'lucide-react';
 import api from '../../api/axios';
 import jsPDF from 'jspdf';
@@ -24,6 +24,7 @@ const HistoryTab = lazy(() => import('./tabs/HistoryTab').then(module => ({ defa
 const LeaderboardTab = lazy(() => import('./tabs/LeaderboardTab').then(module => ({ default: module.LeaderboardTab })));
 const PlaytimeTab = lazy(() => import('./tabs/PlaytimeTab').then(module => ({ default: module.PlaytimeTab })));
 const SettingsTab = lazy(() => import('./tabs/SettingsTab').then(module => ({ default: module.SettingsTab })));
+const NotesTab = lazy(() => import('./tabs/NotesTab').then(module => ({ default: module.NotesTab })));
 
 const TABS = [
   { id: 'attendance', label: 'attendance', icon: <Users size={18} /> },
@@ -33,6 +34,7 @@ const TABS = [
   { id: 'history', label: 'history', icon: <History size={18} /> },
   { id: 'leaderboard', label: 'leaderboard', icon: <Trophy size={18} /> },
   { id: 'playtime', label: 'playtime', icon: <Clock size={18} /> },
+  { id: 'notes', label: 'Notes', icon: <StickyNote size={18} /> },
   { id: 'settings', label: 'settings', icon: <SettingsIcon size={18} /> }
 ];
 
@@ -118,7 +120,6 @@ export default function SessionDetails() {
       };
     }
   }, [isSimpleMode]);
-  // ---------------------------------------------
 
   const [settingsForm, setSettingsForm] = useState<any>({});
   const [defaultFee, setDefaultFee] = useState<number>(0);
@@ -369,7 +370,6 @@ export default function SessionDetails() {
     finally { setIsProcessing(false); }
   };
 
-  // --- SIMPLE MODE ENTRY / EXIT ACTIONS ---
   const handleOpenSimpleModePrompt = () => {
     setTempPin(adminPin);
     setIsEnterSimpleModeOpen(true);
@@ -427,7 +427,6 @@ export default function SessionDetails() {
       }
     }
   };
-  // ----------------------------------------
 
   const applyPDFHeaderFooter = (doc: any, title: string, subtitle: string) => {
     let yPos = 20; doc.setFillColor(15, 23, 42); doc.rect(0, 0, doc.internal.pageSize.width, 40, 'F');
@@ -534,7 +533,6 @@ export default function SessionDetails() {
       }
       await api.put(`/matches/${matchId}/finish`, payload); 
       
-      // Auto-pull the very top of our visual queue into the freed court!
       if (freedCourtId) {
           const topQueued = queuedMatchesList[0];
           if (topQueued) {
@@ -805,6 +803,9 @@ export default function SessionDetails() {
           )}
           {activeTab === 'playtime' && (
              <PlaytimeTab playtimeSearch={playtimeSearch} setPlaytimeSearch={setPlaytimeSearch} playtimeData={playtimeData} setPlayerDetailModal={setPlayerDetailModal} t={t} inputStyles={inputStyles} />
+          )}
+          {activeTab === 'notes' && (
+             <NotesTab session={session} fetchSessionData={fetchSessionData} t={t} />
           )}
           {activeTab === 'settings' && (
              <SettingsTab settingsForm={settingsForm} setSettingsForm={setSettingsForm} settingsLimitType={settingsLimitType} handleSaveSettings={handleSaveSettings} handleDeleteSession={handleDeleteSession} isProcessing={isProcessing} t={t} inputStyles={inputStyles} />

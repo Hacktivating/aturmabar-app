@@ -88,6 +88,7 @@ export const sessions = pgTable("sessions", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   defaultFee: integer("default_fee").default(0).notNull(),
   memberDefaultFee: integer("member_default_fee").default(0).notNull(),
+  notes: text("notes"), // ADDED: Stores the rich text HTML content
 });
 
 export const sessionCourts = pgTable("session_courts", {
@@ -113,7 +114,7 @@ export const matches = pgTable("matches", {
   id: serial("id").primaryKey(),
   sessionId: integer("session_id").references(() => sessions.id, { onDelete: "cascade" }).notNull(),
   courtId: integer("court_id").references(() => sessionCourts.id, { onDelete: "set null" }),
-  name: text("name"), // ADDED: To store "MD 1", "WD 2", etc.
+  name: text("name"),
   teamA_player1: integer("team_a_p1").references(() => members.id),
   teamA_player2: integer("team_a_p2").references(() => members.id),
   teamB_player1: integer("team_b_p1").references(() => members.id),

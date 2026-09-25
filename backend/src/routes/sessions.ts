@@ -284,16 +284,44 @@ router.delete("/:id/courts/:courtId", async (req: AuthRequest, res) => {
   }
 });
 
+// CRITICAL FIX: Added `notes` to the extraction and database update payload
 router.put("/:id", async (req: AuthRequest, res) => {
   try {
     const sessionId = parseInt(String(req.params.id), 10);
-    const { name, scoringSystem, customSets, customPoints, pairingRule, matchLimit, sessionType, opposingCommunityName, matchQuotas } = req.body;
+    const { 
+      name, scoringSystem, customSets, customPoints, pairingRule, 
+      matchLimit, sessionType, opposingCommunityName, matchQuotas,
+      notes 
+    } = req.body;
+    
     await db.update(sessions)
-      .set({ name, scoringSystem, customSets, customPoints, pairingRule, matchLimit, sessionType, opposingCommunityName, matchQuotas })
+      .set({ 
+        name, scoringSystem, customSets, customPoints, pairingRule, 
+        matchLimit, sessionType, opposingCommunityName, matchQuotas,
+        notes 
+      })
       .where(eq(sessions.id, sessionId));
+      
     res.status(200).json({ message: "Session updated." });
   } catch (error) {
     res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+// --- DEDICATED NOTES ROUTE ---
+router.put("/:id/notes", async (req: AuthRequest, res) => {
+  try {
+    const sessionId = parseInt(String(req.params.id), 10);
+    const { notes } = req.body;
+    
+    await db.update(sessions)
+      .set({ notes })
+      .where(eq(sessions.id, sessionId));
+      
+    res.status(200).json({ message: "Notes updated successfully." });
+  } catch (error) {
+    console.error("PUT /sessions/:id/notes Error:", error);
+    res.status(500).json({ error: "Internal server error saving notes." });
   }
 });
 
