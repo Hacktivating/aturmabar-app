@@ -5,6 +5,15 @@ import { Trophy, Calendar, SquareStack, ArrowLeft, Zap, Globe, Sun, Moon, Settin
 import api from '../api/axios';
 import { useAppPreferences } from '../hooks/useAppPreferences';
 
+const SKILL_LEVELS = [
+  { id: 'A1', label: 'A1 - Pro', color: 'bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-200 border border-slate-200 dark:border-zinc-700' },
+  { id: 'A2', label: 'A2 - Advanced', color: 'bg-purple-50 text-purple-700 dark:bg-[#3b0764]/60 dark:text-[#d8b4fe] border border-purple-200 dark:border-purple-800/60' },
+  { id: 'B1', label: 'B1 - Upper Intermediate', color: 'bg-blue-50 text-blue-700 dark:bg-[#172554]/60 dark:text-[#93c5fd] border border-blue-200 dark:border-blue-800/60' },
+  { id: 'B2', label: 'B2 - Lower Intermediate', color: 'bg-teal-50 text-teal-700 dark:bg-[#042f2e]/60 dark:text-[#5eead4] border border-teal-200 dark:border-teal-800/60' },
+  { id: 'C1', label: 'C1 - Beginner', color: 'bg-emerald-50 text-emerald-700 dark:bg-[#022c22]/60 dark:text-[#6ee7b7] border border-emerald-200 dark:border-emerald-800/60' },
+  { id: 'C2', label: 'C2 - Newbie', color: 'bg-lime-50 text-lime-700 dark:bg-[#3f6212]/40 dark:text-[#d9f99d] border border-lime-200 dark:border-lime-800/60' }
+];
+
 export default function Leaderboard() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -20,9 +29,6 @@ export default function Leaderboard() {
   const [viewMode, setViewMode] = useState<'month' | 'session'>('month');
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
-
-
-
 
   useEffect(() => {
     const initData = async () => {
@@ -94,13 +100,12 @@ export default function Leaderboard() {
     });
 
     targetSessions.forEach(session => {
-      const matchLimit = session.matchLimit || 999; // Assume 999 if no limit set
+      const matchLimit = session.matchLimit || 999; 
       const maxSets = session.scoringSystem?.includes('3 Sets') ? 3 : session.customSets || 1;
 
       const sessionMatches = matchesMap[session.id] || [];
       const finished = sessionMatches.filter(m => m.status === 'finished').sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
 
-      // Track limits per session
       const playerMatchCount: Record<number, number> = {};
 
       finished.forEach(match => {
@@ -148,7 +153,7 @@ export default function Leaderboard() {
 
           if ((isTeamA && aWon) || (!isTeamA && bWon)) {
             p.won++;
-            p.lastWinTime = Math.max(p.lastWinTime, endTime); // Keep track of latest win for this aggregation
+            p.lastWinTime = Math.max(p.lastWinTime, endTime); 
           } else if ((isTeamA && bWon) || (!isTeamA && aWon)) {
             p.lost++;
           }
@@ -179,125 +184,138 @@ export default function Leaderboard() {
       });
   }, [viewMode, selectedMonth, selectedSessionId, sessions, matchesMap, members]);
 
+  const getBadgeStyle = (levelId: string) => SKILL_LEVELS.find(s => s.id === levelId)?.color || 'bg-muted text-primary-soft dark:bg-zinc-800 dark:text-zinc-400 border border-transparent dark:border-zinc-700';
+  const getBadgeLabel = (levelId: string) => SKILL_LEVELS.find(s => s.id === levelId)?.label || levelId;
+
   return (
-    <div className="min-h-screen bg-app dark:bg-app-dark text-primary dark:text-primary-dark font-sans flex flex-col">
-      {/* Universal Top Navigation */}
-      <nav className="h-16 border-b border-subtle dark:border-subtle-dark bg-surface dark:bg-surface-dark sticky top-0 z-30 shrink-0">
-        <div className="max-w-7xl mx-auto w-full h-full flex justify-between items-center px-4 sm:px-8">
-          <div className="flex items-center gap-2">
-            <div className="bg-ink dark:bg-ink-dark p-1.5 rounded-md flex items-center justify-center text-white dark:text-white shrink-0">
-              <Zap size={18} fill="currentColor" />
+    <div className="min-h-screen bg-app dark:bg-[#09090b] text-primary dark:text-zinc-100 font-sans flex flex-col transition-colors duration-200">
+      
+      <nav className="border-b border-subtle dark:border-zinc-800 bg-surface dark:bg-[#0f0f11] sticky top-0 z-20 shadow-sm shrink-0">
+        <div className="max-w-7xl mx-auto w-full flex justify-between items-center px-4 sm:px-8 py-4">
+          <div className="flex items-center gap-3">
+            <div className="bg-ink dark:bg-white p-1.5 rounded-lg flex items-center justify-center text-white dark:text-zinc-950 shrink-0 shadow-sm">
+              <Zap size={20} fill="currentColor" />
             </div>
-            <span className="text-lg sm:text-xl font-bold tracking-tight hidden sm:block">AturMabar</span>
+            <span className="text-xl font-bold tracking-tight hidden sm:block">AturMabar</span>
           </div>
+
           <div className="flex items-center gap-2 sm:gap-4">
-            <div className="flex items-center gap-2 pr-2 sm:pr-4 border-r border-subtle dark:border-subtle-dark max-w-[140px] sm:max-w-xs">
-              <div className="w-8 h-8 rounded-full bg-muted dark:bg-elevated-dark border border-subtle dark:border-strong-dark flex items-center justify-center text-sm shrink-0 overflow-hidden">
+            <div className="flex items-center gap-3 pr-3 sm:pr-5 border-r border-subtle dark:border-zinc-800 max-w-[140px] sm:max-w-xs">
+              <div className="w-8 h-8 rounded-full bg-muted dark:bg-zinc-800 border border-subtle dark:border-zinc-700 flex items-center justify-center text-sm shrink-0 overflow-hidden shadow-sm">
                 {communityData?.logo?.startsWith('data:image') ? <img src={communityData.logo} alt="logo" className="w-full h-full object-cover"/> : communityData?.logo || '🏸'}
               </div>
-              <span className="text-sm font-semibold truncate hidden sm:block">{communityData?.name}</span>
+              <span className="text-sm font-bold truncate hidden sm:block">{communityData?.name}</span>
             </div>
-            <button onClick={toggleLanguage} className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-muted-ink dark:text-faint hover:text-ink dark:hover:text-ink-dark px-2 py-1.5 rounded-lg transition-colors">
+
+            <button onClick={toggleLanguage} className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-muted-ink dark:text-zinc-400 hover:text-ink dark:hover:text-white transition-colors px-2.5 py-2 rounded-lg hover:bg-muted dark:hover:bg-zinc-800">
               <Globe size={16} /> {i18n.language.toUpperCase()}
             </button>
-            <button onClick={toggleTheme} className="p-1.5 text-muted-ink hover:text-ink dark:text-faint dark:hover:text-ink-dark rounded-lg transition-colors">
+            <button onClick={toggleTheme} className="p-2 text-muted-ink dark:text-zinc-400 hover:text-ink dark:hover:text-white hover:bg-muted dark:hover:bg-zinc-800 rounded-lg transition-colors">
               {isDark ? <Sun size={18} /> : <Moon size={18} />}
             </button>
-            <button onClick={() => navigate('/dashboard')} className="p-1.5 text-muted-ink hover:text-ink dark:text-faint dark:hover:text-ink-dark rounded-lg transition-colors shrink-0">
+            <button onClick={() => navigate('/dashboard')} className="p-2 text-muted-ink dark:text-zinc-400 hover:text-ink dark:hover:text-white hover:bg-muted dark:hover:bg-zinc-800 rounded-lg transition-colors shrink-0" title="Settings / Dashboard">
               <SettingsIcon size={18} />
             </button>
-            <button onClick={handleLogout} className="flex items-center gap-2 text-sm text-rose-600 font-medium hover:bg-rose-50 dark:hover:bg-rose-900/20 px-2 sm:px-3 py-1.5 rounded-lg transition-colors shrink-0">
-              <LogOut size={16} /> <span className="hidden sm:inline">{t('logout')}</span>
+            <button onClick={handleLogout} className="flex items-center gap-2 text-sm text-rose-600 dark:text-rose-500 font-bold hover:bg-rose-50 dark:hover:bg-rose-500/10 px-3 py-2 rounded-lg transition-colors shrink-0">
+              <LogOut size={16} /> <span className="hidden sm:inline">{String(t('logout', { defaultValue: 'Logout' }))}</span>
             </button>
           </div>
         </div>
       </nav>
 
-      <main className="flex-1 p-4 sm:p-8 max-w-7xl w-full mx-auto">
-        <div className="flex items-center gap-4 mb-8">
-          <Link to="/dashboard" className="p-2 sm:p-2.5 bg-app dark:bg-elevated-dark border border-subtle dark:border-strong-dark rounded-xl hover:bg-muted dark:hover:bg-strong-dark/80 transition-colors shrink-0">
+      <main className="flex-1 relative p-4 sm:p-8 max-w-6xl mx-auto w-full flex flex-col z-10">
+        <div className="flex items-center gap-5 mb-8 shrink-0">
+          <Link 
+            to="/dashboard" 
+            className="block p-2.5 bg-surface dark:bg-[#121214] border border-subtle dark:border-zinc-800 rounded-xl hover:bg-muted dark:hover:bg-zinc-800 text-primary dark:text-zinc-300 transition-colors shadow-sm"
+          >
             <ArrowLeft size={20} />
           </Link>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 rounded-xl flex items-center justify-center">
-               <Trophy size={20} />
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20 rounded-xl flex items-center justify-center shadow-sm">
+               <Trophy size={22} />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t('leaderboard', 'Leaderboard')}</h1>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-primary dark:text-white">{t('leaderboard', 'Leaderboard')}</h1>
           </div>
         </div>
 
-        <div className="bg-surface dark:bg-surface-dark border border-subtle dark:border-subtle-dark p-4 sm:p-6 rounded-2xl shadow-sm mb-8 flex flex-col sm:flex-row justify-between gap-6">
-          <div className="flex bg-muted dark:bg-elevated-dark p-1 rounded-xl w-full sm:w-auto shrink-0">
-             <button onClick={() => setViewMode('month')} className={`flex-1 sm:px-6 py-2 text-sm font-bold rounded-lg transition-colors ${viewMode === 'month' ? 'bg-surface dark:bg-surface-dark shadow-sm text-ink dark:text-ink-dark' : 'text-muted-ink hover:text-primary-soft dark:hover:text-muted-dark'}`}>
+        {/* Filter Bar */}
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8 shrink-0">
+          <div className="flex bg-surface dark:bg-[#121214] border border-subtle dark:border-zinc-800 p-1.5 rounded-xl w-full sm:w-auto shrink-0 shadow-sm">
+             <button onClick={() => setViewMode('month')} className={`flex-1 sm:flex-none px-8 py-2.5 text-sm font-bold rounded-lg transition-all whitespace-nowrap ${viewMode === 'month' ? 'bg-app dark:bg-[#18181b] shadow-sm text-ink dark:text-white border border-subtle dark:border-zinc-700' : 'text-muted-ink dark:text-zinc-500 hover:text-primary dark:hover:text-zinc-300 border border-transparent'}`}>
                 {t('by_month', 'By Month')}
              </button>
-             <button onClick={() => setViewMode('session')} className={`flex-1 sm:px-6 py-2 text-sm font-bold rounded-lg transition-colors ${viewMode === 'session' ? 'bg-surface dark:bg-surface-dark shadow-sm text-ink dark:text-ink-dark' : 'text-muted-ink hover:text-primary-soft dark:hover:text-muted-dark'}`}>
+             <button onClick={() => setViewMode('session')} className={`flex-1 sm:flex-none px-8 py-2.5 text-sm font-bold rounded-lg transition-all whitespace-nowrap ${viewMode === 'session' ? 'bg-app dark:bg-[#18181b] shadow-sm text-ink dark:text-white border border-subtle dark:border-zinc-700' : 'text-muted-ink dark:text-zinc-500 hover:text-primary dark:hover:text-zinc-300 border border-transparent'}`}>
                 {t('by_session', 'By Session')}
              </button>
           </div>
 
-          <div className="w-full sm:w-72">
+          <div className="relative w-full sm:w-80">
              {viewMode === 'month' ? (
                 <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" size={18} />
-                  <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-app dark:bg-app-dark border border-subtle dark:border-subtle-dark rounded-xl text-sm font-bold outline-none focus:border-ink transition-colors [&::-webkit-calendar-picker-indicator]:dark:invert" />
+                  <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-ink dark:text-zinc-500" size={18} />
+                  <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="w-full pl-11 pr-4 py-3 bg-surface dark:bg-[#121214] border border-subtle dark:border-zinc-800 rounded-xl shadow-sm outline-none focus:ring-2 focus:ring-ink text-sm font-bold text-primary dark:text-white [&::-webkit-calendar-picker-indicator]:dark:invert opacity-90 hover:opacity-100 transition-opacity" />
                 </div>
              ) : (
                 <div className="relative">
-                  <SquareStack className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" size={18} />
-                  <select value={selectedSessionId || ''} onChange={e => setSelectedSessionId(parseInt(e.target.value))} className="w-full pl-10 pr-4 py-2.5 bg-app dark:bg-app-dark border border-subtle dark:border-subtle-dark rounded-xl text-sm font-bold outline-none focus:border-ink transition-colors appearance-none">
+                  <SquareStack className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-ink dark:text-zinc-500" size={18} />
+                  <select value={selectedSessionId || ''} onChange={e => setSelectedSessionId(parseInt(e.target.value))} className="w-full pl-11 pr-10 py-3 bg-surface dark:bg-[#121214] border border-subtle dark:border-zinc-800 rounded-xl shadow-sm outline-none focus:ring-2 focus:ring-ink text-sm font-bold text-primary dark:text-white appearance-none truncate">
                     {sessions.map(s => <option key={s.id} value={s.id}>{s.name} ({new Date(s.date).toLocaleDateString()})</option>)}
                   </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-faint pointer-events-none" size={16} />
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-ink dark:text-zinc-500 pointer-events-none" size={18} />
                 </div>
              )}
           </div>
         </div>
 
         {loading ? (
-           <div className="text-center py-20 text-muted-ink font-medium">Loading rankings...</div>
+           <div className="text-center py-20 text-muted-ink dark:text-zinc-500 font-medium">Loading rankings...</div>
         ) : (
-          <div className="bg-surface dark:bg-surface-dark border border-subtle dark:border-subtle-dark rounded-2xl overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
+          <div className="bg-surface dark:bg-[#121214] border border-subtle dark:border-zinc-800 rounded-2xl overflow-hidden shadow-sm flex-1">
+            <div className="overflow-x-auto h-full">
               <table className="w-full text-left border-collapse min-w-[800px]">
-                <thead className="bg-app dark:bg-app-dark border-b border-subtle dark:border-subtle-dark text-xs uppercase text-muted-ink font-bold tracking-widest">
-                  <tr>
-                    <th className="p-5 w-16 text-center">{t('rank', 'Rank')}</th>
-                    <th className="p-5">{t('player', 'Player')}</th>
-                    <th className="p-5 text-center">{t('matches', 'Matches')}</th>
+                <thead className="bg-app dark:bg-[#18181b] border-b border-subtle dark:border-zinc-800 sticky top-0 z-10">
+                  <tr className="text-xs uppercase text-muted-ink dark:text-zinc-400 font-bold tracking-widest">
+                    <th className="p-5 w-20 text-center">{t('rank', 'RANK')}</th>
+                    <th className="p-5">{t('player', 'PLAYER')}</th>
+                    <th className="p-5 text-center">{t('matches', 'MATCHES')}</th>
                     <th className="p-5 text-center">{t('w_l', 'W-L')}</th>
-                    <th className="p-5 text-center">{t('win_rate', 'Win Rate')}</th>
-                    <th className="p-5 text-center">{t('net_sets', 'Net Sets')}</th>
-                    <th className="p-5 text-center">{t('net_pts', 'Net Pts')}</th>
-                    <th className="p-5 text-center">{t('total_pts', 'Total Pts')}</th>
+                    <th className="p-5 text-center">{t('win_rate', 'WIN RATE')}</th>
+                    <th className="p-5 text-center">{t('net_sets', 'NET SETS')}</th>
+                    <th className="p-5 text-center">{t('net_pts', 'NET PTS')}</th>
+                    <th className="p-5 text-center pr-6">{t('total_pts', 'TOTAL PTS')}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-[#1E293B]">
+                <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/50">
                   {leaderboardData.length === 0 ? (
-                    <tr><td colSpan={8} className="p-10 text-center text-muted-ink font-medium">No matches found for this selection.</td></tr>
+                    <tr><td colSpan={8} className="p-12 text-center text-muted-ink dark:text-zinc-500 font-medium">No matches found for this selection.</td></tr>
                   ) : (
                     leaderboardData.map((player, index) => {
                       const rank = index + 1;
-                      let rankBadge = <span className="font-mono font-black text-faint">{rank}</span>;
-                      if (rank === 1) rankBadge = <div className="w-8 h-8 mx-auto bg-amber-100 text-amber-600 rounded-full flex items-center justify-center shadow-sm"><Medal size={16}/></div>;
-                      if (rank === 2) rankBadge = <div className="w-8 h-8 mx-auto bg-muted text-muted-ink rounded-full flex items-center justify-center shadow-sm"><Medal size={16}/></div>;
-                      if (rank === 3) rankBadge = <div className="w-8 h-8 mx-auto bg-orange-100 text-orange-700 rounded-full flex items-center justify-center shadow-sm"><Medal size={16}/></div>;
+                      let rankBadge = <span className="font-mono font-black text-muted-ink dark:text-zinc-500">{rank}</span>;
+                      if (rank === 1) rankBadge = <div className="w-8 h-8 mx-auto bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 rounded-full flex items-center justify-center shadow-sm border border-amber-200 dark:border-amber-500/30"><Medal size={16}/></div>;
+                      if (rank === 2) rankBadge = <div className="w-8 h-8 mx-auto bg-slate-200 text-slate-600 dark:bg-zinc-700 dark:text-zinc-300 rounded-full flex items-center justify-center shadow-sm border border-slate-300 dark:border-zinc-600"><Medal size={16}/></div>;
+                      if (rank === 3) rankBadge = <div className="w-8 h-8 mx-auto bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400 rounded-full flex items-center justify-center shadow-sm border border-orange-200 dark:border-orange-500/30"><Medal size={16}/></div>;
 
                       return (
-                        <tr key={player.id} className="hover:bg-app dark:hover:bg-elevated-dark/30 transition-colors">
+                        <tr key={player.id} className="hover:bg-app dark:hover:bg-white/5 transition-colors">
                           <td className="p-5 text-center">{rankBadge}</td>
                           <td className="p-5">
-                            <div className="font-bold text-base dark:text-primary-dark">{player.name}</div>
-                            <span className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold mt-1 inline-block ${player.grade === 'A1' ? 'bg-elevated text-white dark:bg-muted dark:text-primary border-transparent' : 'bg-muted text-primary-soft dark:bg-elevated-dark dark:text-faint border-subtle dark:border-default-dark'}`}>{player.grade}</span>
+                            <div className="font-bold text-base text-primary dark:text-zinc-100">{player.name}</div>
+                            {player.grade && (
+                              <span className={`mt-1.5 inline-block px-2.5 py-1 rounded-md text-[10px] font-bold tracking-widest uppercase whitespace-nowrap ${getBadgeStyle(player.grade)}`}>
+                                {getBadgeLabel(player.grade)}
+                              </span>
+                            )}
                           </td>
-                          <td className="p-5 text-center font-black text-primary-soft dark:text-muted-dark">{player.played}</td>
+                          <td className="p-5 text-center font-black text-primary-soft dark:text-zinc-400">{player.played}</td>
                           <td className="p-5 text-center font-bold text-sm">
-                            <span className="text-emerald-600">{player.won}</span> - <span className="text-rose-600">{player.lost}</span>
+                            <span className="text-emerald-600 dark:text-emerald-400">{player.won}</span> <span className="text-muted-ink dark:text-zinc-600 mx-1">-</span> <span className="text-rose-600 dark:text-rose-400">{player.lost}</span>
                           </td>
-                          <td className="p-5 text-center font-black text-ink dark:text-ink-dark">{Math.round(player.winRate * 100)}%</td>
-                          <td className="p-5 text-center font-mono font-bold">{player.netSets > 0 ? `+${player.netSets}` : player.netSets}</td>
-                          <td className="p-5 text-center font-mono font-bold">{player.netPoints > 0 ? `+${player.netPoints}` : player.netPoints}</td>
-                          <td className="p-5 text-center font-mono font-bold text-muted-ink">{player.totalPoints}</td>
+                          <td className="p-5 text-center font-black text-ink dark:text-white">{Math.round(player.winRate * 100)}%</td>
+                          <td className="p-5 text-center font-mono font-bold text-primary dark:text-zinc-300">{player.netSets > 0 ? `+${player.netSets}` : player.netSets}</td>
+                          <td className="p-5 text-center font-mono font-bold text-primary dark:text-zinc-300">{player.netPoints > 0 ? `+${player.netPoints}` : player.netPoints}</td>
+                          <td className="p-5 text-center font-mono font-bold text-muted-ink dark:text-zinc-500 pr-6">{player.totalPoints}</td>
                         </tr>
                       );
                     })

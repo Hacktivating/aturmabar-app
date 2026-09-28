@@ -6,13 +6,13 @@ import {
   Check, Pause, X, Zap, Globe, Sun, Moon, LogOut, ChevronDown, Search, 
   ArrowRightLeft, ListOrdered, AlertCircle, AlertTriangle, FileDown, Square, 
   Trophy, Wallet, RotateCcw, CircleHelp,
-  ChevronLeft, ChevronRight, Lock, Unlock, Info, PlayCircle, StickyNote
+  ChevronLeft, ChevronRight, Lock, Unlock, Info, PlayCircle, StickyNote, Medal
 } from 'lucide-react';
 import api from '../../api/axios';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-import { SessionGlobalTimer, getGradeColor, getMatchTypeColor } from './utils';
+import { SessionGlobalTimer, getMatchTypeColor } from './utils';
 import { PlayerSlotSelect } from './components/PlayerSlotSelect';
 import { MatchCard } from './components/MatchCard'; 
 
@@ -27,16 +27,35 @@ const SettingsTab = lazy(() => import('./tabs/SettingsTab').then(module => ({ de
 const NotesTab = lazy(() => import('./tabs/NotesTab').then(module => ({ default: module.NotesTab })));
 
 const TABS = [
-  { id: 'attendance', label: 'attendance', icon: <Users size={18} /> },
-  { id: 'courts', label: 'courts', icon: <SquareStack size={18} /> },
-  { id: 'matches', label: 'matches', icon: <Play size={18} /> },
-  { id: 'billing', label: 'billing', icon: <Wallet size={18} /> },
-  { id: 'history', label: 'history', icon: <History size={18} /> },
-  { id: 'leaderboard', label: 'leaderboard', icon: <Trophy size={18} /> },
-  { id: 'playtime', label: 'playtime', icon: <Clock size={18} /> },
-  { id: 'notes', label: 'Notes', icon: <StickyNote size={18} /> },
-  { id: 'settings', label: 'settings', icon: <SettingsIcon size={18} /> }
+  { id: 'attendance', label: 'attendance', icon: <Users size={16} /> },
+  { id: 'courts', label: 'courts', icon: <SquareStack size={16} /> },
+  { id: 'matches', label: 'matches', icon: <Play size={16} /> },
+  { id: 'billing', label: 'billing', icon: <Wallet size={16} /> },
+  { id: 'history', label: 'history', icon: <History size={16} /> },
+  { id: 'leaderboard', label: 'leaderboard', icon: <Trophy size={16} /> },
+  { id: 'playtime', label: 'playtime', icon: <Clock size={16} /> },
+  { id: 'notes', label: 'Notes', icon: <StickyNote size={16} /> },
+  { id: 'settings', label: 'settings', icon: <SettingsIcon size={16} /> }
 ];
+
+const normalizeGender = (value: unknown): 'male' | 'female' | null => {
+  const gender = String(value ?? '').trim().toLowerCase();
+  if (['male', 'man', 'm', 'laki-laki', 'laki laki', 'pria'].includes(gender)) return 'male';
+  if (['female', 'woman', 'f', 'perempuan', 'wanita'].includes(gender)) return 'female';
+  return null;
+};
+
+const SKILL_LEVELS = [
+  { id: 'A1', label: 'A1 - Pro', color: 'bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-200 border border-slate-200 dark:border-zinc-700' },
+  { id: 'A2', label: 'A2 - Advanced', color: 'bg-purple-50 text-purple-700 dark:bg-[#3b0764]/60 dark:text-[#d8b4fe] border border-purple-200 dark:border-purple-800/60' },
+  { id: 'B1', label: 'B1 - Upper Intermediate', color: 'bg-blue-50 text-blue-700 dark:bg-[#172554]/60 dark:text-[#93c5fd] border border-blue-200 dark:border-blue-800/60' },
+  { id: 'B2', label: 'B2 - Lower Intermediate', color: 'bg-teal-50 text-teal-700 dark:bg-[#042f2e]/60 dark:text-[#5eead4] border border-teal-200 dark:border-teal-800/60' },
+  { id: 'C1', label: 'C1 - Beginner', color: 'bg-emerald-50 text-emerald-700 dark:bg-[#022c22]/60 dark:text-[#6ee7b7] border border-emerald-200 dark:border-emerald-800/60' },
+  { id: 'C2', label: 'C2 - Newbie', color: 'bg-lime-50 text-lime-700 dark:bg-[#3f6212]/40 dark:text-[#d9f99d] border border-lime-200 dark:border-lime-800/60' }
+];
+
+const getBadgeStyle = (levelId?: string) => SKILL_LEVELS.find(s => s.id === levelId)?.color || 'bg-muted text-primary-soft dark:bg-zinc-800 dark:text-zinc-400 border border-transparent dark:border-zinc-700';
+const getBadgeLabel = (levelId?: string) => SKILL_LEVELS.find(s => s.id === levelId)?.label || levelId || 'N/A';
 
 export default function SessionDetails() {
   const { id } = useParams();
@@ -144,7 +163,8 @@ export default function SessionDetails() {
   const [historyForm, setHistoryForm] = useState({ courtId: 0, ta1: 0, ta2: 0, tb1: 0, tb2: 0, sa1: 0, sb1: 0, sa2: 0, sb2: 0, sa3: 0, sb3: 0 });
   const [historySetView, setHistorySetView] = useState(1);
 
-  const inputStyles = "w-full px-3 py-2.5 bg-app dark:bg-surface-dark border border-default dark:border-subtle-dark rounded-lg text-sm outline-none focus:ring-2 focus:ring-ink transition-all text-primary dark:text-primary-dark";
+  const inputStyles = "w-full px-4 py-3 bg-app dark:bg-[#121214] border border-default dark:border-zinc-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-ink transition-all text-primary dark:text-white";
+  const labelStyles = "block text-xs font-bold mb-1.5 text-muted-ink dark:text-zinc-400 uppercase tracking-wider";
 
   useEffect(() => {
     if (isDark) { document.documentElement.classList.add('dark'); localStorage.setItem('theme', 'dark'); }
@@ -344,7 +364,14 @@ export default function SessionDetails() {
 
   const settingsLimitType = settingsForm.matchLimit === 0 ? 'all' : ([1,2,3,4,5].includes(settingsForm.matchLimit) ? String(settingsForm.matchLimit) : 'custom');
 
-  function getMemberData(memberId: number) { return allMembers.find(m => m.id === memberId); }
+  function getMemberData(memberId: number) { 
+    let m = allMembers.find(m => Number(m.id) === Number(memberId));
+    if (!m) {
+      const att = attendances.find(a => Number(a.member.id) === Number(memberId));
+      if (att) m = att.member;
+    }
+    return m;
+  }
   function getInitialCourtName(cId: number) { return courts.find(c => c.id === cId)?.name; }
   
   const getOptionsFor = (currentKey: 'ta1'|'ta2'|'tb1'|'tb2') => {
@@ -614,36 +641,36 @@ export default function SessionDetails() {
   const handleDeleteSession = async () => { if (isProcessing || !window.confirm(String(t('delete_session_warning', { defaultValue: "Delete session?" })))) return; setIsProcessing(true); try { await api.delete(`/sessions/${id}`); navigate('/sessions'); } catch (err) { addToast("Error deleting session", "error"); setIsProcessing(false); } };
 
   const renderWaitingListContent = () => (
-    <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2 no-scrollbar">
+    <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2 no-scrollbar bg-surface dark:bg-[#121214] rounded-2xl">
       {waitingListPlayers.length === 0 ? (
-        <div className="p-8 text-center text-faint text-sm font-medium">No available players waiting.</div>
+        <div className="p-8 text-center text-muted-ink dark:text-zinc-500 text-sm font-medium">No available players waiting.</div>
       ) : (
         waitingListPlayers.map((p: any) => (
-          <div key={p.id} className="p-3 bg-surface dark:bg-app-dark border border-subtle dark:border-subtle-dark rounded-xl flex justify-between items-center shadow-sm">
+          <div key={p.id} className="p-4 bg-app dark:bg-[#18181b] border border-subtle dark:border-zinc-800 rounded-xl flex justify-between items-center shadow-sm">
             <div className="flex flex-col min-w-0 pr-3 flex-1">
-              <span className="font-bold text-sm truncate dark:text-primary-dark">{p.name}</span>
+              <span className="font-bold text-base truncate text-primary dark:text-zinc-100">{p.name}</span>
               <div className="flex items-center gap-2 mt-1">
-                <span className={`text-[9px] border px-1.5 py-0.5 rounded font-mono font-bold ${getGradeColor(p.skillLevel)}`}>{p.skillLevel}</span>
-                <span className="text-[10px] text-faint">{new Date(p.arrivedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                <span className={`text-[10px] border px-2 py-0.5 rounded font-mono font-bold ${getBadgeStyle(p.skillLevel)}`}>{p.skillLevel}</span>
+                <span className="text-[10px] font-bold text-muted-ink dark:text-zinc-500">{new Date(p.arrivedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <div className="flex flex-col items-center group relative cursor-help px-2 border-x border-subtle dark:border-subtle-dark">
-                <span className="font-black text-xl leading-none text-ink dark:text-ink-dark">{p.gamesPlayed}</span>
-                <span className="text-[8px] font-bold text-faint uppercase tracking-widest mt-1">{String(t('played', { defaultValue: 'Played' }))}</span>
-                <div className="hidden group-hover:block absolute bottom-full mb-2 right-0 bg-elevated dark:bg-strong-dark text-white p-2.5 rounded-lg shadow-xl text-xs z-50 whitespace-nowrap border dark:border-default-dark dark:border-strong-dark">
-                  <div className="font-bold mb-1 border-b dark:border-strong-dark pb-1">{p.name}</div>
-                  <div className="flex justify-between gap-4"><span>Finished:</span> <span>{p.finishedCount}</span></div>
-                  <div className="flex justify-between gap-4 text-emerald-400"><span>Ongoing:</span> <span>{p.ongoingCount}</span></div>
+              <div className="flex flex-col items-center group relative cursor-help px-3 border-x border-subtle dark:border-zinc-800">
+                <span className="font-black text-xl leading-none text-ink dark:text-white">{p.gamesPlayed}</span>
+                <span className="text-[8px] font-bold text-muted-ink dark:text-zinc-500 uppercase tracking-widest mt-1">{String(t('played', { defaultValue: 'Played' }))}</span>
+                <div className="hidden group-hover:block absolute bottom-full mb-3 right-0 bg-ink dark:bg-white text-white dark:text-zinc-900 p-3 rounded-xl shadow-2xl text-xs z-50 whitespace-nowrap border dark:border-zinc-300">
+                  <div className="font-black mb-2 border-b border-white/20 dark:border-zinc-900/10 pb-1.5">{p.name}</div>
+                  <div className="flex justify-between gap-5 font-medium mb-1"><span>Finished:</span> <span>{p.finishedCount}</span></div>
+                  <div className="flex justify-between gap-5 font-bold text-emerald-400 dark:text-emerald-600"><span>Ongoing:</span> <span>{p.ongoingCount}</span></div>
                 </div>
               </div>
               <button 
-                disabled={isProcessing}
-                onClick={() => updateAttendanceStatus(p.attendanceId, 'resting')}
-                className="w-8 h-8 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-600 hover:bg-amber-100 transition-colors flex items-center justify-center disabled:opacity-50"
+                type="button"
+                onClick={(e) => { e.preventDefault(); updateAttendanceStatus(p.attendanceId, 'resting'); }}
+                className="w-9 h-9 rounded-full bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors flex items-center justify-center ml-1 border border-amber-200 dark:border-amber-500/20 cursor-pointer"
                 title={String(t('set_resting', { defaultValue: 'Set to Resting' }))}
               >
-                <Pause size={14} fill="currentColor" />
+                <Pause size={16} fill="currentColor" />
               </button>
             </div>
           </div>
@@ -652,10 +679,10 @@ export default function SessionDetails() {
     </div>
   );
 
-  if (loading) return <div className="min-h-screen bg-app dark:bg-app-dark flex items-center justify-center text-muted-ink">{t('loading')}</div>;
+  if (loading) return <div className="min-h-screen bg-app dark:bg-[#09090b] flex items-center justify-center text-muted-ink dark:text-zinc-500 font-medium">{t('loading')}</div>;
 
   return (
-    <div className="min-h-screen bg-app dark:bg-app-dark text-primary dark:text-primary-dark font-sans flex flex-col relative pb-32">
+    <div className="min-h-screen bg-app dark:bg-[#09090b] text-primary dark:text-zinc-100 font-sans flex flex-col relative pb-32 transition-colors duration-200">
       
       {/* Notification Toasts */}
       <div className="fixed top-20 right-4 z-[100] flex flex-col gap-3 pointer-events-none">
@@ -663,125 +690,129 @@ export default function SessionDetails() {
           <div key={toastItem.id} className={`pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl text-sm font-bold animate-in slide-in-from-top-5 fade-in duration-300 border ${toastItem.type === 'success' ? 'bg-ink border-ink text-white' : 'bg-rose-600 border-rose-700 text-white'}`}>
             {toastItem.type === 'success' ? <Check size={18} /> : <AlertCircle size={18} />}
             {toastItem.message}
-            <button onClick={() => setToasts(prev => prev.filter(t => t.id !== toastItem.id))} className="ml-4 hover:opacity-75"><X size={16}/></button>
+            <button type="button" onClick={() => setToasts(prev => prev.filter(t => t.id !== toastItem.id))} className="ml-4 hover:opacity-75"><X size={16}/></button>
           </div>
         ))}
       </div>
 
       {/* --- STANDARD NAV & HEADER --- */}
       <div className={isSimpleMode ? 'hidden' : 'contents'}>
-        <nav className="h-16 border-b border-subtle dark:border-subtle-dark bg-surface dark:bg-surface-dark sticky top-0 z-30 shrink-0">
+        <nav className="h-16 border-b border-subtle dark:border-zinc-800 bg-surface dark:bg-[#0f0f11] sticky top-0 z-30 shadow-sm shrink-0">
           <div className="max-w-7xl mx-auto w-full h-full flex justify-between items-center px-4 sm:px-8">
-            <div className="flex items-center gap-2">
-              <div className="bg-ink dark:bg-ink-dark p-1.5 rounded-md flex items-center justify-center text-white dark:text-white shrink-0">
-                <Zap size={18} fill="currentColor" />
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="bg-ink dark:bg-white p-1.5 rounded-lg flex items-center justify-center text-white dark:text-zinc-950 shrink-0 shadow-sm">
+                <Zap size={18} fill="currentColor" className="sm:w-5 sm:h-5" />
               </div>
               <span className="text-lg sm:text-xl font-bold tracking-tight hidden sm:block">AturMabar</span>
             </div>
 
             <div className="flex items-center gap-2 sm:gap-4">
-              <div className="flex items-center gap-2 pr-2 sm:pr-4 border-r border-subtle dark:border-subtle-dark max-w-[140px] sm:max-w-xs">
-                <div className="w-8 h-8 rounded-full bg-muted dark:bg-elevated-dark border border-subtle dark:border-strong-dark flex items-center justify-center text-sm shrink-0 overflow-hidden">
+              <div className="flex items-center gap-2 sm:gap-3 pr-2 sm:pr-4 border-r border-subtle dark:border-zinc-800 max-w-[140px] sm:max-w-xs">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-muted dark:bg-zinc-800 border border-subtle dark:border-zinc-700 flex items-center justify-center text-xs sm:text-sm shrink-0 overflow-hidden shadow-sm">
                   {communityData?.logo?.startsWith('data:image') ? <img src={communityData.logo} alt="logo" className="w-full h-full object-cover"/> : communityData?.logo || '🏸'}
                 </div>
-                <span className="text-sm font-semibold truncate hidden sm:block">{communityData?.name}</span>
+                <span className="text-xs sm:text-sm font-bold truncate hidden sm:block">{communityData?.name}</span>
               </div>
 
-              <button onClick={toggleLanguage} className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-muted-ink dark:text-faint hover:text-ink dark:hover:text-ink-dark px-2 py-1.5 rounded-lg transition-colors">
+              <button type="button" onClick={toggleLanguage} className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-muted-ink dark:text-zinc-400 hover:text-ink dark:hover:text-white transition-colors px-2 py-1.5 rounded-lg hover:bg-muted dark:hover:bg-zinc-800">
                 <Globe size={16} /> {i18n.language.toUpperCase()}
               </button>
-              <button onClick={() => setIsDark(!isDark)} className="p-1.5 text-muted-ink hover:text-ink dark:text-faint dark:hover:text-ink-dark rounded-lg transition-colors">
+              <button type="button" onClick={() => setIsDark(!isDark)} className="p-1.5 text-muted-ink dark:text-zinc-400 hover:text-ink dark:hover:text-white hover:bg-muted dark:hover:bg-zinc-800 rounded-lg transition-colors">
                 {isDark ? <Sun size={18} /> : <Moon size={18} />}
               </button>
-              <button onClick={() => navigate('/dashboard')} className="p-1.5 text-muted-ink hover:text-ink dark:text-faint dark:hover:text-ink-dark rounded-lg transition-colors shrink-0" title="Settings / Dashboard">
+              <button type="button" onClick={() => navigate('/dashboard')} className="p-1.5 text-muted-ink dark:text-zinc-400 hover:text-ink dark:hover:text-white hover:bg-muted dark:hover:bg-zinc-800 rounded-lg transition-colors shrink-0" title="Settings / Dashboard">
                 <SettingsIcon size={18} />
               </button>
-              <button onClick={handleLogout} className="flex items-center gap-2 text-sm text-rose-600 font-medium hover:bg-rose-50 dark:hover:bg-rose-900/20 px-2 sm:px-3 py-1.5 rounded-lg transition-colors shrink-0">
+              <button type="button" onClick={handleLogout} className="flex items-center gap-2 text-sm text-rose-600 dark:text-rose-500 font-bold hover:bg-rose-50 dark:hover:bg-rose-500/10 px-2 sm:px-3 py-1.5 rounded-lg transition-colors shrink-0">
                 <LogOut size={16} /> <span className="hidden sm:inline">{String(t('logout', { defaultValue: 'Logout' }))}</span>
               </button>
             </div>
           </div>
         </nav>
 
-        <div className="bg-surface dark:bg-surface-dark border-b border-subtle dark:border-subtle-dark shrink-0">
-          <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 sm:py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <Link to="/sessions" className="p-2 sm:p-2.5 bg-app dark:bg-elevated-dark border border-subtle dark:border-strong-dark rounded-xl hover:bg-muted dark:hover:bg-strong-dark/80 transition-colors shrink-0">
-                <ArrowLeft size={20} />
+        <div className="bg-surface dark:bg-[#0f0f11] border-b border-subtle dark:border-zinc-800 shrink-0 shadow-sm">
+          <div className="max-w-6xl mx-auto px-4 sm:px-8 py-4 sm:py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-5">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <Link to="/sessions" className="p-2 sm:p-2.5 bg-app dark:bg-[#18181b] border border-subtle dark:border-zinc-800 rounded-lg hover:bg-muted dark:hover:bg-zinc-800 transition-colors shadow-sm shrink-0">
+                <ArrowLeft size={16} className="text-primary dark:text-white sm:w-[18px] sm:h-[18px]"/>
               </Link>
-              <div>
-                <div className="flex items-center gap-3">
-                  <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{session?.name}</h1>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <h1 className="text-lg sm:text-2xl font-black tracking-tight text-primary dark:text-white truncate max-w-[200px] sm:max-w-md">{session?.name}</h1>
                   {session?.sessionType === 'sparring' && (
-                    <span className="bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400 px-2 py-0.5 rounded text-[10px] font-bold tracking-widest uppercase border border-purple-200 dark:border-purple-800">
+                    <span className="bg-purple-50 text-purple-700 dark:bg-[#3b0764]/60 dark:text-[#d8b4fe] px-2 py-0.5 rounded text-[9px] font-bold tracking-widest uppercase border border-purple-200 dark:border-purple-800/60 shrink-0">
                       Sparring: {communityData?.name} vs {session?.opposingCommunityName}
                     </span>
                   )}
                 </div>
-                <div className="text-xs sm:text-sm text-muted-ink font-medium mt-0.5">{session && new Date(session.date).toLocaleString(i18n.language, { dateStyle: 'medium', timeStyle: 'short' })}</div>
+                <div className="text-xs sm:text-sm text-muted-ink dark:text-zinc-500 font-medium mt-0.5 sm:mt-1">{session && new Date(session.date).toLocaleString(i18n.language, { dateStyle: 'medium', timeStyle: 'short' })}</div>
               </div>
             </div>
             
-            <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0 justify-end">
+            <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0 justify-between sm:justify-end shrink-0 overflow-hidden">
+              {/* Play / Finish Button */}
               {(!session?.status || session?.status === 'scheduled' || session?.status === 'finished') && (
-                <button disabled={isProcessing} onClick={handleStartSession} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-colors shadow-sm disabled:opacity-50">
-                  <Play size={16} fill="currentColor"/> 
-                  {session?.status === 'finished' ? t('restart_session', 'Restart Session') : t('start_session', 'Start Session')}
+                <button type="button" disabled={isProcessing} onClick={handleStartSession} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-500 dark:hover:bg-emerald-400 text-white dark:text-zinc-900 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg text-xs sm:text-sm font-bold transition-colors shadow-sm disabled:opacity-50 whitespace-nowrap cursor-pointer">
+                  <Play size={14} fill="currentColor" className="sm:w-4 sm:h-4"/> 
+                  {session?.status === 'finished' ? t('restart_session', 'Restart') : t('start_session', 'Start')}
                 </button>
               )}
               
               {session?.status === 'active' && (
-                <>
+                <div className="flex-1 sm:flex-none flex gap-2 shrink-0">
                   <SessionGlobalTimer startedAt={session?.startedAt} />
-                  <button type="button" onClick={handleOpenSimpleModePrompt} className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-xl bg-amber-500 text-white px-4 py-2.5 text-sm font-bold transition-colors hover:bg-amber-600 shadow-sm">
-                    <Zap size={17} /> <span className="hidden sm:block">Simple Mode</span>
+                  <button type="button" onClick={handleOpenSimpleModePrompt} className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-amber-500 text-white px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg text-xs sm:text-sm font-bold shadow-sm transition-colors hover:bg-amber-400 whitespace-nowrap cursor-pointer">
+                    <Zap size={14} className="sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Simple</span>
                   </button>
-                  <button disabled={isProcessing} onClick={handleEndSession} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-colors shadow-sm disabled:opacity-50">
-                    <Square size={16} fill="currentColor"/> {t('end_session', 'End Session')}
+                  <button type="button" onClick={handleEndSession} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-rose-600 text-white px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg text-xs sm:text-sm font-bold shadow-sm transition-colors hover:bg-rose-500 whitespace-nowrap cursor-pointer">
+                    <Square size={12} fill="currentColor" className="sm:w-3.5 sm:h-3.5"/> <span className="hidden sm:inline">End</span>
                   </button>
-                </>
+                </div>
               )}
 
               {session?.status === 'finished' && (
-                <span className="bg-muted text-primary-soft dark:bg-elevated-dark dark:text-faint px-4 py-2.5 rounded-xl text-sm font-bold tracking-widest uppercase">
-                  {t('status_finished', 'FINISHED')}
+                <span className="text-center bg-muted dark:bg-[#18181b] text-muted-ink dark:text-zinc-400 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg text-[10px] sm:text-xs font-bold tracking-widest uppercase border border-subtle dark:border-zinc-800 whitespace-nowrap shrink-0">
+                  FINISHED
                 </span>
               )}
 
-              <button disabled={isProcessing} onClick={exportSessionPDF} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-accent-soft dark:bg-elevated-dark hover:bg-accent-soft dark:hover:bg-strong-dark text-ink dark:text-ink-dark px-4 py-2.5 rounded-xl text-sm font-bold transition-colors border border-transparent dark:border-strong-dark shadow-sm disabled:opacity-50">
-                <FileDown size={18}/> <span className="hidden sm:block">{t('export_pdf', 'Export PDF')}</span>
-              </button>
-              <button type="button" onClick={() => setIsFairnessModalOpen(true)} className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-xl border border-subtle bg-surface px-4 py-2.5 text-sm font-bold text-primary transition-colors hover:bg-muted dark:border-subtle-dark dark:bg-surface-dark dark:text-primary-dark dark:hover:bg-elevated-dark">
-                <CircleHelp size={17} /> <span className="hidden sm:block">{t('fairness_insights')}</span>
-              </button>
+              {/* Icon Buttons to save space on mobile */}
+              <div className="flex items-center gap-2 shrink-0">
+                <button type="button" onClick={exportSessionPDF} className="w-9 h-9 p-0 sm:w-auto sm:h-auto sm:px-3 sm:py-2.5 flex items-center justify-center gap-1.5 bg-app dark:bg-[#18181b] text-primary dark:text-white rounded-lg text-xs font-bold border border-subtle dark:border-zinc-800 transition-colors hover:bg-muted dark:hover:bg-zinc-800 shadow-sm cursor-pointer shrink-0">
+                  <FileDown size={16}/> <span className="hidden sm:block">{t('export_pdf', 'Export PDF')}</span>
+                </button>
+                <button type="button" onClick={() => setIsFairnessModalOpen(true)} className="w-9 h-9 p-0 sm:w-auto sm:h-auto sm:px-3 sm:py-2.5 flex items-center justify-center gap-1.5 bg-app dark:bg-[#18181b] text-primary dark:text-white rounded-lg text-xs font-bold border border-subtle dark:border-zinc-800 transition-colors hover:bg-muted dark:hover:bg-zinc-800 shadow-sm cursor-pointer shrink-0">
+                  <CircleHelp size={16}/> <span className="hidden sm:block">{t('fairness_insights', 'Fairness')}</span>
+                </button>
+              </div>
             </div>
           </div>
           
-          <div className="hidden sm:flex max-w-7xl mx-auto px-8 overflow-x-auto scrollbar-hide">
+          <div className="hidden sm:flex max-w-6xl mx-auto px-4 sm:px-8 w-full justify-between overflow-hidden">
             {TABS.map(tab => (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 px-5 py-3 border-b-2 text-sm font-semibold whitespace-nowrap transition-colors ${activeTab === tab.id ? 'border-ink text-ink dark:text-ink' : 'border-transparent text-muted-ink hover:text-primary dark:hover:text-muted-dark'}`}>
-                {tab.icon} {t(tab.label)}
+              <button type="button" key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-1.5 py-4 border-b-2 text-[13px] xl:text-sm font-bold whitespace-nowrap transition-colors cursor-pointer ${activeTab === tab.id ? 'border-ink text-primary dark:border-white dark:text-white' : 'border-transparent text-muted-ink dark:text-zinc-500 hover:text-ink dark:hover:text-zinc-300'}`}>
+                {tab.icon} <span className="capitalize">{t(tab.label)}</span>
               </button>
             ))}
           </div>
         </div>
 
-        <div className={`sm:hidden sticky top-16 z-20 px-4 py-3 bg-surface dark:bg-surface-dark border-b border-subtle dark:border-subtle-dark shadow-sm ${isSimpleMode ? 'hidden' : ''}`}>
+        <div className={`sm:hidden sticky top-16 z-20 px-4 py-3 bg-surface dark:bg-[#121214] border-b border-subtle dark:border-zinc-800 shadow-sm ${isSimpleMode ? 'hidden' : ''}`}>
           <div className="relative">
-            <select value={activeTab} onChange={(e) => setActiveTab(e.target.value)} className="w-full appearance-none bg-app dark:bg-elevated-dark border border-subtle dark:border-strong-dark text-primary dark:text-primary-dark py-3 pl-11 pr-10 rounded-xl font-bold text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ink transition-all uppercase tracking-wide">
+            <select value={activeTab} onChange={(e) => setActiveTab(e.target.value)} className="w-full appearance-none bg-app dark:bg-[#18181b] border border-subtle dark:border-zinc-800 text-primary dark:text-white py-3 pl-11 pr-10 rounded-xl font-bold text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ink transition-all uppercase tracking-wide cursor-pointer">
               {TABS.map(tab => <option key={tab.id} value={tab.id}>{t(tab.label)}</option>)}
             </select>
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-ink dark:text-ink pointer-events-none">{TABS.find(t => t.id === activeTab)?.icon}</div>
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-faint pointer-events-none"><ChevronDown size={18} /></div>
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-ink dark:text-white pointer-events-none">{TABS.find(t => t.id === activeTab)?.icon}</div>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-ink dark:text-zinc-500 pointer-events-none"><ChevronDown size={18} /></div>
           </div>
         </div>
       </div>
 
       {/* --- MAIN CONTENT AREA --- */}
-      <main className={`flex-1 p-4 sm:p-8 max-w-7xl w-full mx-auto ${activeTab === 'matches' && !isSimpleMode ? 'pb-24 lg:pb-8' : ''}`}>
+      <main className={`flex-1 relative p-4 sm:p-8 max-w-6xl mx-auto w-full flex flex-col z-10 ${activeTab === 'matches' && !isSimpleMode ? 'pb-24 lg:pb-8' : ''}`}>
         
-        {/* NORMAL MODE TABS (Kept mounted with CSS display to eliminate lag) */}
-        <Suspense fallback={<div className="rounded-2xl border border-subtle bg-surface p-8 text-center text-sm text-muted-ink dark:border-subtle-dark dark:bg-surface-dark dark:text-muted-dark">Loading tab…</div>}>
+        {/* NORMAL MODE TABS */}
+        <Suspense fallback={<div className="rounded-2xl border border-subtle bg-surface p-12 text-center text-sm font-medium text-muted-ink dark:border-zinc-800 dark:bg-[#121214] dark:text-zinc-500">Loading tab…</div>}>
           <div className={isSimpleMode ? 'hidden' : 'contents'}>
           {activeTab === 'attendance' && (
              <AttendanceTab visibleAttendances={visibleAttendances} session={session} communityData={communityData} attendanceTeamTab={attendanceTeamTab} setAttendanceTeamTab={setAttendanceTeamTab} attendanceSearch={attendanceSearch} setAttendanceSearch={setAttendanceSearch} openWalkInModal={openWalkInModal} openAttendeeModal={openAttendeeModal} setPlayerDetailModal={setPlayerDetailModal} handleUpdateGrade={handleUpdateGrade} updateAttendanceStatus={updateAttendanceStatus} isProcessing={isProcessing} t={t} />
@@ -816,44 +847,46 @@ export default function SessionDetails() {
         {/* SIMPLE MODE RENDERING */}
         <div className={!isSimpleMode ? 'hidden' : 'animate-in fade-in flex flex-col gap-6'}>
           {/* Simple Mode Header Card */}
-          <div className="bg-surface dark:bg-surface-dark border border-subtle dark:border-subtle-dark rounded-2xl p-4 sm:p-6 mb-2 shadow-sm">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-subtle dark:border-subtle-dark pb-4 mb-4">
+          <div className="bg-surface dark:bg-[#121214] border border-subtle dark:border-zinc-800 rounded-2xl p-5 sm:p-8 mb-2 shadow-sm">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-5 border-b border-subtle dark:border-zinc-800 pb-5 mb-5">
                <div>
-                  <h2 className="text-2xl sm:text-3xl font-black text-primary dark:text-primary-dark flex items-center gap-2"><Zap size={28} className="text-amber-500 fill-amber-500"/> Simple Mode</h2>
-                  <p className="text-muted-ink dark:text-faint font-medium mt-1 tracking-wide uppercase text-xs">Temporary Scorer View • {session?.name}</p>
+                  <h2 className="text-2xl sm:text-3xl font-black text-primary dark:text-white flex items-center gap-3"><Zap size={28} className="text-amber-500 fill-amber-500"/> Simple Mode</h2>
+                  <p className="text-muted-ink dark:text-zinc-400 font-bold mt-2 tracking-widest uppercase text-xs">Temporary Scorer View • {session?.name}</p>
                </div>
                <div className="flex items-center gap-3 w-full sm:w-auto">
-                  <button onClick={() => {setShowSimpleTutorial(true); setTutorialStep(1)}} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-muted dark:bg-elevated-dark hover:bg-muted dark:hover:bg-strong-dark text-primary dark:text-primary-dark px-5 py-2.5 rounded-xl font-bold transition-colors">
+                  <button type="button" onClick={() => {setShowSimpleTutorial(true); setTutorialStep(1)}} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-app dark:bg-[#18181b] hover:bg-muted dark:hover:bg-zinc-800 text-primary dark:text-white px-5 py-3 rounded-xl font-bold transition-colors border border-subtle dark:border-zinc-700 shadow-sm cursor-pointer">
                     <Info size={18} /> Tutorial
                   </button>
-                  <button onClick={() => setShowSimpleExit(true)} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-rose-500/10 border border-rose-500/20 text-rose-500 px-5 py-2.5 rounded-xl font-bold transition-colors hover:bg-rose-500/20">
+                  <button type="button" onClick={() => setShowSimpleExit(true)} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 px-5 py-3 rounded-xl font-bold transition-colors hover:bg-rose-100 dark:hover:bg-rose-500/20 shadow-sm cursor-pointer">
                     <Lock size={18} /> Exit
                   </button>
                </div>
             </div>
             
             {/* Polished Segmented Control for Simple Mode Tabs */}
-            <div className="flex bg-app dark:bg-app-dark p-1 rounded-xl border border-subtle dark:border-subtle-dark">
-               <button onClick={() => setActiveTab('matches')} className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'matches' ? 'bg-surface dark:bg-surface-dark text-primary dark:text-primary-dark shadow' : 'text-muted-ink hover:text-primary dark:hover:text-primary-dark'}`}>Matches & Queue</button>
-               <button onClick={() => setActiveTab('attendance')} className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'attendance' ? 'bg-surface dark:bg-surface-dark text-primary dark:text-primary-dark shadow' : 'text-muted-ink hover:text-primary dark:hover:text-primary-dark'}`}>Attendance</button>
+            <div className="flex bg-app dark:bg-[#09090b] p-1.5 rounded-xl border border-subtle dark:border-zinc-800 shadow-inner">
+               <button type="button" onClick={() => setActiveTab('matches')} className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all cursor-pointer ${activeTab === 'matches' ? 'bg-surface dark:bg-[#18181b] text-primary dark:text-white shadow-sm border border-subtle dark:border-zinc-700' : 'text-muted-ink dark:text-zinc-500 hover:text-primary dark:hover:text-zinc-300 border border-transparent'}`}>Matches & Queue</button>
+               <button type="button" onClick={() => setActiveTab('attendance')} className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all cursor-pointer ${activeTab === 'attendance' ? 'bg-surface dark:bg-[#18181b] text-primary dark:text-white shadow-sm border border-subtle dark:border-zinc-700' : 'text-muted-ink dark:text-zinc-500 hover:text-primary dark:hover:text-zinc-300 border border-transparent'}`}>Attendance</button>
             </div>
           </div>
 
           {/* Matches & Queue View */}
           <div className={`${activeTab === 'matches' ? 'flex' : 'hidden'} flex-col gap-6`}>
             {/* High Priority Actions */}
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col sm:flex-row gap-5">
               <button 
+                 type="button"
                  onClick={handleAutoFillAllCourts} 
                  disabled={isProcessing} 
-                 className="flex-[2] bg-emerald-600 hover:bg-emerald-500 text-white py-4 sm:py-5 rounded-2xl text-lg sm:text-xl font-black shadow-lg shadow-emerald-900/20 active:scale-[0.98] transition-transform flex justify-center items-center gap-3 disabled:opacity-50"
+                 className="flex-[2] bg-emerald-600 hover:bg-emerald-500 text-white py-4 sm:py-5 rounded-2xl text-lg sm:text-xl font-black shadow-lg shadow-emerald-900/20 active:scale-[0.98] transition-transform flex justify-center items-center gap-3 disabled:opacity-50 cursor-pointer"
               >
                 <PlayCircle size={28} /> {String(t('auto_fill', { defaultValue: 'AUTO FILL COURTS' }))}
               </button>
               <button 
+                 type="button"
                  onClick={handleQueueMatch} 
                  disabled={isProcessing} 
-                 className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-4 sm:py-5 rounded-2xl text-lg sm:text-xl font-black shadow-lg shadow-blue-900/20 active:scale-[0.98] transition-transform flex justify-center items-center gap-3 disabled:opacity-50"
+                 className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-4 sm:py-5 rounded-2xl text-lg sm:text-xl font-black shadow-lg shadow-blue-900/20 active:scale-[0.98] transition-transform flex justify-center items-center gap-3 disabled:opacity-50 cursor-pointer"
               >
                 <ListOrdered size={28} /> {String(t('queue_match', { defaultValue: 'QUEUE MATCH' }))}
               </button>
@@ -861,11 +894,11 @@ export default function SessionDetails() {
 
             <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
                {/* Left: Active Courts & Queue Grid */}
-               <div className="flex-1 w-full flex flex-col gap-4">
-                  <h3 className="text-xl font-bold text-primary dark:text-primary-dark flex items-center gap-2">
-                    <SquareStack size={20} className="text-muted-ink" /> Active Courts
+               <div className="flex-1 w-full flex flex-col gap-5">
+                  <h3 className="text-xl font-black text-primary dark:text-white flex items-center gap-3 tracking-tight">
+                    <SquareStack size={24} className="text-muted-ink dark:text-zinc-500" /> Active Courts
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     {courts.filter(c => c.isActive).map(court => {
                        const match = activeMatches.find(m => m.courtId === court.id) || queuedMatchesList.find(m => m.courtId === court.id);
                        return (
@@ -891,12 +924,12 @@ export default function SessionDetails() {
                   </div>
 
                   {/* Queued Matches Stacked below Courts on Desktop */}
-                  <h3 className="text-xl font-bold text-primary dark:text-primary-dark flex items-center gap-2 mt-4">
-                    <ListOrdered size={20} className="text-muted-ink" /> Queued Matches <span className="bg-muted dark:bg-elevated-dark text-muted-ink px-2 py-0.5 rounded text-sm">{queuedMatchesList.length}</span>
+                  <h3 className="text-xl font-black text-primary dark:text-white flex items-center gap-3 mt-6 tracking-tight">
+                    <ListOrdered size={24} className="text-muted-ink dark:text-zinc-500" /> Queued Matches <span className="bg-muted dark:bg-[#18181b] border border-subtle dark:border-zinc-800 text-muted-ink dark:text-zinc-400 px-2.5 py-1 rounded-lg text-sm">{queuedMatchesList.length}</span>
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     {queuedMatchesList.length === 0 && (
-                      <div className="col-span-full p-8 border border-dashed border-subtle dark:border-strong-dark rounded-xl text-center text-muted-ink font-medium">Queue is empty</div>
+                      <div className="col-span-full p-12 border-2 border-dashed border-subtle dark:border-zinc-800 rounded-2xl text-center text-muted-ink dark:text-zinc-500 font-bold bg-app dark:bg-[#0f0f11]">Queue is empty</div>
                     )}
                     {queuedMatchesList.map((match, index) => (
                        <MatchCard 
@@ -924,11 +957,11 @@ export default function SessionDetails() {
                </div>
                
                {/* Right: Waiting List Panel (Desktop Only - Matches Standard View) */}
-               <div className="hidden lg:flex w-80 shrink-0 flex-col gap-4">
-                  <h3 className="text-xl font-bold text-primary dark:text-primary-dark flex items-center gap-2">
-                    <Users size={20} className="text-muted-ink" /> Waiting List <span className="bg-muted dark:bg-elevated-dark text-muted-ink px-2 py-0.5 rounded text-sm">{waitingListPlayers.length}</span>
+               <div className="hidden lg:flex w-[340px] shrink-0 flex-col gap-5">
+                  <h3 className="text-xl font-black text-primary dark:text-white flex items-center gap-3 tracking-tight">
+                    <Users size={24} className="text-muted-ink dark:text-zinc-500" /> Waiting List <span className="bg-muted dark:bg-[#18181b] border border-subtle dark:border-zinc-800 text-muted-ink dark:text-zinc-400 px-2.5 py-1 rounded-lg text-sm">{waitingListPlayers.length}</span>
                   </h3>
-                  <div className="bg-surface dark:bg-surface-dark border border-subtle dark:border-subtle-dark rounded-2xl overflow-hidden flex flex-col max-h-[calc(100vh-280px)] sticky top-24 shadow-sm">
+                  <div className="bg-surface dark:bg-[#121214] border border-subtle dark:border-zinc-800 rounded-3xl overflow-hidden flex flex-col max-h-[calc(100vh-280px)] sticky top-28 shadow-sm">
                     {renderWaitingListContent()}
                   </div>
                </div>
@@ -936,7 +969,7 @@ export default function SessionDetails() {
           </div>
 
           {/* Attendance View inside Simple Mode */}
-          <div className={`${activeTab === 'attendance' ? 'block' : 'hidden'} bg-surface dark:bg-surface-dark p-4 sm:p-6 rounded-2xl border border-subtle dark:border-subtle-dark shadow-sm`}>
+          <div className={`${activeTab === 'attendance' ? 'block' : 'hidden'} bg-surface dark:bg-[#121214] p-5 sm:p-8 rounded-3xl border border-subtle dark:border-zinc-800 shadow-sm`}>
              <AttendanceTab visibleAttendances={visibleAttendances} session={session} communityData={communityData} attendanceTeamTab={attendanceTeamTab} setAttendanceTeamTab={setAttendanceTeamTab} attendanceSearch={attendanceSearch} setAttendanceSearch={setAttendanceSearch} openWalkInModal={openWalkInModal} openAttendeeModal={openAttendeeModal} setPlayerDetailModal={setPlayerDetailModal} handleUpdateGrade={handleUpdateGrade} updateAttendanceStatus={updateAttendanceStatus} isProcessing={isProcessing} t={t} />
           </div>
         </div>
@@ -947,46 +980,51 @@ export default function SessionDetails() {
       {activeTab === 'matches' && session?.sessionType !== 'sparring' && (
         <div className="fixed bottom-6 left-0 right-0 z-40 flex justify-center lg:hidden pointer-events-none">
           <button 
+            type="button"
             onClick={() => setIsWaitingListOpen(true)} 
-            className="pointer-events-auto bg-ink shadow-xl shadow-blue-600/30 text-white px-6 py-3.5 rounded-full font-bold flex items-center gap-3 transition-transform active:scale-95"
+            className="pointer-events-auto bg-ink shadow-xl shadow-blue-600/30 dark:bg-white dark:text-zinc-900 text-white px-8 py-4 rounded-full font-black flex items-center gap-3 transition-transform active:scale-95 cursor-pointer"
           >
-            <Users size={18} />
+            <Users size={20} />
             {String(t('waiting_list', { defaultValue: 'Waiting List' }))}
-            <span className="bg-surface text-ink px-2.5 py-0.5 rounded-full text-xs font-black">{waitingListPlayers.length}</span>
+            <span className="bg-surface dark:bg-[#121214] text-ink dark:text-white px-3 py-1 rounded-full text-xs font-black shadow-sm">{waitingListPlayers.length}</span>
           </button>
         </div>
       )}
 
-      <div className={`fixed inset-0 z-[100] bg-ink/60 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${isWaitingListOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsWaitingListOpen(false)} />
-      <div className={`fixed inset-y-0 right-0 z-[110] w-full max-w-[320px] bg-surface dark:bg-surface-dark shadow-2xl transform transition-transform duration-300 ease-in-out lg:hidden flex flex-col border-l border-subtle dark:border-strong-dark ${isWaitingListOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-         <div className="p-4 border-b border-subtle dark:border-strong-dark bg-surface dark:bg-app-dark flex justify-between items-center shrink-0 mt-safe">
-            <div className="flex items-center gap-2">
-              <h3 className="font-bold text-sm tracking-wide text-primary dark:text-primary-dark uppercase">{String(t('available_players', { defaultValue: 'Available Players' }))}</h3>
-              <span className="bg-accent-soft text-ink dark:bg-accent-soft-dark dark:text-ink-dark font-bold px-2 py-0.5 rounded-full text-xs">{waitingListPlayers.length}</span>
+      <div className={`fixed inset-0 z-[50] bg-ink/80 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${isWaitingListOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsWaitingListOpen(false)} />
+      <div className={`fixed inset-y-0 right-0 z-[60] w-full max-w-[360px] bg-surface dark:bg-[#0f0f11] shadow-2xl transform transition-transform duration-300 ease-in-out lg:hidden flex flex-col border-l border-subtle dark:border-zinc-800 ${isWaitingListOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+         <div className="p-5 border-b border-subtle dark:border-zinc-800 bg-surface dark:bg-[#121214] flex justify-between items-center shrink-0 mt-safe">
+            <div className="flex items-center gap-3">
+              <h3 className="font-black text-lg tracking-tight text-primary dark:text-white">{String(t('available_players', { defaultValue: 'Available Players' }))}</h3>
+              <span className="bg-app dark:bg-zinc-800 border border-subtle dark:border-zinc-700 text-ink dark:text-white font-bold px-2.5 py-1 rounded-lg text-xs shadow-sm">{waitingListPlayers.length}</span>
             </div>
-            <button onClick={() => setIsWaitingListOpen(false)} className="p-2 text-faint hover:text-muted-ink bg-muted dark:bg-elevated-dark rounded-full"><X size={18}/></button>
+            <button type="button" onClick={() => setIsWaitingListOpen(false)} className="p-2 text-muted-ink dark:text-zinc-500 hover:text-primary dark:hover:text-white bg-app dark:bg-[#18181b] rounded-full transition-colors cursor-pointer"><X size={20}/></button>
          </div>
          {renderWaitingListContent()}
       </div>
 
-      {/* ALL FIXED MODALS ARE PLACED HERE AT THE ROOT WITH z-[9999] */}
+      {/* 
+        =========================================================
+        ALL MODALS - WITH EXPLICIT Z-INDEX 9999 TO FIX OVERLAPS
+        =========================================================
+      */}
       
       {/* --- SIMPLE MODE SPECIFIC MODALS --- */}
 
       {/* Enter Simple Mode Prompt */}
       {isEnterSimpleModeOpen && (
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-surface dark:bg-surface-dark w-full max-w-md rounded-2xl shadow-2xl border border-subtle dark:border-subtle-dark p-6 text-center flex flex-col items-center">
-             <div className="w-16 h-16 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-500 flex items-center justify-center mb-4">
-               <Zap size={32} />
+        <div className="fixed inset-0 flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in" style={{ zIndex: 9999 }}>
+          <div className="bg-surface dark:bg-[#0f0f11] w-full max-w-md rounded-3xl shadow-2xl border border-subtle dark:border-zinc-800 p-8 text-center flex flex-col items-center">
+             <div className="w-20 h-20 rounded-full bg-amber-50 dark:bg-amber-500/10 text-amber-500 flex items-center justify-center mb-5 border border-amber-100 dark:border-amber-500/20">
+               <Zap size={36} />
              </div>
-             <h3 className="text-xl font-bold mb-2 text-primary dark:text-primary-dark">Enter Simple Mode?</h3>
-             <p className="text-muted-ink dark:text-faint text-sm mb-6">
+             <h3 className="text-2xl font-black mb-2 text-primary dark:text-white">Enter Simple Mode?</h3>
+             <p className="text-muted-ink dark:text-zinc-400 text-sm mb-8 font-medium">
                This will hide all advanced settings and display a simplified scorer interface. Perfect for handing a tablet to a temporary umpire.
              </p>
              
-             <div className="w-full text-left bg-app dark:bg-elevated-dark/50 border border-subtle dark:border-subtle-dark p-4 rounded-xl mb-6">
-                <label className="block text-xs font-semibold mb-2 text-primary-soft dark:text-faint uppercase tracking-wider">Set Exit PIN</label>
+             <div className="w-full text-left bg-app dark:bg-[#121214] border border-subtle dark:border-zinc-800 p-5 rounded-2xl mb-8 shadow-sm">
+                <label className="block text-xs font-bold mb-3 text-muted-ink dark:text-zinc-400 uppercase tracking-widest text-center">Set Exit PIN</label>
                 <input 
                   type="password" 
                   inputMode="numeric"
@@ -994,14 +1032,15 @@ export default function SessionDetails() {
                   maxLength={4}
                   value={tempPin} 
                   onChange={e => setTempPin(e.target.value.replace(/[^0-9]/g, ''))} 
-                  className="w-full px-4 py-3 bg-surface dark:bg-app-dark border border-subtle dark:border-strong-dark rounded-xl text-center text-xl tracking-[0.5em] font-black outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all text-primary dark:text-primary-dark"
+                  className="w-full px-5 py-4 bg-surface dark:bg-[#18181b] border border-subtle dark:border-zinc-700 rounded-xl text-center text-3xl tracking-[0.5em] font-black outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all text-primary dark:text-white placeholder:text-muted-ink/50"
+                  placeholder="••••"
                 />
-                <p className="text-[10px] text-muted-ink mt-2 text-center">You will need this PIN to return to the admin view.</p>
+                <p className="text-xs text-muted-ink dark:text-zinc-500 mt-4 font-medium text-center">You will need this PIN to return to the admin view.</p>
              </div>
 
-             <div className="flex gap-3 w-full">
-               <button onClick={() => setIsEnterSimpleModeOpen(false)} className="flex-1 py-3 bg-muted dark:bg-elevated-dark hover:bg-muted dark:hover:bg-strong-dark rounded-xl font-bold transition-colors text-primary dark:text-primary-dark">Cancel</button>
-               <button onClick={confirmEnterSimpleMode} className="flex-1 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold transition-colors">Enter Mode</button>
+             <div className="flex gap-4 w-full">
+               <button type="button" onClick={() => setIsEnterSimpleModeOpen(false)} className="flex-1 py-4 bg-app dark:bg-[#18181b] hover:bg-muted dark:hover:bg-zinc-800 border border-subtle dark:border-zinc-700 rounded-xl font-bold transition-colors text-primary dark:text-white shadow-sm cursor-pointer">Cancel</button>
+               <button type="button" onClick={confirmEnterSimpleMode} className="flex-1 py-4 bg-amber-500 hover:bg-amber-400 text-white rounded-xl font-black transition-colors shadow-sm cursor-pointer">Enter Mode</button>
              </div>
           </div>
         </div>
@@ -1009,17 +1048,17 @@ export default function SessionDetails() {
 
       {/* Exit Simple Mode Prompt (Supports Both PIN and Password API Check) */}
       {showSimpleExit && (
-        <div className="fixed inset-0 z-[99999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-surface dark:bg-surface-dark border border-subtle dark:border-strong-dark w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl p-6">
-             <div className="w-16 h-16 bg-rose-500/10 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4">
-               <Lock size={32} />
+        <div className="fixed inset-0 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in" style={{ zIndex: 9999 }}>
+          <div className="bg-surface dark:bg-[#0f0f11] border border-subtle dark:border-zinc-800 w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl p-8">
+             <div className="w-20 h-20 bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 text-rose-600 dark:text-rose-500 rounded-full flex items-center justify-center mx-auto mb-5 shadow-sm">
+               <Lock size={36} />
              </div>
-             <h2 className="text-2xl font-black text-primary dark:text-primary-dark text-center mb-2">Admin Lock</h2>
-             <p className="text-muted-ink dark:text-faint text-center text-sm mb-6">
+             <h2 className="text-2xl font-black text-primary dark:text-white text-center mb-2">Admin Lock</h2>
+             <p className="text-muted-ink dark:text-zinc-400 font-medium text-center text-sm mb-8">
                {unlockMethod === 'pin' ? 'Enter PIN to exit Simple Mode.' : 'Enter your account password.'}
              </p>
              
-             <form onSubmit={attemptExitSimpleMode} className="flex flex-col gap-4">
+             <form onSubmit={attemptExitSimpleMode} className="flex flex-col gap-5">
                {unlockMethod === 'pin' ? (
                  <input 
                    type="password" 
@@ -1029,7 +1068,7 @@ export default function SessionDetails() {
                    maxLength={4}
                    value={simplePin}
                    onChange={e => setSimplePin(e.target.value.replace(/[^0-9]/g, ''))}
-                   className="w-full bg-app dark:bg-app-dark border border-subtle dark:border-strong-dark text-primary dark:text-primary-dark text-center text-2xl tracking-[0.5em] font-black py-4 rounded-xl outline-none focus:border-rose-500 transition-all"
+                   className="w-full bg-app dark:bg-[#121214] border border-subtle dark:border-zinc-800 text-primary dark:text-white text-center text-3xl tracking-[0.5em] font-black py-5 rounded-2xl outline-none focus:border-rose-500 transition-all shadow-sm placeholder:text-muted-ink/50"
                  />
                ) : (
                  <input 
@@ -1038,7 +1077,7 @@ export default function SessionDetails() {
                    placeholder="Account Password"
                    value={simplePin}
                    onChange={e => setSimplePin(e.target.value)}
-                   className="w-full bg-app dark:bg-app-dark border border-subtle dark:border-strong-dark text-primary dark:text-primary-dark text-center text-xl font-bold py-4 rounded-xl outline-none focus:border-rose-500 transition-all"
+                   className="w-full bg-app dark:bg-[#121214] border border-subtle dark:border-zinc-800 text-primary dark:text-white text-center text-xl font-bold py-5 rounded-2xl outline-none focus:border-rose-500 transition-all shadow-sm placeholder:text-muted-ink/50"
                  />
                )}
                
@@ -1048,14 +1087,14 @@ export default function SessionDetails() {
                    setUnlockMethod(unlockMethod === 'pin' ? 'password' : 'pin');
                    setSimplePin('');
                  }} 
-                 className="text-xs font-bold text-rose-500 hover:text-rose-400 transition-colors text-right"
+                 className="text-xs font-bold text-rose-600 dark:text-rose-400 hover:text-rose-500 dark:hover:text-rose-300 transition-colors text-right cursor-pointer"
                >
                  {unlockMethod === 'pin' ? 'Use Account Password instead' : 'Use PIN instead'}
                </button>
 
-               <div className="flex gap-3 mt-2">
-                 <button type="button" onClick={() => {setShowSimpleExit(false); setSimplePin(''); setUnlockMethod('pin');}} className="flex-1 py-3 text-muted-ink font-bold hover:text-primary transition-colors bg-muted dark:bg-elevated-dark rounded-xl">Cancel</button>
-                 <button type="submit" disabled={isProcessing || !simplePin} className="flex-1 py-3 bg-ink text-white font-black rounded-xl hover:bg-ink-soft transition-colors flex justify-center items-center gap-2 disabled:opacity-50">
+               <div className="flex gap-4 mt-2">
+                 <button type="button" onClick={() => {setShowSimpleExit(false); setSimplePin(''); setUnlockMethod('pin');}} className="flex-1 py-4 text-primary dark:text-white font-bold transition-colors bg-app dark:bg-[#18181b] border border-subtle dark:border-zinc-800 hover:bg-muted dark:hover:bg-zinc-800 rounded-xl shadow-sm cursor-pointer">Cancel</button>
+                 <button type="submit" disabled={isProcessing || !simplePin} className="flex-1 py-4 bg-ink dark:bg-white text-white dark:text-zinc-900 font-black rounded-xl hover:bg-ink-soft dark:hover:bg-zinc-200 transition-colors flex justify-center items-center gap-2 disabled:opacity-50 shadow-sm cursor-pointer">
                    <Unlock size={18} /> {isProcessing ? 'Verifying...' : 'Unlock'}
                  </button>
                </div>
@@ -1065,17 +1104,17 @@ export default function SessionDetails() {
       )}
 
       {showSimpleTutorial && (
-        <div className="fixed inset-0 z-[99999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-surface dark:bg-surface-dark border border-subtle dark:border-strong-dark w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl">
-            <div className="p-8 text-center flex flex-col items-center">
+        <div className="fixed inset-0 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in" style={{ zIndex: 9999 }}>
+          <div className="bg-surface dark:bg-[#0f0f11] border border-subtle dark:border-zinc-800 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl">
+            <div className="p-8 sm:p-10 text-center flex flex-col items-center">
                
                {tutorialStep === 1 && (
                  <>
-                   <div className="w-20 h-20 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center mb-6">
-                     <Zap size={40} />
+                   <div className="w-24 h-24 bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 text-amber-500 rounded-full flex items-center justify-center mb-8 shadow-sm">
+                     <Zap size={48} />
                    </div>
-                   <h2 className="text-3xl font-black text-primary dark:text-primary-dark mb-4">Welcome to Simple Mode</h2>
-                   <p className="text-muted-ink dark:text-faint text-lg leading-relaxed">
+                   <h2 className="text-3xl sm:text-4xl font-black text-primary dark:text-white mb-5 tracking-tight">Welcome to Simple Mode</h2>
+                   <p className="text-muted-ink dark:text-zinc-400 text-lg font-medium leading-relaxed">
                      This view is designed for anyone to easily help manage matches while the admin is busy playing. You only need to focus on two things: <strong className="text-primary dark:text-white">Generating Matches</strong> and <strong className="text-primary dark:text-white">Inputting Scores</strong>.
                    </p>
                  </>
@@ -1083,43 +1122,43 @@ export default function SessionDetails() {
 
                {tutorialStep === 2 && (
                  <>
-                   <div className="w-20 h-20 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mb-6">
-                     <PlayCircle size={40} />
+                   <div className="w-24 h-24 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mb-8 shadow-sm">
+                     <PlayCircle size={48} />
                    </div>
-                   <h2 className="text-3xl font-black text-primary dark:text-primary-dark mb-4">Step 1: Auto Fill</h2>
-                   <p className="text-muted-ink dark:text-faint text-lg leading-relaxed">
-                     Press the giant Green <strong className="text-emerald-400">AUTO FILL</strong> button. The system will automatically pull the fairest pairings from the waiting list and assign them to any empty courts.
+                   <h2 className="text-3xl sm:text-4xl font-black text-primary dark:text-white mb-5 tracking-tight">Step 1: Auto Fill</h2>
+                   <p className="text-muted-ink dark:text-zinc-400 text-lg font-medium leading-relaxed">
+                     Press the giant Green <strong className="text-emerald-600 dark:text-emerald-400">AUTO FILL</strong> button. The system will automatically pull the fairest pairings from the waiting list and assign them to any empty courts.
                    </p>
                  </>
                )}
 
                {tutorialStep === 3 && (
                  <>
-                   <div className="w-20 h-20 bg-blue-500/10 text-blue-500 rounded-full flex items-center justify-center mb-6">
-                     <Check size={40} />
+                   <div className="w-24 h-24 bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mb-8 shadow-sm">
+                     <Check size={48} />
                    </div>
-                   <h2 className="text-3xl font-black text-primary dark:text-primary-dark mb-4">Step 2: Start & Finish</h2>
-                   <p className="text-muted-ink dark:text-faint text-lg leading-relaxed mb-4">
-                     When players walk onto the court, click <strong className="text-primary dark:text-white bg-app dark:bg-app-dark px-2 py-1 rounded">Start</strong>.
+                   <h2 className="text-3xl sm:text-4xl font-black text-primary dark:text-white mb-5 tracking-tight">Step 2: Start & Finish</h2>
+                   <p className="text-muted-ink dark:text-zinc-400 text-lg font-medium leading-relaxed mb-4">
+                     When players walk onto the court, click <strong className="text-primary dark:text-white bg-app dark:bg-zinc-800 border border-subtle dark:border-zinc-700 px-3 py-1.5 rounded-lg shadow-sm">Start</strong>.
                    </p>
-                   <p className="text-muted-ink dark:text-faint text-lg leading-relaxed">
-                     When they finish playing, click <strong className="text-white bg-emerald-600 px-2 py-1 rounded">Finish</strong> to input their score. The court will then be empty and ready for the next Auto Fill!
+                   <p className="text-muted-ink dark:text-zinc-400 text-lg font-medium leading-relaxed">
+                     When they finish playing, click <strong className="text-emerald-700 bg-emerald-50 border border-emerald-200 dark:text-emerald-400 dark:bg-emerald-500/10 dark:border-emerald-500/20 px-3 py-1.5 rounded-lg shadow-sm">Finish</strong> to input their score. The court will then be empty and ready for the next Auto Fill!
                    </p>
                  </>
                )}
 
             </div>
-            <div className="p-4 bg-app dark:bg-app-dark border-t border-subtle dark:border-strong-dark flex justify-between items-center gap-4">
+            <div className="p-5 sm:p-6 bg-app dark:bg-[#121214] border-t border-subtle dark:border-zinc-800 flex justify-between items-center gap-4">
                {tutorialStep > 1 ? (
-                 <button onClick={() => setTutorialStep(s => s - 1)} className="px-6 py-3 text-muted-ink font-bold hover:text-primary">Back</button>
+                 <button type="button" onClick={() => setTutorialStep(s => s - 1)} className="px-6 py-4 text-muted-ink dark:text-zinc-400 font-bold hover:text-primary dark:hover:text-white transition-colors cursor-pointer">Back</button>
                ) : (
-                 <button onClick={() => setShowSimpleTutorial(false)} className="px-6 py-3 text-faint font-bold hover:text-muted-ink">Skip</button>
+                 <button type="button" onClick={() => setShowSimpleTutorial(false)} className="px-6 py-4 text-muted-ink/70 dark:text-zinc-500 font-bold hover:text-muted-ink dark:hover:text-zinc-400 transition-colors cursor-pointer">Skip</button>
                )}
                
                {tutorialStep < 3 ? (
-                 <button onClick={() => setTutorialStep(s => s + 1)} className="px-8 py-3 bg-ink text-white font-black rounded-xl">Next</button>
+                 <button type="button" onClick={() => setTutorialStep(s => s + 1)} className="px-10 py-4 bg-ink dark:bg-white text-white dark:text-zinc-900 font-black rounded-xl hover:bg-ink-soft dark:hover:bg-zinc-200 transition-colors shadow-sm cursor-pointer">Next</button>
                ) : (
-                 <button onClick={() => setShowSimpleTutorial(false)} className="px-8 py-3 bg-amber-500 text-white font-black rounded-xl hover:bg-amber-600">Got it!</button>
+                 <button type="button" onClick={() => setShowSimpleTutorial(false)} className="px-10 py-4 bg-amber-500 text-white font-black rounded-xl hover:bg-amber-400 transition-colors shadow-sm cursor-pointer">Got it!</button>
                )}
             </div>
           </div>
@@ -1130,28 +1169,28 @@ export default function SessionDetails() {
 
       {/* Import Members Modal */}
       {isImportModalOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-surface dark:bg-surface-dark w-full max-w-md rounded-2xl shadow-2xl flex flex-col border border-subtle dark:border-subtle-dark">
-            <div className="flex justify-between items-center p-5 border-b border-subtle dark:border-subtle-dark bg-app dark:bg-app-dark">
-              <h3 className="font-bold text-lg">{t('import_members')}</h3>
-              <button disabled={isProcessing} onClick={() => setImportModalOpen(false)} className="p-1.5 text-faint hover:bg-muted dark:hover:bg-elevated-dark rounded-full transition-colors"><X size={18}/></button>
+        <div className="fixed inset-0 flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in" style={{ zIndex: 9999 }}>
+          <div className="bg-surface dark:bg-[#0f0f11] w-full max-w-md rounded-3xl shadow-2xl flex flex-col border border-subtle dark:border-zinc-800 overflow-hidden">
+            <div className="flex justify-between items-center p-6 border-b border-subtle dark:border-zinc-800 bg-app dark:bg-[#121214]">
+              <h3 className="font-black text-xl text-primary dark:text-white tracking-tight">{t('import_members')}</h3>
+              <button type="button" onClick={() => setImportModalOpen(false)} className="p-2 text-muted-ink dark:text-zinc-400 hover:bg-muted dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-white rounded-full transition-colors cursor-pointer"><X size={20}/></button>
             </div>
-            <div className="p-6">
+            <div className="p-6 sm:p-8">
               {membershipPeriods.length === 0 ? (
-                <div className="text-center text-muted-ink py-4">No active membership periods found.</div>
+                <div className="text-center text-muted-ink dark:text-zinc-500 font-medium py-8">No active membership periods found.</div>
               ) : (
                 <>
-                  <label className="block text-sm font-bold mb-2 text-primary-soft dark:text-muted-dark">Select Membership Period</label>
+                  <label className="block text-xs font-bold mb-3 text-muted-ink dark:text-zinc-400 uppercase tracking-widest">Select Membership Period</label>
                   <select value={selectedPeriodId} onChange={e => setSelectedPeriodId(e.target.value)} className={inputStyles}>
                     {membershipPeriods.map(period => <option key={period.id} value={period.id}>{period.name}</option>)}
                   </select>
-                  <p className="text-xs text-muted-ink mt-4">Importing will sync all members from the selected period. They will be marked as "Absent" until they physically arrive.</p>
+                  <p className="text-sm font-medium text-muted-ink dark:text-zinc-400 mt-5 leading-relaxed">Importing will sync all members from the selected period. They will be marked as "Absent" until they physically arrive.</p>
                 </>
               )}
             </div>
-            <div className="p-5 border-t border-subtle dark:border-subtle-dark bg-app dark:bg-app-dark flex justify-end gap-3 rounded-b-2xl">
-              <button disabled={isProcessing} onClick={() => setImportModalOpen(false)} className="px-5 py-2.5 text-sm font-medium text-muted-ink dark:text-muted-dark hover:bg-muted dark:hover:bg-elevated-dark rounded-lg transition-colors">Cancel</button>
-              <button disabled={isProcessing || membershipPeriods.length === 0} onClick={confirmImport} className="px-6 py-2.5 text-sm font-medium text-white bg-ink hover:bg-ink-soft rounded-lg shadow-sm transition-colors">Import Now</button>
+            <div className="p-6 border-t border-subtle dark:border-zinc-800 bg-app dark:bg-[#121214] flex justify-end gap-3 rounded-b-3xl">
+              <button type="button" onClick={() => setImportModalOpen(false)} className="px-6 py-3 text-sm font-bold text-muted-ink dark:text-zinc-400 hover:bg-muted dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-white rounded-xl transition-colors cursor-pointer">Cancel</button>
+              <button type="button" disabled={isProcessing || membershipPeriods.length === 0} onClick={confirmImport} className="px-8 py-3 text-sm font-bold text-white dark:text-zinc-900 bg-ink dark:bg-white hover:bg-ink-soft dark:hover:bg-zinc-200 rounded-xl shadow-sm transition-colors disabled:opacity-50 cursor-pointer">Import Now</button>
             </div>
           </div>
         </div>
@@ -1159,40 +1198,40 @@ export default function SessionDetails() {
 
       {/* Manual Match Edit Modal */}
       {editMatchModal && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-surface dark:bg-surface-dark w-full max-w-4xl rounded-2xl shadow-2xl flex flex-col border border-subtle dark:border-subtle-dark">
-            <div className="flex justify-between items-center p-5 border-b border-subtle dark:border-subtle-dark bg-app dark:bg-app-dark shrink-0 rounded-t-2xl">
-              <h3 className="font-bold text-lg">{editMatchModal.id ? 'Edit Match Players' : 'Create Manual Match'}</h3>
-              <button disabled={isProcessing} onClick={() => setEditMatchModal(null)} className="p-1.5 text-faint hover:bg-muted dark:hover:bg-elevated-dark rounded-full transition-colors"><X size={18}/></button>
+        <div className="fixed inset-0 flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in" style={{ zIndex: 9999 }}>
+          <div className="bg-surface dark:bg-[#0f0f11] w-full max-w-4xl rounded-3xl shadow-2xl flex flex-col border border-subtle dark:border-zinc-800 overflow-hidden">
+            <div className="flex justify-between items-center p-6 border-b border-subtle dark:border-zinc-800 bg-app dark:bg-[#121214] shrink-0">
+              <h3 className="font-black text-xl text-primary dark:text-white tracking-tight">{editMatchModal.id ? 'Edit Match Players' : 'Create Manual Match'}</h3>
+              <button type="button" onClick={() => setEditMatchModal(null)} className="p-2 text-muted-ink dark:text-zinc-400 hover:bg-muted dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-white rounded-full transition-colors cursor-pointer"><X size={20}/></button>
             </div>
-            <div className="p-6 md:p-8 flex flex-col md:flex-row gap-6 md:gap-8 relative items-stretch min-h-[400px]">
-              <div className="flex-1 w-full bg-app dark:bg-elevated-dark/30 p-5 md:p-6 rounded-2xl border border-subtle dark:border-subtle-dark shadow-sm flex flex-col">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-8 h-8 rounded-lg bg-accent-soft dark:bg-accent-soft-dark text-ink dark:text-ink-dark flex items-center justify-center font-black">A</div>
-                  <h4 className="font-bold text-lg text-primary dark:text-primary-dark">Team A {session?.sessionType === 'sparring' && <span className="text-xs ml-2 text-faint">({communityData?.name})</span>}</h4>
+            <div className="p-6 sm:p-8 flex flex-col md:flex-row gap-6 sm:gap-8 relative items-stretch min-h-[400px]">
+              <div className="flex-1 w-full bg-app dark:bg-[#121214] p-6 sm:p-8 rounded-3xl border border-subtle dark:border-zinc-800 shadow-sm flex flex-col">
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="w-10 h-10 rounded-xl bg-accent-soft dark:bg-zinc-800 border border-transparent dark:border-zinc-700 text-ink dark:text-white flex items-center justify-center font-black text-lg shadow-sm">A</div>
+                  <h4 className="font-black text-xl text-primary dark:text-white tracking-tight">Team A {session?.sessionType === 'sparring' && <span className="text-sm ml-2 text-muted-ink dark:text-zinc-500 font-bold">({communityData?.name})</span>}</h4>
                 </div>
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-5">
                   <PlayerSlotSelect options={getOptionsFor('ta1')} value={manualPlayers.ta1} t={t} currentName={getMemberData(manualPlayers.ta1)?.name} currentGrade={getMemberData(manualPlayers.ta1)?.skillLevel} swaps={getSwapListFor('ta1')} onSwap={(id: number) => handleSwapWithinMatch('ta1', id)} onChange={(v: number) => setManualPlayers({...manualPlayers, ta1: v})} placeholder="- Select Player 1 -" />
                   <PlayerSlotSelect options={getOptionsFor('ta2')} value={manualPlayers.ta2} t={t} currentName={getMemberData(manualPlayers.ta2)?.name} currentGrade={getMemberData(manualPlayers.ta2)?.skillLevel} swaps={getSwapListFor('ta2')} onSwap={(id: number) => handleSwapWithinMatch('ta2', id)} onChange={(v: number) => setManualPlayers({...manualPlayers, ta2: v})} placeholder="- Select Player 2 -" />
                 </div>
               </div>
-              <div className="hidden md:flex absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-surface dark:bg-app-dark border border-subtle dark:border-subtle-dark shadow-md items-center justify-center font-black text-faint z-10">VS</div>
-              <div className="md:hidden text-center text-faint font-black text-lg py-2">VS</div>
-              <div className="flex-1 w-full bg-app dark:bg-elevated-dark/30 p-5 md:p-6 rounded-2xl border border-subtle dark:border-subtle-dark shadow-sm flex flex-col">
-                <div className="flex items-center gap-3 mb-6 justify-end md:justify-start">
-                  <div className="md:hidden w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black">B</div>
-                  <h4 className="font-bold text-lg text-primary dark:text-primary-dark">Team B {session?.sessionType === 'sparring' && <span className="text-xs ml-2 text-faint">({session?.opposingCommunityName})</span>}</h4>
-                  <div className="hidden md:flex w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 items-center justify-center font-black">B</div>
+              <div className="hidden md:flex absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-full bg-surface dark:bg-[#18181b] border border-subtle dark:border-zinc-800 shadow-md items-center justify-center font-black text-muted-ink dark:text-zinc-500 z-10 text-lg">VS</div>
+              <div className="md:hidden text-center text-muted-ink dark:text-zinc-600 font-black text-xl py-2">VS</div>
+              <div className="flex-1 w-full bg-app dark:bg-[#121214] p-6 sm:p-8 rounded-3xl border border-subtle dark:border-zinc-800 shadow-sm flex flex-col">
+                <div className="flex items-center gap-4 mb-8 justify-end md:justify-start">
+                  <div className="md:hidden w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black text-lg shadow-sm">B</div>
+                  <h4 className="font-black text-xl text-primary dark:text-white tracking-tight">Team B {session?.sessionType === 'sparring' && <span className="text-sm ml-2 text-muted-ink dark:text-zinc-500 font-bold">({session?.opposingCommunityName})</span>}</h4>
+                  <div className="hidden md:flex w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 items-center justify-center font-black text-lg shadow-sm">B</div>
                 </div>
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-5">
                   <PlayerSlotSelect options={getOptionsFor('tb1')} value={manualPlayers.tb1} t={t} currentName={getMemberData(manualPlayers.tb1)?.name} currentGrade={getMemberData(manualPlayers.tb1)?.skillLevel} swaps={getSwapListFor('tb1')} onSwap={(id: number) => handleSwapWithinMatch('tb1', id)} onChange={(v: number) => setManualPlayers({...manualPlayers, tb1: v})} placeholder="- Select Player 1 -" />
-                  <PlayerSlotSelect options={getOptionsFor('tb2')} value={manualPlayers.tb2} t={t} currentName={getMemberData(manualPlayers.tb2)?.name} currentGrade={getMemberData(manualPlayers.tb2)?.skillLevel} swaps={getSwapListFor('tb2')} onSwap={(id: number) => handleSwapWithinMatch('tb2', id)} onChange={(v: number) => setManualPlayers({...manualPlayers, tb2: v})} placeholder="- Select Player 2 -" />
+                  <PlayerSlotSelect options={getOptionsFor('tb2')} value={manualPlayers.tb2} t={t} currentName={getMemberData(manualPlayers.tb2)?.name} currentGrade={getMemberData(manualPlayers.tb2)?.skillLevel} swaps={getSwapListFor('tb2')} onSwap={(id: number) => handleSwapWithinMatch('tb2', id)} onChange={(v: number) => setManualPlayers({...manualPlayers, ta2: v})} placeholder="- Select Player 2 -" />
                 </div>
               </div>
             </div>
-            <div className="p-5 border-t border-subtle dark:border-subtle-dark bg-app dark:bg-app-dark flex justify-end gap-3 shrink-0 rounded-b-2xl">
-              <button disabled={isProcessing} onClick={() => setEditMatchModal(null)} className="px-5 py-2.5 text-sm font-medium text-muted-ink dark:text-muted-dark hover:bg-muted dark:hover:bg-elevated-dark rounded-lg transition-colors disabled:opacity-50">Cancel</button>
-              <button disabled={isProcessing} onClick={saveManualMatch} className="px-6 py-2.5 text-sm font-medium text-white bg-ink hover:bg-ink-soft rounded-lg shadow-sm transition-colors disabled:opacity-50">Save Players</button>
+            <div className="p-6 border-t border-subtle dark:border-zinc-800 bg-app dark:bg-[#121214] flex justify-end gap-3 shrink-0 rounded-b-3xl">
+              <button type="button" onClick={() => setEditMatchModal(null)} className="px-6 py-3 text-sm font-bold text-muted-ink dark:text-zinc-400 hover:bg-muted dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-white rounded-xl transition-colors cursor-pointer">Cancel</button>
+              <button type="button" disabled={isProcessing} onClick={saveManualMatch} className="px-8 py-3 text-sm font-bold text-white dark:text-zinc-900 bg-ink dark:bg-white hover:bg-ink-soft dark:hover:bg-zinc-200 rounded-xl shadow-sm transition-colors disabled:opacity-50 cursor-pointer">Save Players</button>
             </div>
           </div>
         </div>
@@ -1200,65 +1239,65 @@ export default function SessionDetails() {
 
       {/* Edit History Modal */}
       {editHistoryModal && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-surface dark:bg-surface-dark w-full max-w-4xl rounded-2xl shadow-2xl flex flex-col max-h-[90dvh] border border-subtle dark:border-subtle-dark">
-            <div className="flex justify-between items-center p-5 border-b border-subtle dark:border-subtle-dark bg-app dark:bg-app-dark shrink-0 rounded-t-2xl">
-              <h3 className="font-bold text-lg">{t('edit_history')}</h3>
-              <button disabled={isProcessing} onClick={() => setEditHistoryModal(null)} className="p-1.5 text-faint hover:bg-muted dark:hover:bg-elevated-dark rounded-full transition-colors"><X size={18}/></button>
+        <div className="fixed inset-0 flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in" style={{ zIndex: 9999 }}>
+          <div className="bg-surface dark:bg-[#0f0f11] w-full max-w-4xl rounded-3xl shadow-2xl flex flex-col max-h-[90dvh] border border-subtle dark:border-zinc-800 overflow-hidden">
+            <div className="flex justify-between items-center p-6 border-b border-subtle dark:border-zinc-800 bg-app dark:bg-[#121214] shrink-0 rounded-t-3xl">
+              <h3 className="font-black text-xl text-primary dark:text-white tracking-tight">{t('edit_history')}</h3>
+              <button type="button" onClick={() => setEditHistoryModal(null)} className="p-2 text-muted-ink dark:text-zinc-400 hover:bg-muted dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-white rounded-full transition-colors cursor-pointer"><X size={20}/></button>
             </div>
-            <div className="p-6 md:p-8 flex flex-col gap-6 md:gap-8 overflow-y-auto relative">
-              <div className="w-full bg-app dark:bg-elevated-dark/30 p-4 rounded-xl border border-subtle dark:border-subtle-dark">
-                 <label className="block text-xs font-semibold mb-2 text-primary-soft dark:text-faint">Court Played On</label>
+            <div className="p-6 sm:p-8 flex flex-col gap-6 sm:gap-8 overflow-y-auto relative">
+              <div className="w-full bg-app dark:bg-[#121214] p-5 sm:p-6 rounded-3xl border border-subtle dark:border-zinc-800 shadow-sm">
+                 <label className={labelStyles}>Court Played On</label>
                  <select disabled={isProcessing} value={historyForm.courtId} onChange={e => setHistoryForm({...historyForm, courtId: parseInt(e.target.value)})} className={inputStyles}>
                    <option value={0}>Unknown / Deleted Court</option>
                    {courts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                  </select>
               </div>
-              <div className="flex flex-col md:flex-row gap-6 md:gap-8 relative items-stretch">
-                <div className="flex-1 w-full bg-app dark:bg-elevated-dark/30 p-5 md:p-6 rounded-2xl border border-subtle dark:border-subtle-dark shadow-sm flex flex-col">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-8 h-8 rounded-lg bg-accent-soft dark:bg-accent-soft-dark text-ink dark:text-ink-dark flex items-center justify-center font-black">A</div>
-                    <h4 className="font-bold text-lg text-primary dark:text-primary-dark">Team A {session?.sessionType === 'sparring' && <span className="text-xs ml-2 text-faint">({communityData?.name})</span>}</h4>
+              <div className="flex flex-col md:flex-row gap-6 sm:gap-8 relative items-stretch">
+                <div className="flex-1 w-full bg-app dark:bg-[#121214] p-6 sm:p-8 rounded-3xl border border-subtle dark:border-zinc-800 shadow-sm flex flex-col">
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-10 h-10 rounded-xl bg-accent-soft dark:bg-zinc-800 border border-transparent dark:border-zinc-700 text-ink dark:text-white flex items-center justify-center font-black text-lg shadow-sm">A</div>
+                    <h4 className="font-black text-xl text-primary dark:text-white tracking-tight">Team A {session?.sessionType === 'sparring' && <span className="text-sm ml-2 text-muted-ink dark:text-zinc-500 font-bold">({communityData?.name})</span>}</h4>
                   </div>
-                  <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-5">
                     <PlayerSlotSelect options={historyPlayerOptions.filter(m => m.id !== historyForm.ta2 && m.id !== historyForm.tb1 && m.id !== historyForm.tb2)} value={historyForm.ta1} t={t} currentName={getMemberData(historyForm.ta1)?.name} currentGrade={getMemberData(historyForm.ta1)?.skillLevel} swaps={getHistorySwapListFor('ta1')} onSwap={(id: number) => handleSwapWithinHistory('ta1', id)} onChange={(v: number) => setHistoryForm({...historyForm, ta1: v})} placeholder="- Select Player 1 -" />
                     <PlayerSlotSelect options={historyPlayerOptions.filter(m => m.id !== historyForm.ta1 && m.id !== historyForm.tb1 && m.id !== historyForm.tb2)} value={historyForm.ta2} t={t} currentName={getMemberData(historyForm.ta2)?.name} currentGrade={getMemberData(historyForm.ta2)?.skillLevel} swaps={getHistorySwapListFor('ta2')} onSwap={(id: number) => handleSwapWithinHistory('ta2', id)} onChange={(v: number) => setHistoryForm({...historyForm, ta2: v})} placeholder="- Select Player 2 -" />
                   </div>
-                  <div className="mt-6">
-                    <div className="flex items-center justify-between mb-2">
-                      <button type="button" onClick={() => setHistorySetView(v => v - 1)} disabled={historySetView <= 1 || isProcessing} className="p-1.5 text-muted-ink hover:text-ink disabled:opacity-30"><ChevronLeft size={16}/></button>
-                      <label className="block text-xs font-semibold text-primary-soft dark:text-faint text-center uppercase tracking-widest">Score (Set {historySetView})</label>
-                      <button type="button" onClick={() => setHistorySetView(v => v + 1)} disabled={historySetView >= maxSets || isProcessing} className="p-1.5 text-muted-ink hover:text-ink disabled:opacity-30"><ChevronRight size={16}/></button>
+                  <div className="mt-8 border-t border-subtle dark:border-zinc-800 pt-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <button type="button" onClick={() => setHistorySetView(v => v - 1)} disabled={historySetView <= 1 || isProcessing} className="p-2 bg-surface dark:bg-[#18181b] border border-subtle dark:border-zinc-800 rounded-lg text-muted-ink dark:text-white hover:bg-muted dark:hover:bg-zinc-800 transition-colors disabled:opacity-40 shadow-sm cursor-pointer"><ChevronLeft size={18}/></button>
+                      <label className="block text-xs font-bold text-muted-ink dark:text-zinc-400 text-center uppercase tracking-widest">Score (Set {historySetView})</label>
+                      <button type="button" onClick={() => setHistorySetView(v => v + 1)} disabled={historySetView >= maxSets || isProcessing} className="p-2 bg-surface dark:bg-[#18181b] border border-subtle dark:border-zinc-800 rounded-lg text-muted-ink dark:text-white hover:bg-muted dark:hover:bg-zinc-800 transition-colors disabled:opacity-40 shadow-sm cursor-pointer"><ChevronRight size={18}/></button>
                     </div>
-                    <input disabled={isProcessing} type="number" value={historyForm[`sa${historySetView}` as keyof typeof historyForm] || ''} placeholder="0" onChange={e => setHistoryForm({...historyForm, [`sa${historySetView}`]: parseInt(e.target.value) || 0})} className={`${inputStyles} text-center font-black text-2xl py-4 ${(historyForm[`sa${historySetView}` as keyof typeof historyForm] as number) > (historyForm[`sb${historySetView}` as keyof typeof historyForm] as number) ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : ''}`} />
+                    <input disabled={isProcessing} type="number" value={historyForm[`sa${historySetView}` as keyof typeof historyForm] || ''} placeholder="0" onChange={e => setHistoryForm({...historyForm, [`sa${historySetView}`]: parseInt(e.target.value) || 0})} className={`${inputStyles} text-center font-black text-3xl py-6 ${(historyForm[`sa${historySetView}` as keyof typeof historyForm] as number) > (historyForm[`sb${historySetView}` as keyof typeof historyForm] as number) ? 'border-emerald-500 ring-1 ring-emerald-500 text-emerald-600 dark:text-emerald-400' : ''}`} />
                   </div>
                 </div>
-                <div className="hidden md:flex absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-surface dark:bg-app-dark border border-subtle dark:border-subtle-dark shadow-md items-center justify-center font-black text-faint z-10">VS</div>
-                <div className="md:hidden text-center text-faint font-black text-lg py-2">VS</div>
-                <div className="flex-1 w-full bg-app dark:bg-elevated-dark/30 p-5 md:p-6 rounded-2xl border border-subtle dark:border-subtle-dark shadow-sm flex flex-col">
-                  <div className="flex items-center gap-3 mb-6 justify-end md:justify-start">
-                    <div className="md:hidden w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black">B</div>
-                    <h4 className="font-bold text-lg text-primary dark:text-primary-dark">Team B {session?.sessionType === 'sparring' && <span className="text-xs ml-2 text-faint">({session?.opposingCommunityName})</span>}</h4>
-                    <div className="hidden md:flex w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 items-center justify-center font-black">B</div>
+                <div className="hidden md:flex absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-full bg-surface dark:bg-[#18181b] border border-subtle dark:border-zinc-800 shadow-md items-center justify-center font-black text-muted-ink dark:text-zinc-500 z-10 text-lg">VS</div>
+                <div className="md:hidden text-center text-muted-ink dark:text-zinc-600 font-black text-xl py-2">VS</div>
+                <div className="flex-1 w-full bg-app dark:bg-[#121214] p-6 sm:p-8 rounded-3xl border border-subtle dark:border-zinc-800 shadow-sm flex flex-col">
+                  <div className="flex items-center gap-4 mb-8 justify-end md:justify-start">
+                    <div className="md:hidden w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black text-lg shadow-sm">B</div>
+                    <h4 className="font-black text-xl text-primary dark:text-white tracking-tight">Team B {session?.sessionType === 'sparring' && <span className="text-sm ml-2 text-muted-ink dark:text-zinc-500 font-bold">({session?.opposingCommunityName})</span>}</h4>
+                    <div className="hidden md:flex w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 items-center justify-center font-black text-lg shadow-sm">B</div>
                   </div>
-                  <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-5">
                     <PlayerSlotSelect options={historyPlayerOptions.filter(m => m.id !== historyForm.ta1 && m.id !== historyForm.ta2 && m.id !== historyForm.tb2)} value={historyForm.tb1} t={t} currentName={getMemberData(historyForm.tb1)?.name} currentGrade={getMemberData(historyForm.tb1)?.skillLevel} swaps={getHistorySwapListFor('tb1')} onSwap={(id: number) => handleSwapWithinHistory('tb1', id)} onChange={(v: number) => setHistoryForm({...historyForm, tb1: v})} placeholder="- Select Player 1 -" />
-                    <PlayerSlotSelect options={historyPlayerOptions.filter(m => m.id !== historyForm.ta1 && m.id !== historyForm.ta2 && m.id !== historyForm.tb1)} value={historyForm.tb2} t={t} currentName={getMemberData(historyForm.tb2)?.name} currentGrade={getMemberData(historyForm.tb2)?.skillLevel} swaps={getHistorySwapListFor('tb2')} onSwap={(id: number) => handleSwapWithinHistory('tb2', id)} onChange={(v: number) => setHistoryForm({...historyForm, tb2: v})} placeholder="- Select Player 2 -" />
+                    <PlayerSlotSelect options={historyPlayerOptions.filter(m => m.id !== historyForm.ta1 && m.id !== historyForm.ta2 && m.id !== historyForm.tb1)} value={historyForm.tb2} t={t} currentName={getMemberData(historyForm.tb2)?.name} currentGrade={getMemberData(historyForm.tb2)?.skillLevel} swaps={getHistorySwapListFor('tb2')} onSwap={(id: number) => handleSwapWithinHistory('tb2', id)} onChange={(v: number) => setHistoryForm({...historyForm, ta2: v})} placeholder="- Select Player 2 -" />
                   </div>
-                  <div className="mt-6">
-                    <div className="flex items-center justify-between mb-2">
-                      <button type="button" onClick={() => setHistorySetView(v => v - 1)} disabled={historySetView <= 1 || isProcessing} className="p-1.5 text-muted-ink hover:text-ink disabled:opacity-30"><ChevronLeft size={16}/></button>
-                      <label className="block text-xs font-semibold text-primary-soft dark:text-faint text-center uppercase tracking-widest">Score (Set {historySetView})</label>
-                      <button type="button" onClick={() => setHistorySetView(v => v + 1)} disabled={historySetView >= maxSets || isProcessing} className="p-1.5 text-muted-ink hover:text-ink disabled:opacity-30"><ChevronRight size={16}/></button>
+                  <div className="mt-8 border-t border-subtle dark:border-zinc-800 pt-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <button type="button" onClick={() => setHistorySetView(v => v - 1)} disabled={historySetView <= 1 || isProcessing} className="p-2 bg-surface dark:bg-[#18181b] border border-subtle dark:border-zinc-800 rounded-lg text-muted-ink dark:text-white hover:bg-muted dark:hover:bg-zinc-800 transition-colors disabled:opacity-40 shadow-sm cursor-pointer"><ChevronLeft size={18}/></button>
+                      <label className="block text-xs font-bold text-muted-ink dark:text-zinc-400 text-center uppercase tracking-widest">Score (Set {historySetView})</label>
+                      <button type="button" onClick={() => setHistorySetView(v => v + 1)} disabled={historySetView >= maxSets || isProcessing} className="p-2 bg-surface dark:bg-[#18181b] border border-subtle dark:border-zinc-800 rounded-lg text-muted-ink dark:text-white hover:bg-muted dark:hover:bg-zinc-800 transition-colors disabled:opacity-40 shadow-sm cursor-pointer"><ChevronRight size={18}/></button>
                     </div>
-                    <input disabled={isProcessing} type="number" value={historyForm[`sb${historySetView}` as keyof typeof historyForm] || ''} placeholder="0" onChange={e => setHistoryForm({...historyForm, [`sb${historySetView}`]: parseInt(e.target.value) || 0})} className={`${inputStyles} text-center font-black text-2xl py-4 ${(historyForm[`sb${historySetView}` as keyof typeof historyForm] as number) > (historyForm[`sa${historySetView}` as keyof typeof historyForm] as number) ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : ''}`} />
+                    <input disabled={isProcessing} type="number" value={historyForm[`sb${historySetView}` as keyof typeof historyForm] || ''} placeholder="0" onChange={e => setHistoryForm({...historyForm, [`sb${historySetView}`]: parseInt(e.target.value) || 0})} className={`${inputStyles} text-center font-black text-3xl py-6 ${(historyForm[`sb${historySetView}` as keyof typeof historyForm] as number) > (historyForm[`sa${historySetView}` as keyof typeof historyForm] as number) ? 'border-emerald-500 ring-1 ring-emerald-500 text-emerald-600 dark:text-emerald-400' : ''}`} />
                   </div>
                 </div>
               </div>
             </div>
-            <div className="p-5 border-t border-subtle dark:border-subtle-dark bg-app dark:bg-app-dark flex justify-end gap-3 shrink-0 rounded-b-2xl">
-              <button disabled={isProcessing} onClick={() => setEditHistoryModal(null)} className="px-5 py-2.5 text-sm font-medium text-muted-ink dark:text-muted-dark hover:bg-muted dark:hover:bg-elevated-dark rounded-lg transition-colors disabled:opacity-50">Cancel</button>
-              <button disabled={isProcessing} onClick={saveHistoryMatch} className="px-6 py-2.5 text-sm font-medium text-white bg-ink hover:bg-ink-soft rounded-lg shadow-sm transition-colors disabled:opacity-50">Save Changes</button>
+            <div className="p-6 border-t border-subtle dark:border-zinc-800 bg-app dark:bg-[#121214] flex justify-end gap-3 shrink-0 rounded-b-3xl">
+              <button type="button" onClick={() => setEditHistoryModal(null)} className="px-6 py-3 text-sm font-bold text-muted-ink dark:text-zinc-400 hover:bg-muted dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-white rounded-xl transition-colors cursor-pointer">Cancel</button>
+              <button type="button" disabled={isProcessing} onClick={saveHistoryMatch} className="px-8 py-3 text-sm font-bold text-white dark:text-zinc-900 bg-ink dark:bg-white hover:bg-ink-soft dark:hover:bg-zinc-200 rounded-xl shadow-sm transition-colors disabled:opacity-50 cursor-pointer">Save Changes</button>
             </div>
           </div>
         </div>
@@ -1266,16 +1305,16 @@ export default function SessionDetails() {
 
       {/* Confirmation Modal - Delete Court */}
       {confirmDeleteCourtId && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-surface dark:bg-surface-dark w-full max-w-sm rounded-2xl shadow-2xl border border-subtle dark:border-subtle-dark p-6 text-center">
-             <div className="w-16 h-16 rounded-full bg-rose-50 dark:bg-rose-900/20 text-rose-600 mx-auto flex items-center justify-center mb-4">
-               <AlertTriangle size={32} />
+        <div className="fixed inset-0 flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in" style={{ zIndex: 9999 }}>
+          <div className="bg-surface dark:bg-[#0f0f11] w-full max-w-sm rounded-3xl shadow-2xl border border-subtle dark:border-zinc-800 p-8 text-center">
+             <div className="w-20 h-20 rounded-full bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 text-rose-600 dark:text-rose-500 mx-auto flex items-center justify-center mb-5 shadow-sm">
+               <AlertTriangle size={36} />
              </div>
-             <h3 className="text-xl font-bold mb-2">{String(t('delete_court', { defaultValue: 'Delete Court' }))}?</h3>
-             <p className="text-muted-ink dark:text-faint text-sm mb-6">Are you sure you want to delete this court? This action cannot be undone.</p>
-             <div className="flex gap-3">
-               <button disabled={isProcessing} onClick={() => setConfirmDeleteCourtId(null)} className="flex-1 py-3 bg-muted dark:bg-elevated-dark hover:bg-muted dark:hover:bg-strong-dark rounded-xl font-bold transition-colors disabled:opacity-50">{String(t('abort', { defaultValue: 'Cancel' }))}</button>
-               <button disabled={isProcessing} onClick={handleConfirmDeleteCourt} className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold transition-colors disabled:opacity-50">{String(t('confirm', { defaultValue: 'Confirm' }))}</button>
+             <h3 className="text-2xl font-black mb-2 text-primary dark:text-white">{String(t('delete_court', { defaultValue: 'Delete Court' }))}?</h3>
+             <p className="text-muted-ink dark:text-zinc-400 font-medium text-sm mb-8">Are you sure you want to delete this court? This action cannot be undone.</p>
+             <div className="flex gap-4">
+               <button type="button" disabled={isProcessing} onClick={() => setConfirmDeleteCourtId(null)} className="flex-1 py-4 bg-app dark:bg-[#18181b] hover:bg-muted dark:hover:bg-zinc-800 border border-subtle dark:border-zinc-700 rounded-xl font-bold transition-colors text-primary dark:text-white shadow-sm disabled:opacity-50 cursor-pointer">{String(t('abort', { defaultValue: 'Cancel' }))}</button>
+               <button type="button" disabled={isProcessing} onClick={handleConfirmDeleteCourt} className="flex-1 py-4 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-black transition-colors shadow-sm disabled:opacity-50 cursor-pointer">{String(t('confirm', { defaultValue: 'Confirm' }))}</button>
              </div>
           </div>
         </div>
@@ -1283,16 +1322,16 @@ export default function SessionDetails() {
 
       {/* Confirmation Modal - Delete/Cancel Match */}
       {confirmDeleteMatchId && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-surface dark:bg-surface-dark w-full max-w-sm rounded-2xl shadow-2xl border border-subtle dark:border-subtle-dark p-6 text-center">
-             <div className="w-16 h-16 rounded-full bg-rose-50 dark:bg-rose-900/20 text-rose-600 mx-auto flex items-center justify-center mb-4">
-               <AlertTriangle size={32} />
+        <div className="fixed inset-0 flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in" style={{ zIndex: 9999 }}>
+          <div className="bg-surface dark:bg-[#0f0f11] w-full max-w-sm rounded-3xl shadow-2xl border border-subtle dark:border-zinc-800 p-8 text-center">
+             <div className="w-20 h-20 rounded-full bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 text-rose-600 dark:text-rose-500 mx-auto flex items-center justify-center mb-5 shadow-sm">
+               <AlertTriangle size={36} />
              </div>
-             <h3 className="text-xl font-bold mb-2">{String(t('confirm_cancel_title', { defaultValue: 'Cancel Match' }))}</h3>
-             <p className="text-muted-ink dark:text-faint text-sm mb-6">{String(t('confirm_cancel_desc', { defaultValue: 'Are you sure you want to cancel?' }))}</p>
-             <div className="flex gap-3">
-               <button disabled={isProcessing} onClick={() => setConfirmDeleteMatchId(null)} className="flex-1 py-3 bg-muted dark:bg-elevated-dark hover:bg-muted dark:hover:bg-strong-dark rounded-xl font-bold transition-colors disabled:opacity-50">{String(t('abort', { defaultValue: 'Cancel' }))}</button>
-               <button disabled={isProcessing} onClick={handleConfirmDeleteMatch} className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold transition-colors disabled:opacity-50">{String(t('confirm', { defaultValue: 'Confirm' }))}</button>
+             <h3 className="text-2xl font-black mb-2 text-primary dark:text-white">{String(t('confirm_cancel_title', { defaultValue: 'Cancel Match' }))}</h3>
+             <p className="text-muted-ink dark:text-zinc-400 font-medium text-sm mb-8">{String(t('confirm_cancel_desc', { defaultValue: 'Are you sure you want to cancel?' }))}</p>
+             <div className="flex gap-4">
+               <button type="button" disabled={isProcessing} onClick={() => setConfirmDeleteMatchId(null)} className="flex-1 py-4 bg-app dark:bg-[#18181b] hover:bg-muted dark:hover:bg-zinc-800 border border-subtle dark:border-zinc-700 rounded-xl font-bold transition-colors text-primary dark:text-white shadow-sm disabled:opacity-50 cursor-pointer">{String(t('abort', { defaultValue: 'Cancel' }))}</button>
+               <button type="button" disabled={isProcessing} onClick={handleConfirmDeleteMatch} className="flex-1 py-4 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-black transition-colors shadow-sm disabled:opacity-50 cursor-pointer">{String(t('confirm', { defaultValue: 'Confirm' }))}</button>
              </div>
           </div>
         </div>
@@ -1300,16 +1339,16 @@ export default function SessionDetails() {
 
       {/* Confirmation Modal - Reset Match */}
       {confirmResetMatchId && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-surface dark:bg-surface-dark w-full max-w-sm rounded-2xl shadow-2xl border border-subtle dark:border-subtle-dark p-6 text-center">
-             <div className="w-16 h-16 rounded-full bg-rose-50 dark:bg-rose-900/20 text-rose-600 mx-auto flex items-center justify-center mb-4">
-               <RotateCcw size={32} />
+        <div className="fixed inset-0 flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in" style={{ zIndex: 9999 }}>
+          <div className="bg-surface dark:bg-[#0f0f11] w-full max-w-sm rounded-3xl shadow-2xl border border-subtle dark:border-zinc-800 p-8 text-center">
+             <div className="w-20 h-20 rounded-full bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 text-rose-600 dark:text-rose-500 mx-auto flex items-center justify-center mb-5 shadow-sm">
+               <RotateCcw size={36} />
              </div>
-             <h3 className="text-xl font-bold mb-2">Reset Match?</h3>
-             <p className="text-muted-ink dark:text-faint text-sm mb-6">This will reset the match timer and status back to Waiting. Are you sure?</p>
-             <div className="flex gap-3">
-               <button disabled={isProcessing} onClick={() => setConfirmResetMatchId(null)} className="flex-1 py-3 bg-muted dark:bg-elevated-dark hover:bg-muted dark:hover:bg-strong-dark rounded-xl font-bold transition-colors disabled:opacity-50">{String(t('abort', { defaultValue: 'Cancel' }))}</button>
-               <button disabled={isProcessing} onClick={handleResetMatch} className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold transition-colors disabled:opacity-50">Reset Match</button>
+             <h3 className="text-2xl font-black mb-2 text-primary dark:text-white">Reset Match?</h3>
+             <p className="text-muted-ink dark:text-zinc-400 font-medium text-sm mb-8">This will reset the match timer and status back to Waiting. Are you sure?</p>
+             <div className="flex gap-4">
+               <button type="button" disabled={isProcessing} onClick={() => setConfirmResetMatchId(null)} className="flex-1 py-4 bg-app dark:bg-[#18181b] hover:bg-muted dark:hover:bg-zinc-800 border border-subtle dark:border-zinc-700 rounded-xl font-bold transition-colors text-primary dark:text-white shadow-sm disabled:opacity-50 cursor-pointer">{String(t('abort', { defaultValue: 'Cancel' }))}</button>
+               <button type="button" disabled={isProcessing} onClick={handleResetMatch} className="flex-1 py-4 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-black transition-colors shadow-sm disabled:opacity-50 cursor-pointer">Reset Match</button>
              </div>
           </div>
         </div>
@@ -1317,26 +1356,27 @@ export default function SessionDetails() {
 
       {/* Swap Court Modal */}
       {swapCourtModal && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-surface dark:bg-surface-dark w-full max-w-md rounded-2xl shadow-2xl flex flex-col max-h-[85dvh] overflow-hidden border border-subtle dark:border-subtle-dark">
-            <div className="flex justify-between items-center p-5 border-b border-subtle dark:border-subtle-dark bg-app dark:bg-app-dark">
-              <h3 className="font-bold text-lg">Move to Court</h3>
-              <button disabled={isProcessing} onClick={() => setSwapCourtModal(null)} className="p-1.5 text-faint hover:bg-muted dark:hover:bg-elevated-dark rounded-full transition-colors disabled:opacity-50"><X size={18}/></button>
+        <div className="fixed inset-0 flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in" style={{ zIndex: 9999 }}>
+          <div className="bg-surface dark:bg-[#0f0f11] w-full max-w-md rounded-3xl shadow-2xl flex flex-col max-h-[85dvh] overflow-hidden border border-subtle dark:border-zinc-800">
+            <div className="flex justify-between items-center p-6 border-b border-subtle dark:border-zinc-800 bg-app dark:bg-[#121214] shrink-0">
+              <h3 className="font-black text-xl text-primary dark:text-white tracking-tight">Move to Court</h3>
+              <button type="button" disabled={isProcessing} onClick={() => setSwapCourtModal(null)} className="p-2 text-muted-ink dark:text-zinc-400 hover:bg-muted dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-white rounded-full transition-colors disabled:opacity-50 cursor-pointer"><X size={20}/></button>
             </div>
-            <div className="p-4 overflow-y-auto flex flex-col gap-2">
+            <div className="p-5 sm:p-6 overflow-y-auto flex flex-col gap-3">
               {swapCourtModal.status !== 'on_court' && swapCourtModal.courtId !== null && (
-                <button disabled={isProcessing} onClick={() => handleSwapCourt(swapCourtModal.id, null)} className="w-full text-left p-4 rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-900/10 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors font-bold flex justify-between items-center text-amber-700 dark:text-amber-500 mb-2 disabled:opacity-50">
+                <button type="button" disabled={isProcessing} onClick={() => handleSwapCourt(swapCourtModal.id, null)} className="w-full text-left p-5 rounded-2xl border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors font-bold flex justify-between items-center text-amber-700 dark:text-amber-400 mb-2 disabled:opacity-50 shadow-sm cursor-pointer">
                   Move to Queue (Waiting List)
-                  <ListOrdered size={16} />
+                  <ListOrdered size={20} />
                 </button>
               )}
               {courts.filter(c => c.isActive && c.id !== swapCourtModal.courtId).length === 0 ? (
-                <div className="text-center text-muted-ink py-4">No other active courts available.</div>
+                <div className="text-center text-muted-ink dark:text-zinc-500 font-medium py-8">No other active courts available.</div>
               ) : (
                 courts.filter(c => c.isActive && c.id !== swapCourtModal.courtId).map(c => {
                   const isOccupied = activeMatches.some(m => m.courtId === c.id && m.status === 'on_court');
                   return (
                     <button 
+                      type="button"
                       disabled={isProcessing} 
                       key={c.id} 
                       onClick={() => {
@@ -1346,13 +1386,13 @@ export default function SessionDetails() {
                           handleSwapCourt(swapCourtModal.id, c.id);
                         }
                       }} 
-                      className={`w-full text-left p-4 rounded-xl border ${isOccupied ? 'border-rose-200 bg-rose-50/50 dark:border-rose-900/50 dark:bg-rose-900/10 cursor-not-allowed opacity-75' : 'border-subtle dark:border-subtle-dark bg-app dark:bg-app-dark hover:bg-accent-soft hover:border-ink dark:hover:bg-elevated-dark dark:hover:dark:border-strong-dark'} transition-colors font-bold flex justify-between items-center`}
+                      className={`w-full text-left p-5 rounded-2xl border ${isOccupied ? 'border-rose-200 bg-rose-50/50 dark:border-rose-900/50 dark:bg-rose-900/10 cursor-not-allowed opacity-75' : 'border-subtle dark:border-zinc-800 bg-app dark:bg-[#121214] hover:bg-accent-soft hover:border-ink dark:hover:bg-zinc-800 dark:hover:dark:border-zinc-700 shadow-sm cursor-pointer'} transition-colors font-bold flex justify-between items-center`}
                     >
-                      <div className="flex flex-col">
-                        <span>{c.name}</span>
-                        {isOccupied && <span className="text-[10px] text-rose-500 uppercase tracking-widest mt-1">Match Ongoing</span>}
+                      <div className="flex flex-col gap-1">
+                        <span className="text-base text-primary dark:text-zinc-100">{c.name}</span>
+                        {isOccupied && <span className="text-[10px] font-bold text-rose-500 uppercase tracking-widest mt-0.5">Match Ongoing</span>}
                       </div>
-                      <ArrowRightLeft size={16} className={isOccupied ? "text-rose-400" : "text-faint"} />
+                      <ArrowRightLeft size={18} className={isOccupied ? "text-rose-400" : "text-muted-ink dark:text-zinc-500"} />
                     </button>
                   );
                 })
@@ -1362,41 +1402,87 @@ export default function SessionDetails() {
         </div>
       )}
 
+      {/* Fairness Insights Modal */}
+      {isFairnessModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center bg-ink/80 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="fairness-title" style={{ zIndex: 9999 }}>
+          <div className="flex max-h-[90dvh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-subtle bg-surface shadow-2xl dark:border-zinc-800 dark:bg-[#0f0f11]">
+            <div className="flex items-start justify-between gap-4 border-b border-subtle px-6 py-6 dark:border-zinc-800 sm:px-8 bg-app dark:bg-[#121214]">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-ink dark:text-zinc-500">{String(t('organizer_view', { defaultValue: 'ORGANIZER VIEW' }))}</p>
+                <h2 id="fairness-title" className="mt-1 text-2xl font-black tracking-tight text-primary dark:text-white">{String(t('fairness_insights', { defaultValue: 'Fairness Insights' }))}</h2>
+                <p className="mt-1 max-w-xl text-sm font-medium text-muted-ink dark:text-zinc-400">{String(t('fairness_insights_desc', { defaultValue: 'Matchmaking statistics.' }))}</p>
+              </div>
+              <button type="button" onClick={() => setIsFairnessModalOpen(false)} aria-label={String(t('close'))} className="rounded-full p-2 text-muted-ink transition-colors hover:bg-muted hover:text-ink dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white cursor-pointer"><X size={20} /></button>
+            </div>
+
+            <div className="min-h-0 overflow-y-auto px-6 py-8 sm:px-8 bg-surface dark:bg-[#0f0f11]">
+              {fairnessInsights.length === 0 ? (
+                <div className="rounded-2xl border border-subtle bg-app p-12 text-center text-base font-medium text-muted-ink dark:border-zinc-800 dark:bg-[#121214] dark:text-zinc-500">{String(t('fairness_insights_empty', { defaultValue: 'Not enough data yet.' }))}</div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="hidden grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(0,1fr))] gap-4 px-5 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-ink dark:text-zinc-500 sm:grid">
+                    <span>{String(t('player', { defaultValue: 'Player' }))}</span><span>{String(t('court_turns', { defaultValue: 'Court Turns' }))}</span><span>{String(t('rest_time', { defaultValue: 'Rest Time' }))}</span><span>{String(t('partner_repetition', { defaultValue: 'Partner Repetition' }))}</span><span>{String(t('opponent_repetition', { defaultValue: 'Opponent Repetition' }))}</span>
+                  </div>
+                  {fairnessInsights.map((insight: any) => (
+                    <div key={insight.id} className="rounded-2xl border border-subtle bg-app p-5 dark:border-zinc-800 dark:bg-[#121214] shadow-sm hover:bg-muted dark:hover:bg-white/5 transition-colors">
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="min-w-0 truncate text-base font-bold text-primary dark:text-zinc-100">{insight.name}</span>
+                        {insight.waitingPosition && <span className="shrink-0 rounded-lg bg-accent-soft px-2.5 py-1 text-[10px] font-bold tracking-widest uppercase text-ink dark:bg-[#18181b] dark:border dark:border-zinc-700 dark:text-zinc-300">{String(t('queue_position', { defaultValue: 'Queue #{{position}}' })).replace('{{position}}', insight.waitingPosition.toString())}</span>}
+                      </div>
+                      <div className="mt-5 grid grid-cols-2 gap-4 text-base sm:grid-cols-4">
+                        <div><p className="text-[10px] font-bold uppercase tracking-widest text-muted-ink dark:text-zinc-500 sm:hidden">{String(t('court_turns', { defaultValue: 'Court Turns' }))}</p><p className="mt-1 font-black text-primary dark:text-white sm:mt-0">{insight.turns}</p></div>
+                        <div><p className="text-[10px] font-bold uppercase tracking-widest text-muted-ink dark:text-zinc-500 sm:hidden">{String(t('rest_time', { defaultValue: 'Rest Time' }))}</p><p className="mt-1 font-black text-primary dark:text-white sm:mt-0">{insight.restMinutes === null ? String(t('not_played_yet', { defaultValue: 'Not played yet' })) : String(t('minutes_value', { defaultValue: '{{minutes}} mins' })).replace('{{minutes}}', insight.restMinutes.toString())}</p></div>
+                        <div><p className="text-[10px] font-bold uppercase tracking-widest text-muted-ink dark:text-zinc-500 sm:hidden">{String(t('partner_repetition', { defaultValue: 'Partner Rep' }))}</p><p className="mt-1 font-black text-primary dark:text-white sm:mt-0">{insight.partnerRepeat}</p></div>
+                        <div><p className="text-[10px] font-bold uppercase tracking-widest text-muted-ink dark:text-zinc-500 sm:hidden">{String(t('opponent_repetition', { defaultValue: 'Opponent Rep' }))}</p><p className="mt-1 font-black text-primary dark:text-white sm:mt-0">{insight.opponentRepeat}</p></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-subtle bg-app px-6 py-5 dark:border-zinc-800 dark:bg-[#121214] sm:px-8">
+              <p className="text-xs font-medium text-muted-ink dark:text-zinc-500">{String(t('fairness_insights_note', { defaultValue: 'This tracks matches generated algorithmically to ensure fairness.' }))}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Multi-select Attendee Modal */}
       {isAttendeeModalOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-surface dark:bg-surface-dark w-full max-w-md rounded-2xl shadow-2xl flex flex-col max-h-[85dvh] overflow-hidden border border-subtle dark:border-subtle-dark">
-            <div className="flex justify-between items-center p-5 border-b border-subtle dark:border-subtle-dark bg-app dark:bg-app-dark">
-              <h3 className="font-bold text-lg">{String(t('add_attendee', { defaultValue: 'Add Attendee' }))}</h3>
-              <button disabled={isProcessing} onClick={() => setAttendeeModalOpen(false)} className="p-1.5 text-faint hover:bg-muted dark:hover:bg-elevated-dark rounded-full transition-colors disabled:opacity-50"><X size={18}/></button>
+        <div className="fixed inset-0 flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in" style={{ zIndex: 9999 }}>
+          <div className="bg-surface dark:bg-[#0f0f11] w-full max-w-lg rounded-3xl shadow-2xl flex flex-col max-h-[85dvh] overflow-hidden border border-subtle dark:border-zinc-800">
+            <div className="flex justify-between items-center p-6 border-b border-subtle dark:border-zinc-800 bg-app dark:bg-[#121214] shrink-0">
+              <h3 className="font-black text-xl text-primary dark:text-white tracking-tight">{String(t('add_attendee', { defaultValue: 'Add Attendee' }))}</h3>
+              <button type="button" disabled={isProcessing} onClick={() => setAttendeeModalOpen(false)} className="p-2 text-muted-ink dark:text-zinc-400 hover:bg-muted dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-white rounded-full transition-colors disabled:opacity-50 cursor-pointer"><X size={20}/></button>
             </div>
             
-            <div className="p-4 border-b border-subtle dark:border-subtle-dark">
+            <div className="p-5 border-b border-subtle dark:border-zinc-800 shrink-0">
               <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" size={16} />
-                <input disabled={isProcessing} type="text" placeholder={String(t('search_players', { defaultValue: 'Search Players...' }))} value={modalSearch} onChange={(e) => setModalSearch(e.target.value)} className="w-full pl-9 pr-4 py-2.5 bg-app dark:bg-app-dark border border-subtle dark:border-subtle-dark rounded-lg shadow-sm outline-none focus:ring-2 focus:ring-ink text-sm disabled:opacity-50" autoFocus />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-ink dark:text-zinc-500" size={18} />
+                <input disabled={isProcessing} type="text" placeholder={String(t('search_players', { defaultValue: 'Search Players...' }))} value={modalSearch} onChange={(e) => setModalSearch(e.target.value)} className="w-full pl-11 pr-4 py-3 bg-app dark:bg-[#121214] border border-subtle dark:border-zinc-800 rounded-xl shadow-sm outline-none focus:ring-2 focus:ring-ink text-sm disabled:opacity-50 text-primary dark:text-white" autoFocus />
               </div>
             </div>
 
-            <div className="p-2 overflow-y-auto flex-1 bg-surface dark:bg-surface-dark">
-              {availableMembersModal.length === 0 ? <div className="p-8 text-center text-muted-ink">{String(t('no_players', { defaultValue: 'No players found.' }))}</div> : 
+            <div className="p-3 overflow-y-auto flex-1 bg-surface dark:bg-[#0f0f11]">
+              {availableMembersModal.length === 0 ? <div className="p-12 text-center font-medium text-muted-ink dark:text-zinc-500">{String(t('no_players', { defaultValue: 'No players found.' }))}</div> : 
                availableMembersModal.map((member: any) => (
-                <div key={member.id} className={`flex items-center p-3 hover:bg-app dark:hover:bg-elevated-dark/50 rounded-xl cursor-pointer transition-colors ${isProcessing ? 'pointer-events-none opacity-50' : ''}`} onClick={() => toggleSelectAttendee(member.id)}>
-                  <div className="flex items-center gap-4 w-full">
-                    <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${selectedAttendees.includes(member.id) ? 'bg-ink border-ink text-white' : 'border-default dark:border-strong-dark'}`}>
-                      {selectedAttendees.includes(member.id) && <Check size={14} strokeWidth={3} />}
+                <div key={member.id} className={`flex items-center p-4 hover:bg-app dark:hover:bg-white/5 rounded-2xl cursor-pointer transition-colors ${isProcessing ? 'pointer-events-none opacity-50' : ''}`} onClick={() => toggleSelectAttendee(member.id)}>
+                  <div className="flex items-center gap-5 w-full">
+                    <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${selectedAttendees.includes(member.id) ? 'bg-ink border-ink text-white dark:bg-white dark:border-white dark:text-zinc-900' : 'border-default dark:border-zinc-700 bg-transparent'}`}>
+                      {selectedAttendees.includes(member.id) && <Check size={16} strokeWidth={3} />}
                     </div>
                     <div>
-                      <div className="font-bold text-sm">{member.name}</div>
-                      <div className="text-xs text-muted-ink mt-0.5">{member.skillLevel}</div>
+                      <div className="font-bold text-base text-primary dark:text-zinc-100">{member.name}</div>
+                      <div className="text-sm font-medium text-muted-ink dark:text-zinc-500 mt-0.5">{member.skillLevel}</div>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="p-4 border-t border-subtle dark:border-subtle-dark bg-app dark:bg-app-dark">
-              <button onClick={handleAddSelectedAttendees} disabled={selectedAttendees.length === 0 || isProcessing} className="w-full py-3 text-sm font-medium text-white bg-ink hover:bg-ink-soft rounded-xl shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            <div className="p-6 border-t border-subtle dark:border-zinc-800 bg-app dark:bg-[#121214] shrink-0 rounded-b-3xl">
+              <button type="button" onClick={handleAddSelectedAttendees} disabled={selectedAttendees.length === 0 || isProcessing} className="w-full py-4 text-base font-bold text-white dark:text-zinc-900 bg-ink dark:bg-white hover:bg-ink-soft dark:hover:bg-zinc-200 rounded-xl shadow-sm transition-colors disabled:opacity-50 cursor-pointer">
                 {String(t('add_selected', { defaultValue: 'Add Selected' })).replace('{{count}}', selectedAttendees.length.toString())}
               </button>
             </div>
@@ -1406,47 +1492,54 @@ export default function SessionDetails() {
 
       {/* Walk-in Modal */}
       {isWalkInModalOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-surface dark:bg-surface-dark w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-subtle dark:border-subtle-dark">
-            <div className="flex justify-between items-center p-5 border-b border-subtle dark:border-subtle-dark bg-app dark:bg-app-dark">
-              <h3 className="font-bold text-lg">{String(t('add_walk_in', { defaultValue: 'Add Walk-In' }))}</h3>
-              <button disabled={isProcessing} onClick={() => setWalkInModalOpen(false)} className="p-1.5 text-faint hover:bg-muted dark:hover:bg-elevated-dark rounded-full transition-colors disabled:opacity-50"><X size={18}/></button>
+        <div className="fixed inset-0 flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in" style={{ zIndex: 9999 }}>
+          <div className="bg-surface dark:bg-[#0f0f11] w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border border-subtle dark:border-zinc-800">
+            <div className="flex justify-between items-center p-6 border-b border-subtle dark:border-zinc-800 bg-app dark:bg-[#121214]">
+              <h3 className="font-black text-xl text-primary dark:text-white tracking-tight">{String(t('add_walk_in', { defaultValue: 'Add Walk-In' }))}</h3>
+              <button type="button" disabled={isProcessing} onClick={() => setWalkInModalOpen(false)} className="p-2 text-muted-ink dark:text-zinc-400 hover:bg-muted dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-white rounded-full transition-colors disabled:opacity-50 cursor-pointer"><X size={20}/></button>
             </div>
-            <form onSubmit={handleWalkIn} className="p-6 flex flex-col gap-4">
+            <form onSubmit={handleWalkIn} className="p-6 sm:p-8 flex flex-col gap-6">
               <div>
-                <label className="block text-xs font-semibold mb-1.5 text-primary-soft dark:text-faint">Name</label>
+                <label className={labelStyles}>Name</label>
                 <input disabled={isProcessing} type="text" required placeholder="Walk-in Player Name" value={walkInForm.name} onChange={e => setWalkInForm({...walkInForm, name: e.target.value})} className={inputStyles} autoFocus />
               </div>
               
               {session?.sessionType === 'sparring' && (
                 <div className="animate-in fade-in">
-                  <label className="block text-xs font-semibold mb-1.5 text-primary-soft dark:text-faint">Team Assignment</label>
-                  <select disabled={isProcessing} value={walkInForm.team} onChange={e => setWalkInForm({...walkInForm, team: e.target.value})} className={`${inputStyles} font-bold`}>
-                    <option value="home">Home ({communityData?.name})</option>
-                    <option value="away">Away ({session.opposingCommunityName})</option>
-                  </select>
+                  <label className={labelStyles}>Team Assignment</label>
+                  <div className="relative">
+                    <select disabled={isProcessing} value={walkInForm.team} onChange={e => setWalkInForm({...walkInForm, team: e.target.value})} className={`${inputStyles} font-bold appearance-none pr-10 cursor-pointer`}>
+                      <option value="home">Home ({communityData?.name})</option>
+                      <option value="away">Away ({session.opposingCommunityName})</option>
+                    </select>
+                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-muted-ink dark:text-zinc-500" size={16}/>
+                  </div>
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5 text-primary-soft dark:text-faint">Gender</label>
-                  <select disabled={isProcessing} value={walkInForm.gender} onChange={e => setWalkInForm({...walkInForm, gender: e.target.value})} className={`${inputStyles} font-medium`}>
-                    <option value="male">♂ Male</option><option value="female">♀ Female</option>
-                  </select>
+                  <label className={labelStyles}>Gender</label>
+                  <div className="relative">
+                    <select disabled={isProcessing} value={walkInForm.gender} onChange={e => setWalkInForm({...walkInForm, gender: e.target.value})} className={`${inputStyles} font-bold appearance-none pr-10 cursor-pointer`}>
+                      <option value="male">♂ Male</option><option value="female">♀ Female</option>
+                    </select>
+                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-muted-ink dark:text-zinc-500" size={16}/>
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5 text-primary-soft dark:text-faint">Skill Level</label>
-                  <select disabled={isProcessing} value={walkInForm.skillLevel} onChange={e => setWalkInForm({...walkInForm, skillLevel: e.target.value})} className={`${inputStyles} font-medium`}>
-                    <option value="A1">A1</option><option value="A2">A2</option>
-                    <option value="B1">B1</option><option value="B2">B2</option>
-                    <option value="C1">C1</option><option value="C2">C2</option>
-                  </select>
+                  <label className={labelStyles}>Skill Level</label>
+                  <div className="relative">
+                    <select disabled={isProcessing} value={walkInForm.skillLevel} onChange={e => setWalkInForm({...walkInForm, skillLevel: e.target.value})} className={`${inputStyles} font-bold appearance-none pr-10 cursor-pointer`}>
+                      {SKILL_LEVELS.map(lvl => <option key={lvl.id} value={lvl.id}>{lvl.id}</option>)}
+                    </select>
+                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-muted-ink dark:text-zinc-500" size={16}/>
+                  </div>
                 </div>
               </div>
-              <div className="flex gap-3 justify-end mt-4">
-                <button disabled={isProcessing} type="button" onClick={() => setWalkInModalOpen(false)} className="flex-1 sm:flex-none px-5 py-2.5 text-sm font-medium bg-muted dark:bg-elevated-dark hover:bg-muted dark:hover:bg-strong-dark rounded-lg transition-colors disabled:opacity-50">Cancel</button>
-                <button disabled={isProcessing} type="submit" className="flex-1 sm:flex-none px-6 py-2.5 text-sm font-medium text-white bg-ink hover:bg-ink-soft rounded-lg shadow-sm transition-colors disabled:opacity-50">Add Walk-In</button>
+              <div className="flex gap-4 justify-end mt-4 pt-6 border-t border-subtle dark:border-zinc-800">
+                <button type="button" disabled={isProcessing} onClick={() => setWalkInModalOpen(false)} className="flex-1 px-6 py-3 text-sm font-bold bg-app dark:bg-[#18181b] border border-subtle dark:border-zinc-700 hover:bg-muted dark:hover:bg-zinc-800 text-primary dark:text-white rounded-xl transition-colors shadow-sm disabled:opacity-50 cursor-pointer">Cancel</button>
+                <button type="submit" disabled={isProcessing} className="flex-1 px-8 py-3 text-sm font-bold text-white dark:text-zinc-900 bg-ink dark:bg-white hover:bg-ink-soft dark:hover:bg-zinc-200 rounded-xl shadow-sm transition-colors disabled:opacity-50 cursor-pointer">Add Walk-In</button>
               </div>
             </form>
           </div>
@@ -1455,85 +1548,86 @@ export default function SessionDetails() {
 
       {/* Player Detail Modal */}
       {playerDetailModal && selectedDetailPlayer && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-surface dark:bg-surface-dark w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden border border-subtle dark:border-subtle-dark">
-            <div className="flex justify-between items-center p-5 border-b border-subtle dark:border-subtle-dark bg-app dark:bg-app-dark shrink-0">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-accent-soft dark:bg-elevated-dark flex items-center justify-center text-ink dark:text-muted-dark font-bold">
+        <div className="fixed inset-0 flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in" style={{ zIndex: 9999 }}>
+          <div className="bg-surface dark:bg-[#0f0f11] w-full max-w-4xl rounded-3xl shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden border border-subtle dark:border-zinc-800">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-6 border-b border-subtle dark:border-zinc-800 bg-app dark:bg-[#121214] shrink-0">
+              <div className="flex items-center gap-5 w-full sm:w-auto">
+                <div className="w-14 h-14 rounded-2xl bg-app dark:bg-[#18181b] border border-subtle dark:border-zinc-800 flex items-center justify-center text-primary dark:text-white font-black text-2xl shadow-sm shrink-0">
                   {selectedDetailPlayer?.name?.charAt(0) || '?'}
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg leading-tight">{selectedDetailPlayer?.name}</h3>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className={`text-[10px] border px-1.5 py-0.5 rounded font-mono font-bold ${getGradeColor(selectedDetailPlayer?.skillLevel)}`}>{selectedDetailPlayer?.skillLevel}</span>
-                    <span className="text-[10px] bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400 border border-purple-200 dark:border-purple-800 px-1.5 py-0.5 rounded font-mono font-bold">MMR: {selectedDetailPlayer?.hiddenMmr ?? 1200}</span>
-                    <span className="text-xs text-muted-ink font-medium capitalize">{selectedDetailPlayer?.gender}</span>
+                  <h3 className="font-black text-xl leading-tight text-primary dark:text-white tracking-tight">{selectedDetailPlayer?.name}</h3>
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold tracking-widest uppercase whitespace-nowrap ${getBadgeStyle(selectedDetailPlayer?.skillLevel)}`}>{getBadgeLabel(selectedDetailPlayer?.skillLevel)}</span>
+                    <span className="text-[10px] bg-purple-50 text-purple-700 dark:bg-[#3b0764]/60 dark:text-[#d8b4fe] border border-purple-200 dark:border-purple-800/60 px-2.5 py-1 rounded-md font-bold tracking-widest uppercase whitespace-nowrap">MMR: {selectedDetailPlayer?.hiddenMmr ?? 1200}</span>
+                    {normalizeGender(selectedDetailPlayer?.gender) === 'male' && <span className="text-sky-600 dark:text-[#0ea5e9] bg-sky-50 dark:bg-sky-500/10 border border-sky-200 dark:border-sky-500/20 px-2.5 py-1 rounded-md text-[10px] font-bold tracking-widest uppercase">♂ M</span>}
+                    {normalizeGender(selectedDetailPlayer?.gender) === 'female' && <span className="text-pink-600 dark:text-[#f472b6] bg-pink-50 dark:bg-[#f472b6]/10 border border-pink-200 dark:border-[#f472b6]/20 px-2.5 py-1 rounded-md text-[10px] font-bold tracking-widest uppercase">♀ F</span>}
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button disabled={isProcessing} onClick={() => exportPlayerPDF(selectedDetailPlayer?.id || 0, selectedDetailPlayer?.name || 'Unknown', selectedDetailGames)} className="px-4 py-2 bg-accent-soft dark:bg-elevated-dark text-ink dark:text-ink-dark hover:bg-accent-soft dark:hover:bg-strong-dark rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 border border-transparent dark:border-strong-dark disabled:opacity-50">
-                  <FileDown size={14}/> {String(t('export_pdf', { defaultValue: 'Export PDF' }))}
+              <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                <button type="button" disabled={isProcessing} onClick={() => exportPlayerPDF(selectedDetailPlayer?.id || 0, selectedDetailPlayer?.name || 'Unknown', selectedDetailGames)} className="flex-1 sm:flex-none px-5 py-3 bg-app dark:bg-[#18181b] text-primary dark:text-white hover:bg-muted dark:hover:bg-zinc-800 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 border border-subtle dark:border-zinc-700 shadow-sm disabled:opacity-50 cursor-pointer">
+                  <FileDown size={18}/> <span className="hidden sm:block">{String(t('export_pdf', { defaultValue: 'Export PDF' }))}</span>
                 </button>
-                <button disabled={isProcessing} onClick={() => setPlayerDetailModal(null)} className="p-1.5 text-faint hover:bg-muted dark:hover:bg-elevated-dark rounded-full transition-colors disabled:opacity-50"><X size={18}/></button>
+                <button type="button" disabled={isProcessing} onClick={() => setPlayerDetailModal(null)} className="p-2.5 text-muted-ink dark:text-zinc-400 hover:bg-muted dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-white rounded-full transition-colors disabled:opacity-50 cursor-pointer"><X size={20}/></button>
               </div>
             </div>
             
-            <div className="p-6 overflow-y-auto flex-1">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-                 <div className="bg-app dark:bg-elevated-dark/30 border border-subtle dark:border-subtle-dark p-4 rounded-xl text-center">
-                   <div className="text-2xl font-black text-primary dark:text-primary-dark">{selectedDetailGames.length}</div>
-                   <div className="text-[10px] font-bold text-muted-ink uppercase tracking-widest mt-1">{String(t('matches_played', { defaultValue: 'MATCHES PLAYED' }))}</div>
+            <div className="p-6 sm:p-8 overflow-y-auto flex-1">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 mb-10">
+                 <div className="bg-app dark:bg-[#121214] border border-subtle dark:border-zinc-800 p-5 rounded-3xl text-center shadow-sm flex flex-col justify-center min-h-[120px]">
+                   <div className="text-3xl font-black text-primary dark:text-white">{selectedDetailGames.length}</div>
+                   <div className="text-[10px] font-bold text-muted-ink dark:text-zinc-500 uppercase tracking-widest mt-2">{String(t('matches_played', { defaultValue: 'MATCHES PLAYED' }))}</div>
                  </div>
-                 <div className="bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-900/30 p-4 rounded-xl text-center">
-                   <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{selectedDetailGames.filter((g: any) => g.result === 'Won').length}</div>
-                   <div className="text-[10px] font-bold text-emerald-600/70 uppercase tracking-widest mt-1">{String(t('won', { defaultValue: 'WON' }))}</div>
+                 <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 p-5 rounded-3xl text-center shadow-sm flex flex-col justify-center min-h-[120px]">
+                   <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400">{selectedDetailGames.filter((g: any) => g.result === 'Won').length}</div>
+                   <div className="text-[10px] font-bold text-emerald-600/70 dark:text-emerald-500/70 uppercase tracking-widest mt-2">{String(t('won', { defaultValue: 'WON' }))}</div>
                  </div>
-                 <div className="bg-rose-50 dark:bg-rose-900/10 border border-rose-200 dark:border-rose-900/30 p-4 rounded-xl text-center">
-                   <div className="text-2xl font-black text-rose-600 dark:text-rose-500">{selectedDetailGames.filter((g: any) => g.result === 'Lost').length}</div>
-                   <div className="text-[10px] font-bold text-rose-600/70 uppercase tracking-widest mt-1">{String(t('lost', { defaultValue: 'LOST' }))}</div>
+                 <div className="bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 p-5 rounded-3xl text-center shadow-sm flex flex-col justify-center min-h-[120px]">
+                   <div className="text-3xl font-black text-rose-600 dark:text-rose-500">{selectedDetailGames.filter((g: any) => g.result === 'Lost').length}</div>
+                   <div className="text-[10px] font-bold text-rose-600/70 dark:text-rose-500/70 uppercase tracking-widest mt-2">{String(t('lost', { defaultValue: 'LOST' }))}</div>
                  </div>
-                 <div className="bg-accent-soft dark:bg-accent-soft-dark border border-accent dark:border-subtle-dark p-4 rounded-xl text-center">
-                   <div className="text-2xl font-black text-ink dark:text-ink-dark">
+                 <div className="bg-ink dark:bg-white border border-transparent p-5 rounded-3xl text-center shadow-sm flex flex-col justify-center min-h-[120px]">
+                   <div className="text-3xl font-black text-white dark:text-zinc-900">
                      {selectedDetailGames.filter((g: any) => g.result !== 'Ongoing').length > 0 
                        ? Math.round((selectedDetailGames.filter((g: any) => g.result === 'Won').length / selectedDetailGames.filter((g: any) => g.result !== 'Ongoing').length) * 100) 
                        : 0}%
                    </div>
-                   <div className="text-[10px] font-bold text-ink/70 uppercase tracking-widest mt-1">{String(t('win_rate', { defaultValue: 'WIN RATE' }))}</div>
+                   <div className="text-[10px] font-bold text-white/70 dark:text-zinc-900/70 uppercase tracking-widest mt-2">{String(t('win_rate', { defaultValue: 'WIN RATE' }))}</div>
                  </div>
               </div>
 
-              <h4 className="font-bold mb-4">{String(t('history', { defaultValue: 'History' }))}</h4>
-              <div className="flex flex-col gap-3">
-                {selectedDetailGames.length === 0 ? <div className="p-8 text-center text-muted-ink border border-subtle dark:border-subtle-dark rounded-xl">{String(t('no_history', { defaultValue: 'No history found' }))}</div> : 
+              <h4 className="font-black text-xl text-primary dark:text-white mb-6 tracking-tight">{String(t('history', { defaultValue: 'History' }))}</h4>
+              <div className="flex flex-col gap-4">
+                {selectedDetailGames.length === 0 ? <div className="p-12 text-center text-muted-ink dark:text-zinc-500 font-medium border border-subtle dark:border-zinc-800 rounded-2xl bg-app dark:bg-[#121214]">{String(t('no_history', { defaultValue: 'No history found' }))}</div> : 
                  selectedDetailGames.map((g: any, i: number) => (
-                   <div key={i} className="flex flex-col sm:flex-row items-stretch sm:items-center bg-surface dark:bg-surface-dark border border-subtle dark:border-subtle-dark rounded-xl overflow-hidden shadow-sm">
-                     <div className="p-4 flex-1 flex items-center justify-between">
+                   <div key={i} className="flex flex-col sm:flex-row items-stretch sm:items-center bg-surface dark:bg-[#121214] border border-subtle dark:border-zinc-800 rounded-2xl overflow-hidden shadow-sm">
+                     <div className="p-5 flex-1 flex items-center justify-between">
                        <div className="flex flex-col gap-1 w-1/3">
-                         <span className="text-[10px] font-bold text-faint uppercase tracking-widest">{String(t('partner', { defaultValue: 'PARTNER' }))}</span>
-                         <span className="font-bold text-sm truncate">{g.partnerName}</span>
+                         <span className="text-[10px] font-bold text-muted-ink dark:text-zinc-500 uppercase tracking-widest">{String(t('partner', { defaultValue: 'PARTNER' }))}</span>
+                         <span className="font-bold text-base text-primary dark:text-zinc-100 truncate">{g.partnerName}</span>
                        </div>
-                       <div className="flex flex-col items-center justify-center px-4 w-1/3 border-x border-subtle dark:border-subtle-dark">
-                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold mb-1 border ${getMatchTypeColor(g.type)} whitespace-nowrap`}>{g.type}</span>
-                         <span className="font-black text-lg text-primary dark:text-primary-dark text-center whitespace-nowrap">
+                       <div className="flex flex-col items-center justify-center px-4 w-1/3 border-x border-subtle dark:border-zinc-800">
+                         <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold mb-2 border ${g.type === 'MD' ? 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-[#0c4a6e]/40 dark:text-[#7dd3fc] dark:border-[#0c4a6e]' : g.type === 'WD' ? 'bg-pink-50 text-pink-700 border-pink-200 dark:bg-[#831843]/40 dark:text-[#f9a8d4] dark:border-[#831843]' : g.type === 'XD' ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-[#3b0764]/60 dark:text-[#d8b4fe] dark:border-[#3b0764]' : 'bg-muted text-muted-ink border-subtle dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700'} whitespace-nowrap tracking-widest`}>{g.type}</span>
+                         <span className="font-black text-xl text-primary dark:text-white text-center whitespace-nowrap tracking-tight">
                             {g.result === 'Ongoing' ? (
-                               <span className="text-ink text-sm">Playing...</span>
+                               <span className="text-ink dark:text-white text-sm font-bold">Playing...</span>
                             ) : (
                                g.scoreString || `${g.myScore} - ${g.oppScore}`
                             )}
                          </span>
                        </div>
                        <div className="flex flex-col gap-1 w-1/3 text-right">
-                         <span className="text-[10px] font-bold text-faint uppercase tracking-widest">{String(t('opponents', { defaultValue: 'OPPONENTS' }))}</span>
-                         <span className="font-bold text-sm truncate">{g.opp1Name}</span>
-                         <span className="font-bold text-sm truncate">{g.opp2Name}</span>
+                         <span className="text-[10px] font-bold text-muted-ink dark:text-zinc-500 uppercase tracking-widest">{String(t('opponents', { defaultValue: 'OPPONENTS' }))}</span>
+                         <span className="font-bold text-sm text-primary dark:text-zinc-100 truncate">{g.opp1Name}</span>
+                         <span className="font-bold text-sm text-primary dark:text-zinc-100 truncate">{g.opp2Name}</span>
                        </div>
                      </div>
-                     <div className={`p-4 sm:w-24 shrink-0 flex items-center justify-center font-bold text-sm uppercase tracking-widest ${
-                        g.result === 'Won' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20' : 
-                        g.result === 'Lost' ? 'bg-rose-50 text-rose-600 dark:bg-rose-900/20' : 
-                        g.result === 'Ongoing' ? 'bg-accent-soft text-ink dark:bg-accent-soft-dark animate-pulse' :
-                        'bg-app text-muted-ink dark:bg-elevated-dark'
+                     <div className={`p-5 sm:w-32 shrink-0 flex items-center justify-center font-black text-sm uppercase tracking-widest ${
+                        g.result === 'Won' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' : 
+                        g.result === 'Lost' ? 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400' : 
+                        g.result === 'Ongoing' ? 'bg-accent-soft text-ink dark:bg-accent-soft-dark dark:text-white animate-pulse' :
+                        'bg-app text-muted-ink dark:bg-[#18181b] dark:text-zinc-500'
                      }`}>
                        {String(t(g.result.toLowerCase(), { defaultValue: g.result }))}
                      </div>
@@ -1541,52 +1635,6 @@ export default function SessionDetails() {
                  ))
                 }
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Fairness Insights Modal */}
-      {isFairnessModalOpen && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-ink/70 p-3 backdrop-blur-sm sm:p-6" role="dialog" aria-modal="true" aria-labelledby="fairness-title">
-          <div className="flex max-h-[90dvh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-subtle bg-surface shadow-2xl dark:border-subtle-dark dark:bg-surface-dark">
-            <div className="flex items-start justify-between gap-4 border-b border-subtle px-5 py-5 dark:border-subtle-dark sm:px-7">
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-ink dark:text-muted-dark">{String(t('organizer_view', { defaultValue: 'ORGANIZER VIEW' }))}</p>
-                <h2 id="fairness-title" className="mt-1 text-xl font-bold tracking-tight text-primary dark:text-primary-dark">{String(t('fairness_insights', { defaultValue: 'Fairness Insights' }))}</h2>
-                <p className="mt-1 max-w-xl text-sm leading-5 text-muted-ink dark:text-muted-dark">{String(t('fairness_insights_desc', { defaultValue: 'Matchmaking statistics.' }))}</p>
-              </div>
-              <button type="button" onClick={() => setIsFairnessModalOpen(false)} aria-label={String(t('close'))} className="rounded-lg p-2 text-muted-ink transition-colors hover:bg-muted hover:text-ink dark:text-muted-dark dark:hover:bg-elevated-dark dark:hover:text-primary-dark"><X size={18} /></button>
-            </div>
-
-            <div className="min-h-0 overflow-y-auto px-5 py-5 sm:px-7">
-              {fairnessInsights.length === 0 ? (
-                <div className="rounded-xl border border-subtle bg-app p-8 text-center text-sm text-muted-ink dark:border-subtle-dark dark:bg-elevated-dark dark:text-muted-dark">{String(t('fairness_insights_empty', { defaultValue: 'Not enough data yet.' }))}</div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="hidden grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(0,1fr))] gap-3 px-4 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-ink dark:text-muted-dark sm:grid">
-                    <span>{String(t('player', { defaultValue: 'Player' }))}</span><span>{String(t('court_turns', { defaultValue: 'Court Turns' }))}</span><span>{String(t('rest_time', { defaultValue: 'Rest Time' }))}</span><span>{String(t('partner_repetition', { defaultValue: 'Partner Repetition' }))}</span><span>{String(t('opponent_repetition', { defaultValue: 'Opponent Repetition' }))}</span>
-                  </div>
-                  {fairnessInsights.map((insight: any) => (
-                    <div key={insight.id} className="rounded-xl border border-subtle bg-app p-4 dark:border-subtle-dark dark:bg-elevated-dark">
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="min-w-0 truncate text-sm font-bold text-primary dark:text-primary-dark">{insight.name}</span>
-                        {insight.waitingPosition && <span className="shrink-0 rounded-full bg-accent-soft px-2 py-1 text-[10px] font-bold text-ink dark:bg-accent-soft-dark dark:text-ink-dark">{String(t('queue_position', { defaultValue: 'Queue #{{position}}' })).replace('{{position}}', insight.waitingPosition.toString())}</span>}
-                      </div>
-                      <div className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-                        <div><p className="text-[10px] font-bold uppercase tracking-wide text-muted-ink dark:text-muted-dark sm:hidden">{String(t('court_turns', { defaultValue: 'Court Turns' }))}</p><p className="mt-1 font-bold text-primary dark:text-primary-dark sm:mt-0">{insight.turns}</p></div>
-                        <div><p className="text-[10px] font-bold uppercase tracking-wide text-muted-ink dark:text-muted-dark sm:hidden">{String(t('rest_time', { defaultValue: 'Rest Time' }))}</p><p className="mt-1 font-bold text-primary dark:text-primary-dark sm:mt-0">{insight.restMinutes === null ? String(t('not_played_yet', { defaultValue: 'Not played yet' })) : String(t('minutes_value', { defaultValue: '{{minutes}} mins' })).replace('{{minutes}}', insight.restMinutes.toString())}</p></div>
-                        <div><p className="text-[10px] font-bold uppercase tracking-wide text-muted-ink dark:text-muted-dark sm:hidden">{String(t('partner_repetition', { defaultValue: 'Partner Rep' }))}</p><p className="mt-1 font-bold text-primary dark:text-primary-dark sm:mt-0">{insight.partnerRepeat}</p></div>
-                        <div><p className="text-[10px] font-bold uppercase tracking-wide text-muted-ink dark:text-muted-dark sm:hidden">{String(t('opponent_repetition', { defaultValue: 'Opponent Rep' }))}</p><p className="mt-1 font-bold text-primary dark:text-primary-dark sm:mt-0">{insight.opponentRepeat}</p></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="border-t border-subtle bg-surface px-5 py-4 dark:border-subtle-dark dark:bg-surface-dark sm:px-7">
-              <p className="text-xs leading-5 text-muted-ink dark:text-muted-dark">{String(t('fairness_insights_note', { defaultValue: 'This tracks matches generated algorithmically to ensure fairness.' }))}</p>
             </div>
           </div>
         </div>
