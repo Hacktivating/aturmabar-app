@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Zap, LogOut, Settings, X, ShieldAlert, User, Lock, Globe, Image as ImageIcon,
   Upload, Sun, Moon, Users, CalendarDays, Trophy, ChevronRight, AlertCircle,
-  Calendar, Clock, Play, CheckCircle, Sparkles, Trash2, ChevronLeft
+  Calendar, Clock, Play, CheckCircle, Sparkles, Trash2, ChevronLeft, Wallet
 } from 'lucide-react';
 import api from '../api/axios';
 import { TourOverlay } from '../components/TourOverlay';
@@ -191,22 +191,22 @@ export default function Dashboard() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'active': return <span className="flex items-center gap-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-md text-[10px] sm:text-xs font-bold uppercase tracking-widest"><Play size={12} fill="currentColor"/> {t('status_active', 'Active')}</span>;
-      case 'finished': return <span className="flex items-center gap-1.5 bg-zinc-500/10 text-zinc-500 dark:text-zinc-400 border border-zinc-500/20 px-2.5 py-1 rounded-md text-[10px] sm:text-xs font-bold uppercase tracking-widest"><CheckCircle size={12}/> {t('status_finished', 'Finished')}</span>;
-      default: return <span className="flex items-center gap-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2.5 py-1 rounded-md text-[10px] sm:text-xs font-bold uppercase tracking-widest"><Clock size={12}/> {t('status_scheduled', 'Scheduled')}</span>;
+      case 'active': return <span className="flex items-center gap-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest"><Play size={12} fill="currentColor"/> {t('status_active', 'Active')}</span>;
+      case 'finished': return <span className="flex items-center gap-1.5 bg-zinc-500/10 text-zinc-500 dark:text-zinc-400 border border-zinc-500/20 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest"><CheckCircle size={12}/> {t('status_finished', 'Finished')}</span>;
+      default: return <span className="flex items-center gap-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest"><Clock size={12}/> {t('status_scheduled', 'Scheduled')}</span>;
     }
   };
 
   const totalPages = Math.ceil((recentActivities?.length || 0) / itemsPerPage);
   const paginatedActivities = recentActivities?.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage) || [];
 
-  if (loading) return <div className="min-h-screen bg-app dark:bg-zinc-950 flex items-center justify-center text-muted-ink">{t('loading')}</div>;
+  if (loading) return <div className="min-h-screen bg-app dark:bg-[#09090b] flex items-center justify-center text-muted-ink dark:text-zinc-500 font-bold uppercase tracking-widest text-[10px]">{t('loading')}</div>;
 
   const isExpired = communityData?.subscriptionStatus !== 'lifetime' && (!communityData?.subscriptionEndsAt || new Date(communityData.subscriptionEndsAt) < new Date());
   const isBlocked = communityData?.subscriptionStatus === 'inactive' || isExpired;
 
-  const inputStyles = "w-full px-4 py-3 bg-app dark:bg-[#121214] border border-default dark:border-zinc-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-ink transition-all text-primary dark:text-white";
-  const labelStyles = "block text-xs font-semibold mb-1.5 text-muted-ink dark:text-zinc-400 uppercase tracking-wider";
+  const inputStyles = "w-full px-4 py-2.5 bg-app dark:bg-[#18181b] border border-subtle dark:border-zinc-800 rounded-xl text-sm font-bold outline-none focus:ring-1 focus:ring-ink transition-all text-primary dark:text-white";
+  const labelStyles = "block text-[10px] font-black mb-1.5 text-muted-ink dark:text-zinc-500 uppercase tracking-widest";
 
   return (
     <div className="min-h-screen bg-app dark:bg-[#09090b] text-primary dark:text-zinc-100 font-sans transition-colors duration-200">
@@ -217,20 +217,19 @@ export default function Dashboard() {
           <div key={toastItem.id} className={`pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl text-sm font-bold animate-in slide-in-from-top-5 fade-in duration-300 border ${toastItem.type === 'success' ? 'bg-ink border-ink text-white' : 'bg-rose-600 border-rose-700 text-white'}`}>
             {toastItem.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
             {toastItem.message}
-            <button onClick={() => setToasts(prev => prev.filter(t => t.id !== toastItem.id))} className="ml-4 hover:opacity-75"><X size={16}/></button>
+            <button onClick={() => setToasts(prev => prev.filter(t => t.id !== toastItem.id))} className="ml-4 hover:opacity-75 cursor-pointer"><X size={16}/></button>
           </div>
         ))}
       </div>
 
       {/* --- TOUR OVERLAYS (Dashboard Steps) --- */}
       <TourOverlay step={1} currentStep={tourStep} targetId={null} title={String(t('tour_title', 'Interactive App Tour'))} content={String(t('tour_welcome', 'Welcome to AturMabar! We will guide you through the main workflow for managing your community.'))} onNext={() => advanceTour(2)} onCancel={endTour} />
-      
       <TourOverlay step={2} currentStep={tourStep} targetId="tour-manage-members" title="1. Your Players" content="Let's start by adding players. Click 'Manage Members' to proceed." allowClick={true} hideNext={true} onCancel={endTour} />
-      
       <TourOverlay step={9} currentStep={tourStep} targetId="tour-sessions" title="2. Matchmaking" content="Great! Your roster is set up. Now let's create a session. Click 'Schedule & Sessions' to continue." allowClick={true} hideNext={true} onCancel={endTour} />
       {/* --------------------------------------- */}
 
-      <nav className="border-b border-subtle dark:border-zinc-800 bg-surface dark:bg-[#0f0f11] px-4 sm:px-8 py-4 flex justify-between items-center sticky top-0 z-20 shadow-sm">
+      {/* Modern High-Density Nav */}
+      <nav className="border-b border-subtle dark:border-zinc-800 bg-surface dark:bg-[#0f0f11] h-16 flex justify-between items-center sticky top-0 z-20 shadow-sm px-4 sm:px-8">
         <div className="flex items-center gap-3">
           <div className="bg-ink dark:bg-white p-1.5 rounded-lg flex items-center justify-center text-white dark:text-zinc-950 shrink-0 shadow-sm">
             <Zap size={20} fill="currentColor" />
@@ -246,68 +245,67 @@ export default function Dashboard() {
             <span className="text-sm font-bold truncate hidden sm:block">{communityData?.name}</span>
           </div>
 
-          <button onClick={toggleLanguage} className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-muted-ink dark:text-zinc-400 hover:text-ink dark:hover:text-white transition-colors px-2.5 py-2 rounded-lg hover:bg-muted dark:hover:bg-zinc-800">
+          <button onClick={toggleLanguage} className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-muted-ink dark:text-zinc-400 hover:text-ink dark:hover:text-white transition-colors px-2.5 py-2 rounded-lg hover:bg-muted dark:hover:bg-zinc-800 cursor-pointer">
             <Globe size={16} />
             {i18n.language.toUpperCase()}
           </button>
-          <button onClick={() => setIsDark(!isDark)} className="p-2 text-muted-ink dark:text-zinc-400 hover:text-ink dark:hover:text-white hover:bg-muted dark:hover:bg-zinc-800 rounded-lg transition-colors">
+          <button onClick={() => setIsDark(!isDark)} className="p-2 text-muted-ink dark:text-zinc-400 hover:text-ink dark:hover:text-white hover:bg-muted dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer">
             {isDark ? <Sun size={18} /> : <Moon size={18} />}
           </button>
 
-          <button onClick={() => { setIsSettingsOpen(true); setMessage(null); }} className="p-2 text-muted-ink dark:text-zinc-400 hover:text-ink dark:hover:text-white hover:bg-muted dark:hover:bg-zinc-800 rounded-lg transition-colors shrink-0" title="Settings / Dashboard">
+          <button onClick={() => { setIsSettingsOpen(true); setMessage(null); }} className="p-2 text-muted-ink dark:text-zinc-400 hover:text-ink dark:hover:text-white hover:bg-muted dark:hover:bg-zinc-800 rounded-lg transition-colors shrink-0 cursor-pointer" title="Settings / Dashboard">
             <Settings size={18} />
           </button>
-          <button onClick={handleLogout} className="flex items-center gap-2 text-sm text-rose-600 dark:text-rose-500 font-bold hover:bg-rose-50 dark:hover:bg-rose-500/10 px-3 py-2 rounded-lg transition-colors shrink-0">
+          <button onClick={handleLogout} className="flex items-center gap-2 text-sm text-rose-600 dark:text-rose-500 font-bold hover:bg-rose-50 dark:hover:bg-rose-500/10 px-3 py-2 rounded-lg transition-colors shrink-0 cursor-pointer">
             <LogOut size={16} /> <span className="hidden sm:inline">{t('logout')}</span>
           </button>
         </div>
       </nav>
 
-      <main className="relative p-4 sm:p-8 max-w-6xl mx-auto min-h-[calc(100vh-80px)] z-10">
+      <main className="relative p-4 sm:p-8 max-w-6xl mx-auto min-h-[calc(100vh-80px)] z-10 flex flex-col gap-8">
         {isBlocked && (
           <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-surface/80 dark:bg-zinc-950/80 backdrop-blur-sm rounded-xl p-4">
-            <div className="bg-surface dark:bg-zinc-900 p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-md text-center border border-subtle dark:border-zinc-800">
-              <div className="mx-auto w-12 h-12 sm:w-16 sm:h-16 bg-rose-100 dark:bg-rose-500/10 text-rose-600 dark:text-rose-500 rounded-full flex items-center justify-center mb-4">
-                <ShieldAlert size={28} className="sm:w-8 sm:h-8" />
+            <div className="bg-surface dark:bg-[#121214] p-8 rounded-3xl shadow-2xl w-full max-w-md text-center border border-subtle dark:border-zinc-800">
+              <div className="mx-auto w-16 h-16 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-500 rounded-full flex items-center justify-center mb-5 shadow-sm">
+                <ShieldAlert size={32} />
               </div>
-              <h2 className="text-xl sm:text-2xl font-bold mb-2 text-primary dark:text-white">{t('sub_inactive')}</h2>
-              <p className="text-sm sm:text-base text-muted-ink dark:text-zinc-400 mb-6">
+              <h2 className="text-2xl font-black mb-2 text-primary dark:text-white tracking-tight">{t('sub_inactive')}</h2>
+              <p className="text-sm font-medium text-muted-ink dark:text-zinc-400 mb-8">
                 {t('sub_desc')}
               </p>
-              <button onClick={handleLogout} className="w-full bg-ink dark:bg-white hover:bg-ink-soft dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-bold py-3 px-4 rounded-xl transition-colors shadow-sm">
+              <button onClick={handleLogout} className="w-full bg-ink dark:bg-white hover:bg-ink-soft dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-black py-4 px-4 rounded-xl transition-colors shadow-sm cursor-pointer">
                 {t('return_login')}
               </button>
             </div>
           </div>
         )}
 
-        <div className={`transition-opacity ${isBlocked ? 'opacity-20 pointer-events-none' : 'opacity-100'}`}>
+        <div className={`transition-opacity flex flex-col gap-8 ${isBlocked ? 'opacity-20 pointer-events-none' : 'opacity-100'}`}>
           
-          <header className="mb-10">
-            <h1 className="text-3xl sm:text-4xl font-black tracking-tight mb-2 text-primary dark:text-white">
+          <header className="flex flex-col gap-1">
+            <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-primary dark:text-white">
               {t('welcome')}, {communityData?.name}
             </h1>
-            <p className="text-muted-ink dark:text-zinc-400 text-sm sm:text-base font-medium">
+            <p className="text-muted-ink dark:text-zinc-400 text-sm font-medium">
               Manage your players, sessions, and community settings all in one place.
             </p>
           </header>
 
-          <div className="mb-10">
-            <h2 className="text-xl font-bold mb-5 text-primary dark:text-white tracking-tight">{t('quick_actions')}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+          <section>
+            <h2 className="text-sm font-black mb-4 text-primary dark:text-white tracking-widest uppercase">{t('quick_actions')}</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5">
               
               <Link 
                 id="tour-manage-members" 
                 to="/members" 
                 onClick={() => { if(tourStep === 2) advanceTour(3); }} 
-                className="bg-surface dark:bg-[#121214] border border-subtle dark:border-zinc-800 p-6 rounded-2xl shadow-sm hover:shadow-md hover:border-ink dark:hover:border-zinc-600 transition-all group flex flex-col justify-between min-h-[140px]"
+                className="bg-surface dark:bg-[#121214] border border-subtle dark:border-zinc-800 p-5 sm:p-6 rounded-3xl shadow-sm hover:shadow-md hover:border-ink dark:hover:border-zinc-600 transition-all group flex flex-col gap-6"
               >
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-slate-100 text-slate-600 dark:bg-white/5 dark:text-zinc-300 group-hover:scale-110 transition-transform shadow-sm border border-slate-200 dark:border-white/10">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-300 group-hover:scale-110 transition-transform shadow-sm border border-slate-200 dark:border-zinc-700">
                   <Users size={22} />
                 </div>
-                <div className="flex items-center justify-between mt-6">
-                  <span className="font-bold text-base text-primary dark:text-white">{t('manage_members')}</span>
-                  <ChevronRight size={18} className="text-muted-ink dark:text-zinc-500 group-hover:text-ink dark:group-hover:text-white transition-colors" />
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-sm sm:text-base text-primary dark:text-white leading-tight">{t('manage_members')}</span>
                 </div>
               </Link>
 
@@ -315,72 +313,83 @@ export default function Dashboard() {
                 id="tour-sessions" 
                 to="/sessions" 
                 onClick={() => { if(tourStep === 9) advanceTour(10); }} 
-                className="bg-surface dark:bg-[#121214] border border-subtle dark:border-zinc-800 p-6 rounded-2xl shadow-sm hover:shadow-md hover:border-emerald-500 dark:hover:border-emerald-500/50 transition-all group flex flex-col justify-between min-h-[140px]"
+                className="bg-surface dark:bg-[#121214] border border-subtle dark:border-zinc-800 p-5 sm:p-6 rounded-3xl shadow-sm hover:shadow-md hover:border-emerald-500 dark:hover:border-emerald-500/50 transition-all group flex flex-col gap-6"
               >
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 group-hover:scale-110 transition-transform shadow-sm border border-emerald-100 dark:border-emerald-500/20">
                   <CalendarDays size={22} />
                 </div>
-                <div className="flex items-center justify-between mt-6">
-                  <span className="font-bold text-base text-primary dark:text-white">{t('manage_schedule')}</span>
-                  <ChevronRight size={18} className="text-muted-ink dark:text-zinc-500 group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors" />
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-sm sm:text-base text-primary dark:text-white leading-tight">{t('manage_schedule')}</span>
                 </div>
               </Link>
 
               <Link 
                 to="/leaderboard" 
-                className="bg-surface dark:bg-[#121214] border border-subtle dark:border-zinc-800 p-6 rounded-2xl shadow-sm hover:shadow-md hover:border-amber-500 dark:hover:border-amber-500/50 transition-all group flex flex-col justify-between min-h-[140px]"
+                className="bg-surface dark:bg-[#121214] border border-subtle dark:border-zinc-800 p-5 sm:p-6 rounded-3xl shadow-sm hover:shadow-md hover:border-amber-500 dark:hover:border-amber-500/50 transition-all group flex flex-col gap-6"
               >
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400 group-hover:scale-110 transition-transform shadow-sm border border-amber-100 dark:border-amber-500/20">
                   <Trophy size={22} />
                 </div>
-                <div className="flex items-center justify-between mt-6">
-                  <span className="font-bold text-base text-primary dark:text-white">{t('leaderboard', 'Leaderboard')}</span>
-                  <ChevronRight size={18} className="text-muted-ink dark:text-zinc-500 group-hover:text-amber-500 dark:group-hover:text-amber-400 transition-colors" />
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-sm sm:text-base text-primary dark:text-white leading-tight">{t('leaderboard', 'Leaderboard')}</span>
                 </div>
               </Link>
-            </div>
-          </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-xl font-bold text-primary dark:text-white tracking-tight">{t('recent_activity')}</h2>
-              <Link to="/sessions" className="text-sm font-bold text-ink dark:text-zinc-300 hover:text-ink-soft dark:hover:text-white hover:underline transition-colors">{t('view_all', 'View All')}</Link>
+              <Link 
+                to="/finances" 
+                className="bg-surface dark:bg-[#121214] border border-subtle dark:border-zinc-800 p-5 sm:p-6 rounded-3xl shadow-sm hover:shadow-md hover:border-blue-500 dark:hover:border-blue-500/50 transition-all group flex flex-col gap-6"
+              >
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 group-hover:scale-110 transition-transform shadow-sm border border-blue-100 dark:border-blue-500/20">
+                  <Wallet size={22} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-sm sm:text-base text-primary dark:text-white leading-tight">Club Treasury</span>
+                </div>
+              </Link>
+
+            </div>
+          </section>
+
+          <section className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-black text-primary dark:text-white tracking-widest uppercase">{t('recent_activity')}</h2>
+              <Link to="/sessions" className="text-[11px] font-black uppercase tracking-widest text-ink dark:text-zinc-400 hover:text-ink-soft dark:hover:text-white hover:underline transition-colors cursor-pointer">{t('view_all', 'View All')}</Link>
             </div>
 
-            <div className="bg-surface dark:bg-[#121214] border border-subtle dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+            <div className="bg-surface dark:bg-[#121214] border border-subtle dark:border-zinc-800 rounded-3xl shadow-sm overflow-hidden flex flex-col">
               {recentActivities.length === 0 ? (
                 <div className="p-12 text-center flex flex-col items-center justify-center">
-                  <div className="w-16 h-16 bg-muted dark:bg-zinc-800/50 rounded-full flex items-center justify-center mb-4 text-muted-ink dark:text-zinc-500">
+                  <div className="w-16 h-16 bg-muted dark:bg-zinc-800 border border-subtle dark:border-zinc-700 rounded-2xl flex items-center justify-center mb-5 text-muted-ink dark:text-zinc-500 shadow-sm">
                     <AlertCircle size={28} />
                   </div>
-                  <h3 className="text-lg font-bold text-primary dark:text-white mb-1">No Activity Yet</h3>
-                  <p className="text-muted-ink dark:text-zinc-400 text-sm">Create a session to see it appear here.</p>
+                  <h3 className="text-lg font-black text-primary dark:text-white mb-1">No Activity Yet</h3>
+                  <p className="text-muted-ink dark:text-zinc-400 text-sm font-medium">Create a session to see it appear here.</p>
                 </div>
               ) : (
                 <>
-                  <div className="divide-y divide-slate-100 dark:divide-zinc-800/50">
+                  <div className="divide-y divide-slate-100 dark:divide-zinc-800/50 flex flex-col">
                     {paginatedActivities.map((activity: any) => (
                       <div
                         key={activity.id}
                         onClick={() => navigate(`/sessions/${activity.id}`)}
-                        className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-app dark:hover:bg-white/5 cursor-pointer transition-colors group gap-4 sm:gap-0"
+                        className="p-4 sm:p-5 flex items-center justify-between hover:bg-app dark:hover:bg-white/5 cursor-pointer transition-colors group gap-4"
                       >
-                        <div className="flex items-center gap-4 w-full sm:w-auto">
-                          <div className="w-12 h-12 rounded-xl bg-app dark:bg-zinc-900 border border-subtle dark:border-zinc-800 flex items-center justify-center text-muted-ink dark:text-zinc-400 shrink-0 shadow-sm group-hover:border-ink dark:group-hover:border-zinc-600 transition-colors">
+                        <div className="flex items-center gap-4 min-w-0">
+                          <div className="w-12 h-12 rounded-2xl bg-app dark:bg-zinc-900 border border-subtle dark:border-zinc-800 flex items-center justify-center text-muted-ink dark:text-zinc-500 shrink-0 shadow-sm group-hover:border-ink dark:group-hover:border-zinc-600 transition-colors">
                             <Calendar size={20} />
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-bold text-base truncate text-primary dark:text-zinc-100 group-hover:text-ink dark:group-hover:text-white transition-colors">
+                          <div className="flex flex-col min-w-0 gap-1">
+                            <h3 className="font-bold text-sm sm:text-base truncate text-primary dark:text-zinc-100 group-hover:text-ink dark:group-hover:text-white transition-colors">
                               {activity.name}
                             </h3>
-                            <div className="text-sm text-muted-ink dark:text-zinc-400 mt-0.5 flex items-center gap-2">
-                              <span>{new Date(activity.date).toLocaleDateString(i18n.language, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-                              <span className="text-faint dark:text-zinc-600">•</span>
+                            <div className="text-xs font-medium text-muted-ink dark:text-zinc-500 flex items-center gap-1.5">
+                              <span>{new Date(activity.date).toLocaleDateString(i18n.language, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                              <span className="text-subtle dark:text-zinc-700">•</span>
                               <span>{new Date(activity.date).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' })}</span>
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto pl-16 sm:pl-0">
+                        <div className="flex items-center justify-end gap-3 shrink-0">
                           {getStatusBadge(activity.status)}
                           <ChevronRight size={18} className="text-muted-ink dark:text-zinc-500 group-hover:text-ink dark:group-hover:text-white transition-colors" />
                         </div>
@@ -390,22 +399,22 @@ export default function Dashboard() {
                   
                   {/* Pagination Controls */}
                   {totalPages > 1 && (
-                    <div className="p-4 border-t border-subtle dark:border-zinc-800 bg-app dark:bg-zinc-900/30 flex items-center justify-between shrink-0">
-                      <span className="text-xs font-bold text-muted-ink dark:text-zinc-400 uppercase tracking-widest">
+                    <div className="p-4 border-t border-subtle dark:border-zinc-800 bg-app dark:bg-[#18181b] flex items-center justify-between shrink-0">
+                      <span className="text-[10px] font-black text-muted-ink dark:text-zinc-500 uppercase tracking-widest">
                         Page {currentPage} of {totalPages}
                       </span>
                       <div className="flex gap-2">
                         <button 
                           disabled={currentPage === 1} 
                           onClick={() => setCurrentPage(p => p - 1)} 
-                          className="p-2 bg-surface dark:bg-[#18181b] border border-subtle dark:border-zinc-800 rounded-lg hover:bg-muted dark:hover:bg-zinc-800 text-primary dark:text-white disabled:opacity-50 transition-colors shadow-sm"
+                          className="p-2 bg-surface dark:bg-[#121214] border border-subtle dark:border-zinc-800 rounded-lg hover:bg-muted dark:hover:bg-zinc-800 text-primary dark:text-white disabled:opacity-50 transition-colors shadow-sm cursor-pointer"
                         >
                           <ChevronLeft size={16} />
                         </button>
                         <button 
                           disabled={currentPage === totalPages} 
                           onClick={() => setCurrentPage(p => p + 1)} 
-                          className="p-2 bg-surface dark:bg-[#18181b] border border-subtle dark:border-zinc-800 rounded-lg hover:bg-muted dark:hover:bg-zinc-800 text-primary dark:text-white disabled:opacity-50 transition-colors shadow-sm"
+                          className="p-2 bg-surface dark:bg-[#121214] border border-subtle dark:border-zinc-800 rounded-lg hover:bg-muted dark:hover:bg-zinc-800 text-primary dark:text-white disabled:opacity-50 transition-colors shadow-sm cursor-pointer"
                         >
                           <ChevronRight size={16} />
                         </button>
@@ -415,72 +424,72 @@ export default function Dashboard() {
                 </>
               )}
             </div>
-          </div>
+          </section>
         </div>
       </main>
 
-      {/* Settings Modal */}
+      {/* Profile Settings Modal */}
       {isSettingsOpen && (
-        <div className="fixed inset-0 z-[500] flex items-end sm:items-center justify-center sm:p-4 bg-ink/60 backdrop-blur-sm animate-in fade-in">
+        <div className="fixed inset-0 z-[100000] flex items-end sm:items-center justify-center sm:p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in">
           <div className="bg-surface dark:bg-[#0f0f11] w-full h-[90dvh] sm:h-auto sm:max-h-[85vh] sm:max-w-4xl rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row border border-subtle dark:border-zinc-800">
 
             <div className="flex justify-between items-center p-5 border-b border-subtle dark:border-zinc-800 md:hidden shrink-0 bg-app dark:bg-[#121214]">
-              <h3 className="font-bold text-lg text-primary dark:text-white">{t('settings')}</h3>
-              <button onClick={() => setIsSettingsOpen(false)} className="p-1.5 text-muted-ink dark:text-zinc-400 hover:bg-muted dark:hover:bg-zinc-800 rounded-full transition-colors"><X size={20} /></button>
+              <h3 className="font-black text-xl text-primary dark:text-white tracking-tight">{t('settings')}</h3>
+              <button onClick={() => setIsSettingsOpen(false)} className="p-2 text-muted-ink dark:text-zinc-400 hover:bg-muted dark:hover:bg-zinc-800 rounded-full transition-colors cursor-pointer"><X size={20} /></button>
             </div>
 
-            <div className="md:w-64 bg-app dark:bg-[#121214] border-b md:border-b-0 md:border-r border-subtle dark:border-zinc-800 p-3 md:p-6 flex flex-row md:flex-col gap-2 overflow-x-auto shrink-0 scrollbar-hide">
-              <h3 className="font-black text-xl text-primary dark:text-white hidden md:block mb-6 px-2">{t('settings')}</h3>
+            <div className="md:w-64 bg-app dark:bg-[#121214] border-b md:border-b-0 md:border-r border-subtle dark:border-zinc-800 p-4 md:p-6 flex flex-row md:flex-col gap-2 overflow-x-auto shrink-0 scrollbar-hide">
+              <h3 className="font-black text-2xl text-primary dark:text-white hidden md:block mb-6 px-2 tracking-tight">{t('settings')}</h3>
 
-              <button onClick={() => { setActiveTab('profile'); setMessage(null); }} className={`flex items-center gap-2 md:gap-3 px-4 py-2.5 md:py-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'profile' ? 'bg-surface dark:bg-zinc-800/50 shadow-sm border border-subtle dark:border-zinc-700/50 text-ink dark:text-white' : 'text-muted-ink dark:text-zinc-400 border border-transparent hover:bg-muted dark:hover:bg-zinc-800/30 hover:text-primary dark:hover:text-zinc-200'}`}>
+              <button onClick={() => { setActiveTab('profile'); setMessage(null); }} className={`flex items-center gap-2.5 px-4 py-3 rounded-2xl text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${activeTab === 'profile' ? 'bg-surface dark:bg-[#18181b] shadow-sm border border-subtle dark:border-zinc-700 text-ink dark:text-white' : 'text-muted-ink dark:text-zinc-500 border border-transparent hover:bg-muted dark:hover:bg-zinc-800/50 hover:text-primary dark:hover:text-zinc-300'}`}>
                 <User size={18} /> {t('profile')}
               </button>
-              <button onClick={() => { setActiveTab('account'); setMessage(null); }} className={`flex items-center gap-2 md:gap-3 px-4 py-2.5 md:py-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'account' ? 'bg-surface dark:bg-zinc-800/50 shadow-sm border border-subtle dark:border-zinc-700/50 text-ink dark:text-white' : 'text-muted-ink dark:text-zinc-400 border border-transparent hover:bg-muted dark:hover:bg-zinc-800/30 hover:text-primary dark:hover:text-zinc-200'}`}>
+              <button onClick={() => { setActiveTab('account'); setMessage(null); }} className={`flex items-center gap-2.5 px-4 py-3 rounded-2xl text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${activeTab === 'account' ? 'bg-surface dark:bg-[#18181b] shadow-sm border border-subtle dark:border-zinc-700 text-ink dark:text-white' : 'text-muted-ink dark:text-zinc-500 border border-transparent hover:bg-muted dark:hover:bg-zinc-800/50 hover:text-primary dark:hover:text-zinc-300'}`}>
                 <Lock size={18} /> {t('account')}
               </button>
-              <button onClick={() => { setActiveTab('general'); setMessage(null); }} className={`flex items-center gap-2 md:gap-3 px-4 py-2.5 md:py-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'general' ? 'bg-surface dark:bg-zinc-800/50 shadow-sm border border-subtle dark:border-zinc-700/50 text-ink dark:text-white' : 'text-muted-ink dark:text-zinc-400 border border-transparent hover:bg-muted dark:hover:bg-zinc-800/30 hover:text-primary dark:hover:text-zinc-200'}`}>
+              <button onClick={() => { setActiveTab('general'); setMessage(null); }} className={`flex items-center gap-2.5 px-4 py-3 rounded-2xl text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${activeTab === 'general' ? 'bg-surface dark:bg-[#18181b] shadow-sm border border-subtle dark:border-zinc-700 text-ink dark:text-white' : 'text-muted-ink dark:text-zinc-500 border border-transparent hover:bg-muted dark:hover:bg-zinc-800/50 hover:text-primary dark:hover:text-zinc-300'}`}>
                 <Globe size={18} /> {t('general')}
               </button>
             </div>
 
             <div className="flex-1 flex flex-col relative overflow-hidden bg-surface dark:bg-[#0f0f11]">
-              <button onClick={() => setIsSettingsOpen(false)} className="hidden md:flex absolute top-5 right-5 p-2 text-muted-ink dark:text-zinc-400 hover:bg-muted dark:hover:bg-zinc-800 rounded-full transition-colors z-10 items-center justify-center">
+              <button onClick={() => setIsSettingsOpen(false)} className="hidden md:flex absolute top-6 right-6 p-2 text-muted-ink dark:text-zinc-500 hover:bg-app dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-white rounded-full transition-colors z-10 items-center justify-center cursor-pointer">
                 <X size={20} />
               </button>
 
-              <div className="flex-1 overflow-y-auto p-5 sm:p-8">
+              <div className="flex-1 overflow-y-auto p-6 sm:p-10">
                 {message && (
-                  <div className={`mb-8 p-4 rounded-xl text-sm font-bold border flex items-center gap-3 animate-in fade-in ${message.type === 'error' ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20' : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20'}`}>
+                  <div className={`mb-8 p-4 rounded-xl text-sm font-bold border flex items-center gap-3 animate-in fade-in shadow-sm ${message.type === 'error' ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20' : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20'}`}>
                     {message.type === 'success' ? <CheckCircle size={18}/> : <AlertCircle size={18}/>}
                     {message.text}
                   </div>
                 )}
 
                 {activeTab === 'profile' && (
-                  <form onSubmit={handleUpdateProfile} className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
-                    <div>
-                      <h2 className="text-xl sm:text-2xl font-black mb-1 text-primary dark:text-white">{t('profile')}</h2>
-                      <p className="text-sm text-muted-ink dark:text-zinc-400">{t('public_id_desc')}</p>
+                  <form onSubmit={handleUpdateProfile} className="flex flex-col gap-8 animate-in fade-in duration-300 max-w-xl">
+                    <div className="flex flex-col gap-1">
+                      <h2 className="text-2xl font-black text-primary dark:text-white tracking-tight">{t('profile')}</h2>
+                      <p className="text-sm font-medium text-muted-ink dark:text-zinc-400">{t('public_id_desc')}</p>
                     </div>
 
-                    <div className="max-w-md">
+                    <div className="flex flex-col gap-1.5">
                       <label className={labelStyles}>{t('community_name')}</label>
                       <input type="text" required value={profileForm.communityName} onChange={e => setProfileForm({...profileForm, communityName: e.target.value})} className={inputStyles} />
                     </div>
 
-                    <div>
+                    <div className="flex flex-col gap-1.5">
                       <label className={labelStyles}>{t('change_logo')}</label>
-                      <div className="flex flex-col sm:flex-row items-start gap-6 mt-3">
-                        <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-app dark:bg-[#121214] border border-subtle dark:border-zinc-800 flex items-center justify-center text-5xl shrink-0 overflow-hidden shadow-sm">
+                      <div className="flex flex-col sm:flex-row items-start gap-6 mt-2">
+                        <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-app dark:bg-[#18181b] border border-subtle dark:border-zinc-800 flex items-center justify-center text-5xl shrink-0 overflow-hidden shadow-sm">
                           {profileForm.logo?.startsWith('data:image') ? <img src={profileForm.logo} alt="logo" className="w-full h-full object-cover"/> : profileForm.logo || <ImageIcon size={36} className="text-muted-ink dark:text-zinc-600"/>}
                         </div>
 
                         <div className="flex-1 w-full max-w-sm">
-                          <div className="flex flex-wrap gap-2 mb-5">
+                          <div className="flex flex-wrap gap-2 mb-6">
                             {PRESET_AVATARS.map((emoji) => (
                               <button
                                 key={emoji} type="button" onClick={() => setProfileForm({ ...profileForm, logo: emoji })}
-                                className={`w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center text-2xl bg-app hover:bg-muted dark:bg-[#121214] dark:hover:bg-zinc-800 rounded-xl transition-all border shadow-sm ${profileForm.logo === emoji ? 'border-ink bg-accent-soft dark:bg-zinc-800 dark:border-zinc-600 scale-105' : 'border-subtle dark:border-zinc-800 hover:border-default dark:hover:border-zinc-700'}`}
+                                className={`w-12 h-12 flex items-center justify-center text-2xl bg-app hover:bg-muted dark:bg-[#18181b] dark:hover:bg-zinc-800 rounded-xl transition-all border shadow-sm cursor-pointer ${profileForm.logo === emoji ? 'border-ink bg-accent-soft dark:bg-zinc-800 dark:border-zinc-500 scale-105' : 'border-subtle dark:border-zinc-800 hover:border-default dark:hover:border-zinc-600'}`}
                               >
                                 {emoji}
                               </button>
@@ -489,20 +498,20 @@ export default function Dashboard() {
 
                           <div className="flex items-center gap-3">
                             <div className="h-px bg-subtle dark:bg-zinc-800 flex-1"></div>
-                            <span className="text-[10px] sm:text-xs text-muted-ink dark:text-zinc-500 font-bold uppercase tracking-widest">OR</span>
+                            <span className="text-[10px] text-muted-ink dark:text-zinc-500 font-black uppercase tracking-widest">OR</span>
                             <div className="h-px bg-subtle dark:bg-zinc-800 flex-1"></div>
                           </div>
 
                           <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept="image/*" className="hidden" />
-                          <button type="button" onClick={() => fileInputRef.current?.click()} className="mt-5 w-full flex items-center justify-center gap-2 px-4 py-3 bg-app dark:bg-[#121214] hover:bg-muted dark:hover:bg-zinc-800 text-sm font-bold rounded-xl transition-colors border border-subtle dark:border-zinc-800 text-primary dark:text-zinc-300 shadow-sm">
+                          <button type="button" onClick={() => fileInputRef.current?.click()} className="mt-5 w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-app dark:bg-[#18181b] hover:bg-muted dark:hover:bg-zinc-800 text-sm font-bold rounded-xl transition-colors border border-subtle dark:border-zinc-700 text-primary dark:text-zinc-200 shadow-sm cursor-pointer">
                             <Upload size={18} /> {t('upload_image')}
                           </button>
                         </div>
                       </div>
                     </div>
 
-                    <div className="pt-6">
-                      <button type="submit" disabled={isProcessing} className="w-full sm:w-auto bg-ink dark:bg-white hover:bg-ink-soft dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-bold py-3 px-8 rounded-xl text-sm transition-colors shadow-sm disabled:opacity-50">
+                    <div className="pt-6 border-t border-subtle dark:border-zinc-800">
+                      <button type="submit" disabled={isProcessing} className="w-full sm:w-auto bg-ink dark:bg-white hover:bg-ink-soft dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-black py-4 px-8 rounded-xl text-sm transition-colors shadow-sm disabled:opacity-50 cursor-pointer">
                         {isProcessing ? t('saving') : t('save_changes')}
                       </button>
                     </div>
@@ -510,32 +519,32 @@ export default function Dashboard() {
                 )}
 
                 {activeTab === 'account' && (
-                  <div className="space-y-8 animate-in fade-in duration-300 max-w-md">
-                    <div>
-                      <h2 className="text-xl sm:text-2xl font-black mb-1 text-primary dark:text-white">{t('account')}</h2>
-                      <p className="text-sm text-muted-ink dark:text-zinc-400">{t('account_desc')}</p>
+                  <div className="flex flex-col gap-8 animate-in fade-in duration-300 max-w-md">
+                    <div className="flex flex-col gap-1">
+                      <h2 className="text-2xl font-black text-primary dark:text-white tracking-tight">{t('account')}</h2>
+                      <p className="text-sm font-medium text-muted-ink dark:text-zinc-400">{t('account_desc')}</p>
                     </div>
 
-                    <div className="space-y-5 pb-8 border-b border-subtle dark:border-zinc-800">
+                    <div className="flex flex-col gap-5 pb-8 border-b border-subtle dark:border-zinc-800">
                       <div>
                         <label className={labelStyles}>{t('username_cant_change')}</label>
-                        <input type="text" disabled value={userData?.username} className={`${inputStyles} opacity-50 cursor-not-allowed`} />
+                        <input type="text" disabled value={userData?.username} className={`${inputStyles} opacity-50 cursor-not-allowed bg-muted dark:bg-[#121214]`} />
                       </div>
                       <div>
                         <label className={labelStyles}>{t('new_email')}</label>
                         <div className="flex flex-col sm:flex-row gap-3">
                           <input type="email" value={accountForm.newEmail} onChange={e => setAccountForm({...accountForm, newEmail: e.target.value})} className={inputStyles} />
-                          <button type="button" onClick={handleRequestEmailChange} disabled={isProcessing || accountForm.newEmail === userData?.email} className="w-full sm:w-auto shrink-0 bg-ink dark:bg-white hover:bg-ink-soft dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-bold py-3 px-5 rounded-xl text-sm transition-colors disabled:opacity-50 shadow-sm">
+                          <button type="button" onClick={handleRequestEmailChange} disabled={isProcessing || accountForm.newEmail === userData?.email} className="w-full sm:w-auto shrink-0 bg-ink dark:bg-white hover:bg-ink-soft dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-black py-3 px-6 rounded-xl text-sm transition-colors disabled:opacity-50 shadow-sm cursor-pointer">
                             {t('send_verification')}
                           </button>
                         </div>
-                        <p className="text-xs text-muted-ink dark:text-zinc-500 mt-2 font-medium">{t('email_unbind_warning')}</p>
-                        {userData?.pendingEmail && <p className="text-xs text-amber-600 dark:text-amber-500 mt-2 font-bold flex items-center gap-1.5"><Clock size={14}/> Pending: {userData.pendingEmail}</p>}
+                        <p className="text-xs text-muted-ink dark:text-zinc-500 mt-3 font-medium">{t('email_unbind_warning')}</p>
+                        {userData?.pendingEmail && <p className="text-xs text-amber-600 dark:text-amber-500 mt-2 font-bold flex items-center gap-1.5 bg-amber-50 dark:bg-amber-500/10 p-2 rounded-lg"><Clock size={14}/> Pending: {userData.pendingEmail}</p>}
                       </div>
                     </div>
 
-                    <form onSubmit={handleUpdatePassword} className="space-y-5 pt-2">
-                      <h3 className="text-base font-bold text-primary dark:text-white">{t('update_password')}</h3>
+                    <form onSubmit={handleUpdatePassword} className="flex flex-col gap-5">
+                      <h3 className="text-lg font-black text-primary dark:text-white tracking-tight">{t('update_password')}</h3>
                       <div>
                         <label className={labelStyles}>{t('old_password')}</label>
                         <input type="password" required value={accountForm.oldPassword} onChange={e => setAccountForm({...accountForm, oldPassword: e.target.value})} className={inputStyles} />
@@ -551,7 +560,7 @@ export default function Dashboard() {
                         </div>
                       </div>
                       <div className="pt-4">
-                        <button type="submit" disabled={isProcessing} className="w-full sm:w-auto bg-ink dark:bg-white hover:bg-ink-soft dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-bold py-3 px-8 rounded-xl text-sm transition-colors shadow-sm disabled:opacity-50">
+                        <button type="submit" disabled={isProcessing} className="w-full sm:w-auto bg-ink dark:bg-white hover:bg-ink-soft dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-black py-4 px-8 rounded-xl text-sm transition-colors shadow-sm disabled:opacity-50 cursor-pointer">
                           {isProcessing ? t('updating') : t('update_password')}
                         </button>
                       </div>
@@ -560,16 +569,16 @@ export default function Dashboard() {
                 )}
 
                 {activeTab === 'general' && (
-                  <div className="space-y-8 animate-in fade-in duration-300 max-w-lg">
-                    <div>
-                      <h2 className="text-xl sm:text-2xl font-black mb-1 text-primary dark:text-white">{t('general')}</h2>
-                      <p className="text-sm text-muted-ink dark:text-zinc-400">{t('app_pref_desc')}</p>
+                  <div className="flex flex-col gap-8 animate-in fade-in duration-300 max-w-lg">
+                    <div className="flex flex-col gap-1">
+                      <h2 className="text-2xl font-black text-primary dark:text-white tracking-tight">{t('general')}</h2>
+                      <p className="text-sm font-medium text-muted-ink dark:text-zinc-400">{t('app_pref_desc')}</p>
                     </div>
 
-                    <div className="space-y-6">
+                    <div className="flex flex-col gap-6">
                       <div>
                         <label className={labelStyles}>{t('language')}</label>
-                        <select value={i18n.language} onChange={(e) => setLanguageDirectly(e.target.value)} className={`${inputStyles} font-bold`}>
+                        <select value={i18n.language} onChange={(e) => setLanguageDirectly(e.target.value)} className={`${inputStyles} cursor-pointer`}>
                           <option value="en">🇺🇸 English</option>
                           <option value="id">🇮🇩 Bahasa Indonesia</option>
                         </select>
@@ -578,49 +587,46 @@ export default function Dashboard() {
                       <div>
                         <label className={labelStyles}>{t('appearance')}</label>
                         <div className="flex gap-3">
-                          <button onClick={() => setIsDark(false)} className={`flex-1 flex items-center justify-center gap-2 py-3 border rounded-xl text-sm font-bold transition-all shadow-sm ${!isDark ? 'bg-ink border-ink text-white dark:bg-white dark:border-white dark:text-zinc-900' : 'bg-app border-subtle text-primary hover:bg-muted dark:bg-[#121214] dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800'}`}>
+                          <button onClick={() => setIsDark(false)} className={`flex-1 flex items-center justify-center gap-2 py-3.5 border rounded-xl text-sm font-bold transition-all shadow-sm cursor-pointer ${!isDark ? 'bg-ink border-ink text-white dark:bg-white dark:border-white dark:text-zinc-900' : 'bg-app border-subtle text-primary hover:bg-muted dark:bg-[#18181b] dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800'}`}>
                             <Sun size={18}/> {t('light_mode')}
                           </button>
-                          <button onClick={() => setIsDark(true)} className={`flex-1 flex items-center justify-center gap-2 py-3 border rounded-xl text-sm font-bold transition-all shadow-sm ${isDark ? 'bg-ink border-ink text-white dark:bg-white dark:border-white dark:text-zinc-900' : 'bg-app border-subtle text-primary hover:bg-muted dark:bg-[#121214] dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800'}`}>
+                          <button onClick={() => setIsDark(true)} className={`flex-1 flex items-center justify-center gap-2 py-3.5 border rounded-xl text-sm font-bold transition-all shadow-sm cursor-pointer ${isDark ? 'bg-ink border-ink text-white dark:bg-white dark:border-white dark:text-zinc-900' : 'bg-app border-subtle text-primary hover:bg-muted dark:bg-[#18181b] dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800'}`}>
                             <Moon size={18}/> {t('dark_mode')}
                           </button>
                         </div>
                       </div>
                       
-                      <div className="pt-6 border-t border-subtle dark:border-zinc-800 mt-8">
+                      <div className="pt-8 border-t border-subtle dark:border-zinc-800 mt-4 flex flex-col gap-4">
                         <label className={labelStyles}>Interactive Guide & Sandbox</label>
-                        <div className="flex flex-col gap-4 mt-3">
-                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-5 rounded-2xl border border-subtle dark:border-zinc-800 bg-app dark:bg-[#121214] shadow-sm">
-                            <div>
-                              <p className="text-base font-bold text-primary dark:text-white">{t('tour_walkthrough_title', 'Start App Walkthrough')}</p>
-                              <p className="text-sm text-muted-ink dark:text-zinc-400 mt-1 font-medium">{t('tour_walkthrough_desc', 'Take a guided tour to learn how to manage your community.')}</p>
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-6 rounded-3xl border border-subtle dark:border-zinc-800 bg-app dark:bg-[#121214] shadow-sm">
+                          <div className="flex flex-col gap-1">
+                            <p className="text-base font-black text-primary dark:text-white tracking-tight">{t('tour_walkthrough_title', 'Start App Walkthrough')}</p>
+                            <p className="text-sm text-muted-ink dark:text-zinc-500 font-medium">{t('tour_walkthrough_desc', 'Take a guided tour to learn how to manage your community.')}</p>
+                          </div>
+                          <button 
+                            onClick={() => { setIsSettingsOpen(false); advanceTour(1); }}
+                            className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-2 bg-ink dark:bg-zinc-800 hover:bg-ink-soft dark:hover:bg-zinc-700 text-white dark:text-white px-6 py-3.5 rounded-xl text-sm font-black transition-colors shadow-sm cursor-pointer"
+                          >
+                            <Sparkles size={18} /> {t('start_tour', 'Start Tour')}
+                          </button>
+                        </div>
+                        
+                        {hasSandboxData && (
+                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-6 rounded-3xl border border-rose-200 dark:border-rose-900/40 bg-rose-50 dark:bg-rose-500/10 shadow-sm mt-2">
+                            <div className="flex flex-col gap-1">
+                              <p className="text-base font-black text-rose-700 dark:text-rose-400 tracking-tight">Sandbox Data Exists</p>
+                              <p className="text-sm text-rose-600/80 dark:text-rose-400/80 font-medium">Delete the temporary players and session generated by the tour.</p>
                             </div>
                             <button 
-                              onClick={() => { setIsSettingsOpen(false); advanceTour(1); }}
-                              className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-2 bg-ink dark:bg-zinc-800 hover:bg-ink-soft dark:hover:bg-zinc-700 text-white dark:text-white px-5 py-3 rounded-xl text-sm font-bold transition-colors shadow-sm"
+                              disabled={isProcessing}
+                              onClick={handleDeleteSandbox}
+                              className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-2 bg-white dark:bg-rose-900/40 border border-rose-200 dark:border-rose-900 hover:bg-rose-50 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-300 px-6 py-3.5 rounded-xl text-sm font-black transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
                             >
-                              <Sparkles size={18} /> {t('start_tour', 'Start Tour')}
+                              {isProcessing ? 'Deleting...' : <><Trash2 size={18} /> Clean Up Data</>}
                             </button>
                           </div>
-                          
-                          {hasSandboxData && (
-                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-5 rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-500/10 shadow-sm">
-                              <div>
-                                <p className="text-base font-bold text-rose-700 dark:text-rose-400">Sandbox Data Exists</p>
-                                <p className="text-sm text-rose-600/80 dark:text-rose-400/80 mt-1 font-medium">Delete the temporary players and session generated by the tour.</p>
-                              </div>
-                              <button 
-                                disabled={isProcessing}
-                                onClick={handleDeleteSandbox}
-                                className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-2 bg-white dark:bg-rose-900/40 border border-rose-200 dark:border-rose-900 hover:bg-rose-50 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-300 px-5 py-3 rounded-xl text-sm font-bold transition-colors shadow-sm disabled:opacity-50"
-                              >
-                                {isProcessing ? 'Deleting...' : <><Trash2 size={18} /> Clean Up Data</>}
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                        )}
                       </div>
-
                     </div>
                   </div>
                 )}

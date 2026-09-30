@@ -17,10 +17,11 @@ const Sessions = lazy(() => import('./pages/Sessions'));
 const SessionDetails = lazy(() => import('./pages/SessionDetails'));
 const Leaderboard = lazy(() => import('./pages/Leaderboard'));
 const Scoreboard = lazy(() => import('./pages/Scoreboard'));
+const ClubFinances = lazy(() => import('./pages/ClubFinances')); // <-- Imported the new page
 
 function RouteFallback() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-app px-6 text-sm font-medium text-muted-ink dark:bg-app-dark dark:text-muted-dark">
+    <div className="flex min-h-screen items-center justify-center bg-app dark:bg-[#09090b] px-6 text-sm font-bold tracking-widest uppercase text-muted-ink dark:text-zinc-500">
       Loading…
     </div>
   );
@@ -50,6 +51,7 @@ function App() {
           <Route path="/sessions/:id" element={<ProtectedRoute><SessionDetails /></ProtectedRoute>} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/scoreboard" element={<Scoreboard />} />
+          <Route path="/finances" element={<ProtectedRoute><ClubFinances /></ProtectedRoute>} /> {/* <-- Added the route */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
