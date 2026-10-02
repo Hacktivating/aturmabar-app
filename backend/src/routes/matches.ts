@@ -82,15 +82,14 @@ router.post("/:sessionId/auto-generate", async (req: AuthRequest, res) => {
       });
     });
 
-    // Always start with the least-played idle player. Stable name ordering keeps refreshes predictable.
+    // Sort by Games Played (with a random shuffle for tie-breaking)
     const availablePlayers = eligibleAttendances.map(a => ({
       ...a.member,
       games: playerStats.get(a.member.id)?.games || 0,
       weight: GRADE_WEIGHTS[a.member.skillLevel] || 0
     })).sort((a, b) => {
       if (a.games !== b.games) return a.games - b.games;
-      if (a.weight !== b.weight) return b.weight - a.weight;
-      return a.name.localeCompare(b.name);
+      return Math.random() - 0.5; // True randomization on equal games
     });
 
     const p1 = availablePlayers[0];
@@ -190,26 +189,16 @@ router.post("/:sessionId/auto-generate", async (req: AuthRequest, res) => {
         }
       }
 
-      // Within the same strictness tier, keep the lowest total play count first.
-      // The tier already enforces the configured grade/history rules, so this tie-break
-      // preserves fairness without randomly pushing a heavily-played player forward.
+      // If matches are found in this tier, pick one RANDOMLY so it's not fixated
       if (validMatchesForTier.length > 0) {
-        validMatchesForTier.sort((left, right) => {
-          const leftGames = left.reduce((sum, player) => sum + player.games, 0);
-          const rightGames = right.reduce((sum, player) => sum + player.games, 0);
-          if (leftGames !== rightGames) return leftGames - rightGames;
-          const leftSpread = Math.max(...left.map(player => player.weight)) - Math.min(...left.map(player => player.weight));
-          const rightSpread = Math.max(...right.map(player => player.weight)) - Math.min(...right.map(player => player.weight));
-          if (leftSpread !== rightSpread) return leftSpread - rightSpread;
-          return left.slice(0, 4).map(player => player.name).join('|').localeCompare(right.slice(0, 4).map(player => player.name).join('|'));
-        });
-        selectedMatch = validMatchesForTier[0];
-        break;
+        const randomIndex = Math.floor(Math.random() * validMatchesForTier.length);
+        selectedMatch = validMatchesForTier[randomIndex];
+        break; // Break tier loop
       }
     }
 
     if (!selectedMatch) {
-      const fallbackPool = [p1, pool[0], pool[1], pool[2]].sort((a, b) => a.games - b.games || b.weight - a.weight || a.name.localeCompare(b.name));
+      const fallbackPool = [p1, pool[0], pool[1], pool[2]].sort((a, b) => b.weight - a.weight);
       selectedMatch = [fallbackPool[0], fallbackPool[3], fallbackPool[1], fallbackPool[2]];
     }
 
@@ -390,9 +379,6 @@ router.put("/:matchId/finish", async (req: AuthRequest, res) => {
 router.put("/:matchId/players", async (req: AuthRequest, res) => {
   try {
     const matchId = parseInt(String(req.params.matchId), 10);
-    const [match] = await db.select().from(matches).where(eq(matches.id, matchId));
-    if (!match) return res.status(404).json({ error: "Match not found." });
-    if (match.status === 'on_court') return res.status(409).json({ error: "Ongoing matches cannot change players. Finish or cancel the match first." });
     const { teamA_player1, teamA_player2, teamB_player1, teamB_player2 } = req.body;
     await db.update(matches).set({ teamA_player1, teamA_player2, teamB_player1, teamB_player2 }).where(eq(matches.id, matchId));
     res.status(200).json({ message: "Players updated." });
@@ -414,7 +400,6 @@ router.put("/:matchId/swap-court", async (req: AuthRequest, res) => {
     );
 
     if (targetMatch) {
-      if (targetMatch.status === 'on_court') return res.status(409).json({ error: "Ongoing matches cannot be swapped. Finish or cancel the match first." });
       await db.update(matches).set({ courtId: targetCourtId }).where(eq(matches.id, sourceMatch.id));
       await db.update(matches).set({ courtId: sourceMatch.courtId }).where(eq(matches.id, targetMatch.id));
     } else {
