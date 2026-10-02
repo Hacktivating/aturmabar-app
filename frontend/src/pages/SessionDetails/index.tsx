@@ -3,8 +3,8 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Users, SquareStack, Play, History, Clock, Settings as SettingsIcon,
-  Check, Pause, X, Zap, Globe, Sun, Moon, LogOut, ChevronDown, Search, 
-  ArrowRightLeft, ListOrdered, AlertCircle, AlertTriangle, FileDown, Square, 
+  Check, Pause, X, Zap, Globe, Sun, Moon, LogOut, ChevronDown, Search,
+  ArrowRightLeft, ListOrdered, AlertCircle, AlertTriangle, FileDown, Square,
   Trophy, Wallet, RotateCcw, CircleHelp,
   ChevronLeft, ChevronRight, Lock, Unlock, Info, PlayCircle, StickyNote, Medal
 } from 'lucide-react';
@@ -14,7 +14,7 @@ import autoTable from 'jspdf-autotable';
 
 import { SessionGlobalTimer, getMatchTypeColor } from './utils';
 import { PlayerSlotSelect } from './components/PlayerSlotSelect';
-import { MatchCard } from './components/MatchCard'; 
+import { MatchCard } from './components/MatchCard';
 
 const AttendanceTab = lazy(() => import('./tabs/AttendanceTab').then(module => ({ default: module.AttendanceTab })));
 const CourtsTab = lazy(() => import('./tabs/CourtsTab').then(module => ({ default: module.CourtsTab })));
@@ -66,7 +66,7 @@ export default function SessionDetails() {
   const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark');
 
   const [session, setSession] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState('attendance'); 
+  const [activeTab, setActiveTab] = useState('attendance');
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -92,7 +92,7 @@ export default function SessionDetails() {
   const [selectedAttendees, setSelectedAttendees] = useState<number[]>([]);
   const [isWalkInModalOpen, setWalkInModalOpen] = useState(false);
   const [walkInForm, setWalkInForm] = useState({ name: '', gender: 'male', skillLevel: 'C1', team: 'home' });
-  
+
   const [editCourtId, setEditCourtId] = useState<number | null>(null);
   const [courtName, setCourtName] = useState('');
   const [playerDetailModal, setPlayerDetailModal] = useState<number | null>(null);
@@ -154,7 +154,7 @@ export default function SessionDetails() {
   const [editMatchModal, setEditMatchModal] = useState<any>(null);
   const [editHistoryModal, setEditHistoryModal] = useState<any>(null);
   const [swapCourtModal, setSwapCourtModal] = useState<any>(null);
-  
+
   const [confirmDeleteCourtId, setConfirmDeleteCourtId] = useState<number | null>(null);
   const [confirmDeleteMatchId, setConfirmDeleteMatchId] = useState<number | null>(null);
   const [confirmResetMatchId, setConfirmResetMatchId] = useState<number | null>(null);
@@ -343,7 +343,7 @@ export default function SessionDetails() {
     finishedMatches.forEach(m => {
       let hSets = 0, aSets = 0; let hPts = 0, aPts = 0;
       for (let i = 1; i <= maxSets; i++) {
-        const sa = m[`scoreTeamA_set${i}`] || 0; const sb = m[`scoreTeamB_set${i}`] || 0; 
+        const sa = m[`scoreTeamA_set${i}`] || 0; const sb = m[`scoreTeamB_set${i}`] || 0;
         if (sa > 0 || sb > 0 || i === 1) { hPts += sa; aPts += sb; if (sa > sb) hSets++; else if (sb > sa) aSets++; }
       }
       homeSets += hSets; awaySets += aSets; homePoints += hPts; awayPoints += aPts;
@@ -364,7 +364,7 @@ export default function SessionDetails() {
 
   const settingsLimitType = settingsForm.matchLimit === 0 ? 'all' : ([1,2,3,4,5].includes(settingsForm.matchLimit) ? String(settingsForm.matchLimit) : 'custom');
 
-  function getMemberData(memberId: number) { 
+  function getMemberData(memberId: number) {
     let m = allMembers.find(m => Number(m.id) === Number(memberId));
     if (!m) {
       const att = attendances.find(a => Number(a.member.id) === Number(memberId));
@@ -373,12 +373,38 @@ export default function SessionDetails() {
     return m;
   }
   function getInitialCourtName(cId: number) { return courts.find(c => c.id === cId)?.name; }
-  
+
+  const gradeRank: Record<string, number> = { C2: 1, C1: 2, B2: 3, B1: 4, A2: 5, A1: 6 };
+  const gradeDistance = (left?: string | null, right?: string | null) => {
+    if (!left || !right) return Number.POSITIVE_INFINITY;
+    return Math.abs((gradeRank[left] || 0) - (gradeRank[right] || 0));
+  };
   const getOptionsFor = (currentKey: 'ta1'|'ta2'|'tb1'|'tb2') => {
-    const selectedIds = Object.entries(manualPlayers).filter(([k]) => k !== currentKey).map(([, v]) => v);
+    const selectedIds = new Set(Object.entries(manualPlayers).filter(([key]) => key !== currentKey).map(([, value]) => value).filter(Boolean));
+    const teammateKey = currentKey === 'ta1' ? 'ta2' : currentKey === 'ta2' ? 'ta1' : currentKey === 'tb1' ? 'tb2' : 'tb1';
+    const teammate = getMemberData(manualPlayers[teammateKey]);
+    const strictness = session?.pairingRule || 'strict';
+    const maxGradeGap = strictness === 'very_strict' ? 0 : strictness === 'strict' ? 1 : strictness === 'moderate' ? 2 : Number.POSITIVE_INFINITY;
     let filtered = availableForManualMatch;
-    if (session?.sessionType === 'sparring') { const requiredTeam = (currentKey === 'ta1' || currentKey === 'ta2') ? 'home' : 'away'; filtered = filtered.filter(m => m.team === requiredTeam); }
-    return filtered.filter(m => !selectedIds.includes(m.id));
+    if (session?.sessionType === 'sparring') {
+      const requiredTeam = currentKey === 'ta1' || currentKey === 'ta2' ? 'home' : 'away';
+      filtered = filtered.filter(player => player.team === requiredTeam);
+    }
+    const ranked = filtered.filter(player => !selectedIds.has(player.id)).map(player => {
+      const stats = playerMatchCounts[player.id] || { total: 0 };
+      const distance = teammate ? gradeDistance(player.skillLevel, teammate.skillLevel) : null;
+      return { ...player, gamesPlayed: stats.total, gradeDistance: distance, recommended: distance !== null && distance <= maxGradeGap };
+    });
+    return ranked.sort((a, b) => {
+      if (a.gamesPlayed !== b.gamesPlayed) return a.gamesPlayed - b.gamesPlayed;
+      const aDistance = a.gradeDistance ?? Number.POSITIVE_INFINITY;
+      const bDistance = b.gradeDistance ?? Number.POSITIVE_INFINITY;
+      if (aDistance !== bDistance) return aDistance - bDistance;
+      return a.name.localeCompare(b.name);
+    });
+  };
+  const updateManualPlayer = (key: keyof typeof manualPlayers, value: number) => {
+    setManualPlayers(previous => ({ ...previous, [key]: value }));
   };
   const getSwapListFor = (currentKey: 'ta1'|'ta2'|'tb1'|'tb2') => Object.entries(manualPlayers).filter(([k, v]) => k !== currentKey && v !== 0).map(([, v]) => ({ id: v, name: getMemberData(v)?.name || '' }));
   const getHistorySwapListFor = (currentKey: 'ta1'|'ta2'|'tb1'|'tb2') => Object.entries(historyForm).filter(([k]) => k.startsWith('t')).filter(([k, v]) => k !== currentKey && v !== 0).map(([, v]) => ({ id: v, name: getMemberData(v as number)?.name || '' }));
@@ -389,11 +415,11 @@ export default function SessionDetails() {
   // ACTIONS
   const handleStartSession = async () => { if(isProcessing) return; setIsProcessing(true); try { await api.put(`/sessions/${id}/start`); await fetchSessionData(); addToast("Session started successfully"); } catch(err) { addToast("Error starting session", "error"); } finally { setIsProcessing(false); } };
   const handleEndSession = async () => { if(isProcessing || !window.confirm("Are you sure you want to end this session? All ongoing matches will need to be finished manually.")) return; setIsProcessing(true); try { await api.put(`/sessions/${id}/finish`); await fetchSessionData(); addToast("Session ended successfully"); } catch(err) { addToast("Error ending session", "error"); } finally { setIsProcessing(false); } };
-  
+
   const handleUpdateSessionRule = async (rule: string) => {
     if (isProcessing) return; setIsProcessing(true);
-    try { await api.put(`/sessions/${id}`, { ...settingsForm, pairingRule: rule }); await fetchSessionData(); addToast("Matchmaking rule updated"); } 
-    catch (err) { addToast("Error updating rules", "error"); } 
+    try { await api.put(`/sessions/${id}`, { ...settingsForm, pairingRule: rule }); await fetchSessionData(); addToast("Matchmaking rule updated"); }
+    catch (err) { addToast("Error updating rules", "error"); }
     finally { setIsProcessing(false); }
   };
 
@@ -409,7 +435,7 @@ export default function SessionDetails() {
     }
     setAdminPin(tempPin);
     localStorage.setItem('simple_mode_pin', tempPin);
-    localStorage.setItem(`simple_mode_${id}`, 'true'); 
+    localStorage.setItem(`simple_mode_${id}`, 'true');
     setIsEnterSimpleModeOpen(false);
     setIsSimpleMode(true);
     setShowSimpleTutorial(true);
@@ -424,7 +450,7 @@ export default function SessionDetails() {
         setIsSimpleMode(false);
         setShowSimpleExit(false);
         setSimplePin('');
-        localStorage.removeItem(`simple_mode_${id}`); 
+        localStorage.removeItem(`simple_mode_${id}`);
         addToast("Exited Simple Mode");
       } else {
         alert("Incorrect PIN.");
@@ -459,7 +485,7 @@ export default function SessionDetails() {
     let yPos = 20; doc.setFillColor(15, 23, 42); doc.rect(0, 0, doc.internal.pageSize.width, 40, 'F');
     if (communityData?.logo?.startsWith('data:image')) { try { doc.addImage(communityData.logo, 14, 10, 16, 16); doc.setFontSize(16); doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold"); doc.text(communityData.name || 'Community', 35, 18); doc.setFontSize(10); doc.setTextColor(148, 163, 184); doc.setFont("helvetica", "normal"); doc.text("Generated by AturMabar", 35, 24); } catch(e) {} } else { doc.setFontSize(18); doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold"); doc.text(communityData?.name || 'Community', 14, 20); doc.setFontSize(10); doc.setTextColor(148, 163, 184); doc.setFont("helvetica", "normal"); doc.text("Generated by AturMabar", 14, 26); }
     yPos = 55; doc.setFontSize(18); doc.setTextColor(15, 23, 42); doc.setFont("helvetica", "bold"); doc.text(title, 14, yPos); yPos += 8; doc.setFontSize(11); doc.setTextColor(100, 116, 139); doc.setFont("helvetica", "normal"); doc.text(subtitle, 14, yPos);
-    for(let i = 1; i <= doc.internal.getNumberOfPages(); i++) { doc.setPage(i); doc.setFontSize(8); doc.setTextColor(148, 163, 184); doc.text('Generated by AturMabar', 14, doc.internal.pageSize.height - 10); } return yPos + 10; 
+    for(let i = 1; i <= doc.internal.getNumberOfPages(); i++) { doc.setPage(i); doc.setFontSize(8); doc.setTextColor(148, 163, 184); doc.text('Generated by AturMabar', 14, doc.internal.pageSize.height - 10); } return yPos + 10;
   };
 
   const exportSessionPDF = () => {
@@ -482,7 +508,7 @@ export default function SessionDetails() {
 
   const openAttendeeModal = () => { setSelectedAttendees([]); setModalSearch(''); setAttendeeModalOpen(true); };
   const toggleSelectAttendee = (memberId: number) => setSelectedAttendees(prev => prev.includes(memberId) ? prev.filter(mid => mid !== memberId) : [...prev, memberId]);
-  
+
   const handleAddSelectedAttendees = async () => {
     if (selectedAttendees.length === 0 || isProcessing) return; setIsProcessing(true);
     try { await Promise.all(selectedAttendees.map(async (memberId) => { const existingRecord = attendances.find(a => a.member.id === memberId); if (existingRecord) return api.put(`/sessions/${id}/attendances/${existingRecord.attendance.id}`, { status: 'active' }); return api.post(`/sessions/${id}/attendances`, { memberId, team: attendanceTeamTab }); })); await fetchSessionData(); setAttendeeModalOpen(false); addToast(String(t('attendance_added', { defaultValue: "Attendees added successfully" }))); } catch (err) { addToast("Error processing attendees.", "error"); } finally { setIsProcessing(false); }
@@ -502,72 +528,72 @@ export default function SessionDetails() {
   const handleAddCourt = async () => { if (isProcessing) return; setIsProcessing(true); try { await api.post(`/sessions/${id}/courts`, { name: `Court ${courts.length + 1}` }); await fetchSessionData(); addToast(String(t('court_added', { defaultValue: "Court added" }))); } catch (err) { addToast("Error adding court", "error"); } finally { setIsProcessing(false); } };
   const handleUpdateCourt = async (courtId: number, isActive: boolean, name?: string) => { if (isProcessing) return; setIsProcessing(true); try { await api.put(`/sessions/${id}/courts/${courtId}`, { isActive, name: name || courts.find(c => c.id === courtId)?.name }); setEditCourtId(null); await fetchSessionData(); addToast(String(t('court_updated', { defaultValue: "Court updated" }))); } catch (err) { addToast("Error updating court", "error"); } finally { setIsProcessing(false); } };
   const handleConfirmDeleteCourt = async () => { if (!confirmDeleteCourtId || isProcessing) return; setIsProcessing(true); try { await api.delete(`/sessions/${id}/courts/${confirmDeleteCourtId}`); await fetchSessionData(); addToast(String(t('court_deleted', { defaultValue: "Court deleted" }))); } catch (err) { addToast("Error deleting court", "error"); } finally { setConfirmDeleteCourtId(null); setIsProcessing(false); } };
-  
+
   // --- NATIVE QUEUE LOGIC UPGRADES ---
-  const handleAutoGenerateCourt = async (courtId: number) => { 
-    if (isProcessing) return; setIsProcessing(true); 
-    try { 
+  const handleAutoGenerateCourt = async (courtId: number) => {
+    if (isProcessing) return; setIsProcessing(true);
+    try {
       const queuedMatch = queuedMatchesList.find(m => m.courtId === null);
       if (queuedMatch) {
           await api.put(`/matches/${queuedMatch.id}/swap-court`, { targetCourtId: courtId });
       } else {
-          await api.post(`/matches/${id}/auto-generate`, { courtId }); 
+          await api.post(`/matches/${id}/auto-generate`, { courtId });
       }
-      await fetchSessionData(); 
-      addToast("Match assigned to court successfully"); 
-    } catch (err: any) { addToast(err.response?.data?.error || "Error generating match", "error"); } 
-    finally { setIsProcessing(false); } 
+      await fetchSessionData();
+      addToast("Match assigned to court successfully");
+    } catch (err: any) { addToast(err.response?.data?.error || "Error generating match", "error"); }
+    finally { setIsProcessing(false); }
   };
 
-  const handleAutoFillAllCourts = async () => { 
-    if (isProcessing) return; setIsProcessing(true); 
-    try { 
-      const emptyCourts = courts.filter(c => c.isActive && !matches.find(m => m.courtId === c.id && (m.status === 'on_court' || m.status === 'queued'))); 
-      let generated = 0; 
+  const handleAutoFillAllCourts = async () => {
+    if (isProcessing) return; setIsProcessing(true);
+    try {
+      const emptyCourts = courts.filter(c => c.isActive && !matches.find(m => m.courtId === c.id && (m.status === 'on_court' || m.status === 'queued')));
+      let generated = 0;
       let queueIndex = 0;
-      for (const court of emptyCourts) { 
-        try { 
+      for (const court of emptyCourts) {
+        try {
           if (queueIndex < queuedMatchesList.length) {
              const queuedMatch = queuedMatchesList[queueIndex];
              await api.put(`/matches/${queuedMatch.id}/swap-court`, { targetCourtId: court.id });
              queueIndex++;
              generated++;
           } else {
-             await api.post(`/matches/${id}/auto-generate`, { courtId: court.id }); 
+             await api.post(`/matches/${id}/auto-generate`, { courtId: court.id });
              generated++;
           }
-        } catch (err) { break; } 
-      } 
-      await fetchSessionData(); 
-      if (generated > 0) addToast(`Successfully filled ${generated} court(s)`); else addToast("Not enough available players", "error"); 
-    } finally { setIsProcessing(false); } 
+        } catch (err) { break; }
+      }
+      await fetchSessionData();
+      if (generated > 0) addToast(`Successfully filled ${generated} court(s)`); else addToast("Not enough available players", "error");
+    } finally { setIsProcessing(false); }
   };
 
   const handleQueueMatch = async () => { if (isProcessing) return; setIsProcessing(true); try { await api.post(`/matches/${id}/auto-generate`, { courtId: null }); await fetchSessionData(); addToast(String(t('match_queued', { defaultValue: "Match added to queue" }))); } catch (err: any) { addToast(err.response?.data?.error || "Error generating match", "error"); } finally { setIsProcessing(false); } };
   const handleStartMatch = async (matchId: number) => { if (isProcessing) return; setIsProcessing(true); try { await api.put(`/matches/${matchId}/start`); await fetchSessionData(); addToast(String(t('match_started', { defaultValue: "Match started" }))); } catch (err) { addToast("Error starting match", "error"); } finally { setIsProcessing(false); } };
-  
+
   const handleFinishMatch = async (matchId: number, saveScore: boolean, scores?: any, freedCourtId?: number) => {
     if (isProcessing) return; setIsProcessing(true);
     try {
       const payload: any = {};
-      if (saveScore && scores) { 
-          payload.scoreTeamA_set1 = parseInt(scores.a1) || 0; 
-          payload.scoreTeamB_set1 = parseInt(scores.b1) || 0; 
-          payload.scoreTeamA_set2 = parseInt(scores.a2) || 0; 
-          payload.scoreTeamB_set2 = parseInt(scores.b2) || 0; 
-          payload.scoreTeamA_set3 = parseInt(scores.a3) || 0; 
-          payload.scoreTeamB_set3 = parseInt(scores.b3) || 0; 
+      if (saveScore && scores) {
+          payload.scoreTeamA_set1 = parseInt(scores.a1) || 0;
+          payload.scoreTeamB_set1 = parseInt(scores.b1) || 0;
+          payload.scoreTeamA_set2 = parseInt(scores.a2) || 0;
+          payload.scoreTeamB_set2 = parseInt(scores.b2) || 0;
+          payload.scoreTeamA_set3 = parseInt(scores.a3) || 0;
+          payload.scoreTeamB_set3 = parseInt(scores.b3) || 0;
       }
-      await api.put(`/matches/${matchId}/finish`, payload); 
-      
+      await api.put(`/matches/${matchId}/finish`, payload);
+
       if (freedCourtId) {
           const topQueued = queuedMatchesList[0];
           if (topQueued) {
               await api.put(`/matches/${topQueued.id}/swap-court`, { targetCourtId: freedCourtId });
           }
       }
-      
-      await fetchSessionData(); 
+
+      await fetchSessionData();
       addToast(String(t('match_finished', { defaultValue: "Match finished" })));
     } catch (err) { addToast("Error finishing match", "error"); } finally { setIsProcessing(false); }
   };
@@ -576,131 +602,131 @@ export default function SessionDetails() {
   const handleResetMatch = async () => { if (!confirmResetMatchId || isProcessing) return; setIsProcessing(true); try { await api.put(`/matches/${confirmResetMatchId}/reset`); await fetchSessionData(); addToast("Match reset to queued status."); } catch (err) { addToast("Error resetting match", "error"); } finally { setConfirmResetMatchId(null); setIsProcessing(false); } };
   const handleConfirmDeleteMatch = async () => {
     if (!confirmDeleteMatchId || isProcessing) return; setIsProcessing(true);
-    try { 
-      if (session?.sessionType === 'sparring') { await api.put(`/matches/${confirmDeleteMatchId}/sparring`, { teamA_player1: null, teamA_player2: null, teamB_player1: null, teamB_player2: null, courtId: null, status: 'queued' }); addToast("Match cleared successfully."); } 
+    try {
+      if (session?.sessionType === 'sparring') { await api.put(`/matches/${confirmDeleteMatchId}/sparring`, { teamA_player1: null, teamA_player2: null, teamB_player1: null, teamB_player2: null, courtId: null, status: 'queued' }); addToast("Match cleared successfully."); }
       else { await api.delete(`/matches/${confirmDeleteMatchId}`); addToast(String(t('match_cancelled', { defaultValue: "Match cancelled successfully." }))); }
-      await fetchSessionData(); 
+      await fetchSessionData();
     } catch (err) { addToast("Error canceling match", "error"); } finally { setConfirmDeleteMatchId(null); setIsProcessing(false); }
   };
-  
+
   const handleSwapCourt = async (matchId: number, targetCourtId: number | null) => { if (isProcessing) return; setIsProcessing(true); try { await api.put(`/matches/${matchId}/swap-court`, { targetCourtId }); setSwapCourtModal(null); await fetchSessionData(); addToast(String(t('court_swapped', { defaultValue: "Court swapped successfully" }))); } catch (err) { addToast("Error swapping courts", "error"); } finally { setIsProcessing(false); } };
-  
+
   const handleReorderQueue = async (currentIndex: number, direction: 'up'|'down') => {
-    if (isProcessing) return; 
-    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1; 
-    if (targetIndex < 0 || targetIndex >= queuedMatchesList.length) return; 
+    if (isProcessing) return;
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= queuedMatchesList.length) return;
     setIsProcessing(true);
-    try { 
-      const m1 = queuedMatchesList[currentIndex]; 
-      const m2 = queuedMatchesList[targetIndex]; 
-      
+    try {
+      const m1 = queuedMatchesList[currentIndex];
+      const m2 = queuedMatchesList[targetIndex];
+
       const payload1 = { teamA_player1: m2.teamA_player1, teamA_player2: m2.teamA_player2, teamB_player1: m2.teamB_player1, teamB_player2: m2.teamB_player2, matchType: m2.matchType };
       const payload2 = { teamA_player1: m1.teamA_player1, teamA_player2: m1.teamA_player2, teamB_player1: m1.teamB_player1, teamB_player2: m1.teamB_player2, matchType: m1.matchType };
 
       if (session?.sessionType === 'sparring') {
-          await Promise.all([ api.put(`/matches/${m1.id}/sparring`, payload1), api.put(`/matches/${m2.id}/sparring`, payload2) ]); 
+          await Promise.all([ api.put(`/matches/${m1.id}/sparring`, payload1), api.put(`/matches/${m2.id}/sparring`, payload2) ]);
       } else {
-          await Promise.all([ api.put(`/matches/${m1.id}/players`, payload1), api.put(`/matches/${m2.id}/players`, payload2) ]); 
+          await Promise.all([ api.put(`/matches/${m1.id}/players`, payload1), api.put(`/matches/${m2.id}/players`, payload2) ]);
       }
-      await fetchSessionData(); 
-    } catch(e) { addToast("Failed to reorder queue", "error"); } 
+      await fetchSessionData();
+    } catch(e) { addToast("Failed to reorder queue", "error"); }
     finally { setIsProcessing(false); }
   };
 
   // ----------------------------------------
   // MODAL ACTIONS
   // ----------------------------------------
-  
-  const openEditMatchModal = (match: any) => { 
-    setManualPlayers({ 
-      ta1: match.teamA_player1 || 0, 
-      ta2: match.teamA_player2 || 0, 
-      tb1: match.teamB_player1 || 0, 
-      tb2: match.teamB_player2 || 0 
-    }); 
-    setEditMatchModal(match); 
+
+  const openEditMatchModal = (match: any) => {
+    setManualPlayers({
+      ta1: match.teamA_player1 || 0,
+      ta2: match.teamA_player2 || 0,
+      tb1: match.teamB_player1 || 0,
+      tb2: match.teamB_player2 || 0
+    });
+    setEditMatchModal(match);
   };
-  
-  const handleSwapWithinMatch = (sourceKey: 'ta1'|'ta2'|'tb1'|'tb2', targetId: number) => { 
-    const targetKey = (Object.keys(manualPlayers) as Array<keyof typeof manualPlayers>).find(k => manualPlayers[k as keyof typeof manualPlayers] === targetId); 
-    if (targetKey) { 
-      setManualPlayers(prev => ({ 
-        ...prev, 
-        [sourceKey]: prev[targetKey as keyof typeof manualPlayers], 
-        [targetKey]: prev[sourceKey as keyof typeof manualPlayers] 
-      })); 
-    } 
+
+  const handleSwapWithinMatch = (sourceKey: 'ta1'|'ta2'|'tb1'|'tb2', targetId: number) => {
+    const targetKey = (Object.keys(manualPlayers) as Array<keyof typeof manualPlayers>).find(k => manualPlayers[k as keyof typeof manualPlayers] === targetId);
+    if (targetKey) {
+      setManualPlayers(prev => ({
+        ...prev,
+        [sourceKey]: prev[targetKey as keyof typeof manualPlayers],
+        [targetKey]: prev[sourceKey as keyof typeof manualPlayers]
+      }));
+    }
   };
-  
+
   const saveManualMatch = async () => {
     if (isProcessing) return; setIsProcessing(true);
     try {
       const payload = { teamA_player1: manualPlayers.ta1 || null, teamA_player2: manualPlayers.ta2 || null, teamB_player1: manualPlayers.tb1 || null, teamB_player2: manualPlayers.tb2 || null };
-      if (editMatchModal.id) { 
-        if (session?.sessionType === 'sparring') { 
-          await api.put(`/matches/${editMatchModal.id}/sparring`, payload); 
-        } else { 
-          await api.put(`/matches/${editMatchModal.id}/players`, payload); 
-        } 
-        addToast(String(t('match_updated', { defaultValue: "Players updated successfully" }))); 
-      } else { 
-        await api.post(`/matches/${id}/manual`, { ...payload, courtId: editMatchModal.courtId }); 
-        addToast("Manual match created successfully"); 
+      if (editMatchModal.id) {
+        if (session?.sessionType === 'sparring') {
+          await api.put(`/matches/${editMatchModal.id}/sparring`, payload);
+        } else {
+          await api.put(`/matches/${editMatchModal.id}/players`, payload);
+        }
+        addToast(String(t('match_updated', { defaultValue: "Players updated successfully" })));
+      } else {
+        await api.post(`/matches/${id}/manual`, { ...payload, courtId: editMatchModal.courtId });
+        addToast("Manual match created successfully");
       }
       setEditMatchModal(null); await fetchSessionData();
     } catch (err) { addToast("Error saving players", "error"); } finally { setIsProcessing(false); }
   };
 
-  const openEditHistoryModal = (match: any) => { 
-    setHistorySetView(1); 
-    setHistoryForm({ 
-      courtId: match.courtId || 0, 
-      ta1: match.teamA_player1 || 0, 
-      ta2: match.teamA_player2 || 0, 
-      tb1: match.teamB_player1 || 0, 
-      tb2: match.teamB_player2 || 0, 
-      sa1: match.scoreTeamA_set1 || 0, 
-      sb1: match.scoreTeamB_set1 || 0, 
-      sa2: match.scoreTeamA_set2 || 0, 
-      sb2: match.scoreTeamB_set2 || 0, 
-      sa3: match.scoreTeamA_set3 || 0, 
-      sb3: match.scoreTeamB_set3 || 0 
-    }); 
-    setEditHistoryModal(match); 
+  const openEditHistoryModal = (match: any) => {
+    setHistorySetView(1);
+    setHistoryForm({
+      courtId: match.courtId || 0,
+      ta1: match.teamA_player1 || 0,
+      ta2: match.teamA_player2 || 0,
+      tb1: match.teamB_player1 || 0,
+      tb2: match.teamB_player2 || 0,
+      sa1: match.scoreTeamA_set1 || 0,
+      sb1: match.scoreTeamB_set1 || 0,
+      sa2: match.scoreTeamA_set2 || 0,
+      sb2: match.scoreTeamB_set2 || 0,
+      sa3: match.scoreTeamA_set3 || 0,
+      sb3: match.scoreTeamB_set3 || 0
+    });
+    setEditHistoryModal(match);
   };
-  
-  const handleSwapWithinHistory = (sourceKey: 'ta1'|'ta2'|'tb1'|'tb2', targetId: number) => { 
-    const targetKey = (Object.keys(historyForm).filter(k=>k.startsWith('t'))).find(k => historyForm[k as keyof typeof historyForm] === targetId); 
-    if (targetKey) { 
-      setHistoryForm(prev => ({ 
-        ...prev, 
-        [sourceKey]: prev[targetKey as keyof typeof historyForm], 
-        [targetKey]: prev[sourceKey as keyof typeof historyForm] 
-      })); 
-    } 
+
+  const handleSwapWithinHistory = (sourceKey: 'ta1'|'ta2'|'tb1'|'tb2', targetId: number) => {
+    const targetKey = (Object.keys(historyForm).filter(k=>k.startsWith('t'))).find(k => historyForm[k as keyof typeof historyForm] === targetId);
+    if (targetKey) {
+      setHistoryForm(prev => ({
+        ...prev,
+        [sourceKey]: prev[targetKey as keyof typeof historyForm],
+        [targetKey]: prev[sourceKey as keyof typeof historyForm]
+      }));
+    }
   };
-  
+
   const saveHistoryMatch = async () => {
     if (isProcessing) return; setIsProcessing(true);
     try {
-      const payload: any = { 
-        courtId: historyForm.courtId || null, 
-        teamA_player1: historyForm.ta1 || null, 
-        teamA_player2: historyForm.ta2 || null, 
-        teamB_player1: historyForm.tb1 || null, 
-        teamB_player2: historyForm.tb2 || null, 
-        scoreTeamA_set1: historyForm.sa1 || 0, 
-        scoreTeamB_set1: historyForm.sb1 || 0, 
-        scoreTeamA_set2: historyForm.sa2 || 0, 
-        scoreTeamB_set2: historyForm.sb2 || 0, 
-        scoreTeamA_set3: historyForm.sa3 || 0, 
-        scoreTeamB_set3: historyForm.sb3 || 0 
+      const payload: any = {
+        courtId: historyForm.courtId || null,
+        teamA_player1: historyForm.ta1 || null,
+        teamA_player2: historyForm.ta2 || null,
+        teamB_player1: historyForm.tb1 || null,
+        teamB_player2: historyForm.tb2 || null,
+        scoreTeamA_set1: historyForm.sa1 || 0,
+        scoreTeamB_set1: historyForm.sb1 || 0,
+        scoreTeamA_set2: historyForm.sa2 || 0,
+        scoreTeamB_set2: historyForm.sb2 || 0,
+        scoreTeamA_set3: historyForm.sa3 || 0,
+        scoreTeamB_set3: historyForm.sb3 || 0
       };
-      if (session?.sessionType === 'sparring') { 
-        if (editHistoryModal.status === 'on_court') payload.status = 'finished'; 
-        await api.put(`/matches/${editHistoryModal.id}/sparring`, payload); 
-      } else { 
-        await api.put(`/matches/${editHistoryModal.id}/history`, payload); 
+      if (session?.sessionType === 'sparring') {
+        if (editHistoryModal.status === 'on_court') payload.status = 'finished';
+        await api.put(`/matches/${editHistoryModal.id}/sparring`, payload);
+      } else {
+        await api.put(`/matches/${editHistoryModal.id}/history`, payload);
       }
       setEditHistoryModal(null); await fetchSessionData(); addToast("Scores saved successfully");
     } catch (err) { addToast("Error saving score", "error"); } finally { setIsProcessing(false); }
@@ -740,7 +766,7 @@ export default function SessionDetails() {
                   <div className="flex justify-between gap-5 font-bold text-emerald-400 dark:text-emerald-600"><span>Ongoing:</span> <span>{p.ongoingCount}</span></div>
                 </div>
               </div>
-              <button 
+              <button
                 type="button"
                 onClick={(e) => { e.preventDefault(); updateAttendanceStatus(p.attendanceId, 'resting'); }}
                 className="w-9 h-9 rounded-full bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors flex items-center justify-center ml-1 border border-amber-200 dark:border-amber-500/20 cursor-pointer"
@@ -759,7 +785,7 @@ export default function SessionDetails() {
 
   return (
     <div className="min-h-screen bg-app dark:bg-[#09090b] text-primary dark:text-zinc-100 font-sans flex flex-col relative pb-32 transition-colors duration-200">
-      
+
       {/* Notification Toasts */}
       <div className="fixed top-20 right-4 z-[100] flex flex-col gap-3 pointer-events-none">
         {toasts.map(toastItem => (
@@ -824,16 +850,16 @@ export default function SessionDetails() {
                 <div className="text-xs sm:text-sm text-muted-ink dark:text-zinc-500 font-medium mt-0.5 sm:mt-1">{session && new Date(session.date).toLocaleString(i18n.language, { dateStyle: 'medium', timeStyle: 'short' })}</div>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0 justify-between sm:justify-end shrink-0 overflow-hidden">
               {/* Play / Finish Button */}
               {(!session?.status || session?.status === 'scheduled' || session?.status === 'finished') && (
                 <button type="button" disabled={isProcessing} onClick={handleStartSession} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-500 dark:hover:bg-emerald-400 text-white dark:text-zinc-900 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg text-xs sm:text-sm font-bold transition-colors shadow-sm disabled:opacity-50 whitespace-nowrap cursor-pointer">
-                  <Play size={14} fill="currentColor" className="sm:w-4 sm:h-4"/> 
+                  <Play size={14} fill="currentColor" className="sm:w-4 sm:h-4"/>
                   {session?.status === 'finished' ? t('restart_session', 'Restart') : t('start_session', 'Start')}
                 </button>
               )}
-              
+
               {session?.status === 'active' && (
                 <div className="flex-1 sm:flex-none flex gap-2 shrink-0">
                   <SessionGlobalTimer startedAt={session?.startedAt} />
@@ -863,7 +889,7 @@ export default function SessionDetails() {
               </div>
             </div>
           </div>
-          
+
           <div className="hidden sm:flex max-w-6xl mx-auto px-4 sm:px-8 w-full justify-between overflow-hidden">
             {TABS.map(tab => (
               <button type="button" key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-1.5 py-4 border-b-2 text-[13px] xl:text-sm font-bold whitespace-nowrap transition-colors cursor-pointer ${activeTab === tab.id ? 'border-ink text-primary dark:border-white dark:text-white' : 'border-transparent text-muted-ink dark:text-zinc-500 hover:text-ink dark:hover:text-zinc-300'}`}>
@@ -886,7 +912,7 @@ export default function SessionDetails() {
 
       {/* --- MAIN CONTENT AREA --- */}
       <main className={`flex-1 relative p-4 sm:p-8 max-w-6xl mx-auto w-full flex flex-col z-10 ${activeTab === 'matches' && !isSimpleMode ? 'pb-24 lg:pb-8' : ''}`}>
-        
+
         {/* NORMAL MODE TABS */}
         <Suspense fallback={<div className="rounded-2xl border border-subtle bg-surface p-12 text-center text-sm font-medium text-muted-ink dark:border-zinc-800 dark:bg-[#121214] dark:text-zinc-500">Loading tab…</div>}>
           <div className={isSimpleMode ? 'hidden' : 'contents'}>
@@ -938,7 +964,7 @@ export default function SessionDetails() {
                   </button>
                </div>
             </div>
-            
+
             {/* Polished Segmented Control for Simple Mode Tabs */}
             <div className="flex bg-app dark:bg-[#09090b] p-1.5 rounded-xl border border-subtle dark:border-zinc-800 shadow-inner">
                <button type="button" onClick={() => setActiveTab('matches')} className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all cursor-pointer ${activeTab === 'matches' ? 'bg-surface dark:bg-[#18181b] text-primary dark:text-white shadow-sm border border-subtle dark:border-zinc-700' : 'text-muted-ink dark:text-zinc-500 hover:text-primary dark:hover:text-zinc-300 border border-transparent'}`}>Matches & Queue</button>
@@ -950,18 +976,18 @@ export default function SessionDetails() {
           <div className={`${activeTab === 'matches' ? 'flex' : 'hidden'} flex-col gap-6`}>
             {/* High Priority Actions */}
             <div className="flex flex-col sm:flex-row gap-5">
-              <button 
+              <button
                  type="button"
-                 onClick={handleAutoFillAllCourts} 
-                 disabled={isProcessing} 
+                 onClick={handleAutoFillAllCourts}
+                 disabled={isProcessing}
                  className="flex-[2] bg-emerald-600 hover:bg-emerald-500 text-white py-4 sm:py-5 rounded-2xl text-lg sm:text-xl font-black shadow-lg shadow-emerald-900/20 active:scale-[0.98] transition-transform flex justify-center items-center gap-3 disabled:opacity-50 cursor-pointer"
               >
                 <PlayCircle size={28} /> {String(t('auto_fill', { defaultValue: 'AUTO FILL COURTS' }))}
               </button>
-              <button 
+              <button
                  type="button"
-                 onClick={handleQueueMatch} 
-                 disabled={isProcessing} 
+                 onClick={handleQueueMatch}
+                 disabled={isProcessing}
                  className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-4 sm:py-5 rounded-2xl text-lg sm:text-xl font-black shadow-lg shadow-blue-900/20 active:scale-[0.98] transition-transform flex justify-center items-center gap-3 disabled:opacity-50 cursor-pointer"
               >
                 <ListOrdered size={28} /> {String(t('queue_match', { defaultValue: 'QUEUE MATCH' }))}
@@ -978,10 +1004,10 @@ export default function SessionDetails() {
                     {courts.filter(c => c.isActive).map(court => {
                        const match = activeMatches.find(m => m.courtId === court.id) || queuedMatchesList.find(m => m.courtId === court.id);
                        return (
-                         <MatchCard 
-                           key={court.id} 
-                           match={match} 
-                           court={court} 
+                         <MatchCard
+                           key={court.id}
+                           match={match}
+                           court={court}
                            maxSets={maxSets}
                            sessionStatus={session?.status}
                            isProcessing={isProcessing}
@@ -1008,30 +1034,30 @@ export default function SessionDetails() {
                       <div className="col-span-full p-12 border-2 border-dashed border-subtle dark:border-zinc-800 rounded-2xl text-center text-muted-ink dark:text-zinc-500 font-bold bg-app dark:bg-[#0f0f11]">Queue is empty</div>
                     )}
                     {queuedMatchesList.map((match, index) => (
-                       <MatchCard 
-                         key={match.id} 
-                         match={match} 
-                         court={null} 
-                         maxSets={maxSets} 
-                         sessionStatus={session?.status} 
-                         isProcessing={isProcessing} 
-                         getMemberData={getMemberData} 
-                         openEditMatchModal={openEditMatchModal} 
-                         handleFinishMatch={handleFinishMatch} 
-                         setConfirmDeleteMatchId={setConfirmDeleteMatchId} 
+                       <MatchCard
+                         key={match.id}
+                         match={match}
+                         court={null}
+                         maxSets={maxSets}
+                         sessionStatus={session?.status}
+                         isProcessing={isProcessing}
+                         getMemberData={getMemberData}
+                         openEditMatchModal={openEditMatchModal}
+                         handleFinishMatch={handleFinishMatch}
+                         setConfirmDeleteMatchId={setConfirmDeleteMatchId}
                          setConfirmResetMatchId={setConfirmResetMatchId}
-                         setSwapCourtModal={setSwapCourtModal} 
-                         handleStartMatch={handleStartMatch} 
-                         handleAutoGenerateCourt={handleAutoGenerateCourt} 
+                         setSwapCourtModal={setSwapCourtModal}
+                         handleStartMatch={handleStartMatch}
+                         handleAutoGenerateCourt={handleAutoGenerateCourt}
                          handleReorderQueue={handleReorderQueue}
                          queueIndex={index}
                          totalQueued={queuedMatchesList.length}
-                         t={t} 
+                         t={t}
                        />
                     ))}
                   </div>
                </div>
-               
+
                {/* Right: Waiting List Panel (Desktop Only - Matches Standard View) */}
                <div className="hidden lg:flex w-[340px] shrink-0 flex-col gap-5">
                   <h3 className="text-xl font-black text-primary dark:text-white flex items-center gap-3 tracking-tight">
@@ -1055,9 +1081,9 @@ export default function SessionDetails() {
       {/* Works seamlessly for Normal Mode AND Simple Mode matches view! */}
       {activeTab === 'matches' && session?.sessionType !== 'sparring' && (
         <div className="fixed bottom-6 left-0 right-0 z-40 flex justify-center lg:hidden pointer-events-none">
-          <button 
+          <button
             type="button"
-            onClick={() => setIsWaitingListOpen(true)} 
+            onClick={() => setIsWaitingListOpen(true)}
             className="pointer-events-auto bg-ink shadow-xl shadow-blue-600/30 dark:bg-white dark:text-zinc-900 text-white px-8 py-4 rounded-full font-black flex items-center gap-3 transition-transform active:scale-95 cursor-pointer"
           >
             <Users size={20} />
@@ -1079,12 +1105,12 @@ export default function SessionDetails() {
          {renderWaitingListContent()}
       </div>
 
-      {/* 
+      {/*
         =========================================================
         ALL MODALS - WITH EXPLICIT Z-INDEX 9999 TO FIX OVERLAPS
         =========================================================
       */}
-      
+
       {/* --- SIMPLE MODE SPECIFIC MODALS --- */}
 
       {/* Enter Simple Mode Prompt */}
@@ -1098,16 +1124,16 @@ export default function SessionDetails() {
              <p className="text-muted-ink dark:text-zinc-400 text-sm mb-8 font-medium">
                This will hide all advanced settings and display a simplified scorer interface. Perfect for handing a tablet to a temporary umpire.
              </p>
-             
+
              <div className="w-full text-left bg-app dark:bg-[#121214] border border-subtle dark:border-zinc-800 p-5 rounded-2xl mb-8 shadow-sm">
                 <label className="block text-xs font-bold mb-3 text-muted-ink dark:text-zinc-400 uppercase tracking-widest text-center">Set Exit PIN</label>
-                <input 
-                  type="password" 
+                <input
+                  type="password"
                   inputMode="numeric"
                   pattern="[0-9]*"
                   maxLength={4}
-                  value={tempPin} 
-                  onChange={e => setTempPin(e.target.value.replace(/[^0-9]/g, ''))} 
+                  value={tempPin}
+                  onChange={e => setTempPin(e.target.value.replace(/[^0-9]/g, ''))}
                   className="w-full px-5 py-4 bg-surface dark:bg-[#18181b] border border-subtle dark:border-zinc-700 rounded-xl text-center text-3xl tracking-[0.5em] font-black outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all text-primary dark:text-white placeholder:text-muted-ink/50"
                   placeholder="••••"
                 />
@@ -1133,11 +1159,11 @@ export default function SessionDetails() {
              <p className="text-muted-ink dark:text-zinc-400 font-medium text-center text-sm mb-8">
                {unlockMethod === 'pin' ? 'Enter PIN to exit Simple Mode.' : 'Enter your account password.'}
              </p>
-             
+
              <form onSubmit={attemptExitSimpleMode} className="flex flex-col gap-5">
                {unlockMethod === 'pin' ? (
-                 <input 
-                   type="password" 
+                 <input
+                   type="password"
                    inputMode="numeric"
                    autoFocus
                    placeholder="PIN Code"
@@ -1147,8 +1173,8 @@ export default function SessionDetails() {
                    className="w-full bg-app dark:bg-[#121214] border border-subtle dark:border-zinc-800 text-primary dark:text-white text-center text-3xl tracking-[0.5em] font-black py-5 rounded-2xl outline-none focus:border-rose-500 transition-all shadow-sm placeholder:text-muted-ink/50"
                  />
                ) : (
-                 <input 
-                   type="password" 
+                 <input
+                   type="password"
                    autoFocus
                    placeholder="Account Password"
                    value={simplePin}
@@ -1156,13 +1182,13 @@ export default function SessionDetails() {
                    className="w-full bg-app dark:bg-[#121214] border border-subtle dark:border-zinc-800 text-primary dark:text-white text-center text-xl font-bold py-5 rounded-2xl outline-none focus:border-rose-500 transition-all shadow-sm placeholder:text-muted-ink/50"
                  />
                )}
-               
-               <button 
-                 type="button" 
+
+               <button
+                 type="button"
                  onClick={() => {
                    setUnlockMethod(unlockMethod === 'pin' ? 'password' : 'pin');
                    setSimplePin('');
-                 }} 
+                 }}
                  className="text-xs font-bold text-rose-600 dark:text-rose-400 hover:text-rose-500 dark:hover:text-rose-300 transition-colors text-right cursor-pointer"
                >
                  {unlockMethod === 'pin' ? 'Use Account Password instead' : 'Use PIN instead'}
@@ -1183,7 +1209,7 @@ export default function SessionDetails() {
         <div className="fixed inset-0 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in" style={{ zIndex: 9999 }}>
           <div className="bg-surface dark:bg-[#0f0f11] border border-subtle dark:border-zinc-800 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl">
             <div className="p-8 sm:p-10 text-center flex flex-col items-center">
-               
+
                {tutorialStep === 1 && (
                  <>
                    <div className="w-24 h-24 bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 text-amber-500 rounded-full flex items-center justify-center mb-8 shadow-sm">
@@ -1230,7 +1256,7 @@ export default function SessionDetails() {
                ) : (
                  <button type="button" onClick={() => setShowSimpleTutorial(false)} className="px-6 py-4 text-muted-ink/70 dark:text-zinc-500 font-bold hover:text-muted-ink dark:hover:text-zinc-400 transition-colors cursor-pointer">Skip</button>
                )}
-               
+
                {tutorialStep < 3 ? (
                  <button type="button" onClick={() => setTutorialStep(s => s + 1)} className="px-10 py-4 bg-ink dark:bg-white text-white dark:text-zinc-900 font-black rounded-xl hover:bg-ink-soft dark:hover:bg-zinc-200 transition-colors shadow-sm cursor-pointer">Next</button>
                ) : (
@@ -1275,13 +1301,13 @@ export default function SessionDetails() {
       {/* Manual Match Edit Modal */}
       {editMatchModal && (
         <div className="fixed inset-0 flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in" style={{ zIndex: 9999 }}>
-          <div className="bg-surface dark:bg-[#0f0f11] w-full max-w-4xl rounded-3xl shadow-2xl flex flex-col border border-subtle dark:border-zinc-800 overflow-hidden">
+          <div className="bg-surface dark:bg-[#0f0f11] w-full max-w-4xl max-h-[calc(100dvh-2rem)] rounded-3xl shadow-2xl flex flex-col border border-subtle dark:border-zinc-800 overflow-visible">
             <div className="flex justify-between items-center p-6 border-b border-subtle dark:border-zinc-800 bg-app dark:bg-[#121214] shrink-0">
               <h3 className="font-black text-xl text-primary dark:text-white tracking-tight">{editMatchModal.id ? 'Edit Match Players' : 'Create Manual Match'}</h3>
               <button type="button" onClick={() => setEditMatchModal(null)} className="p-2 text-muted-ink dark:text-zinc-400 hover:bg-muted dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-white rounded-full transition-colors cursor-pointer"><X size={20}/></button>
             </div>
-            <div className="p-6 sm:p-8 flex flex-col md:flex-row gap-6 sm:gap-8 relative items-stretch min-h-[400px]">
-              
+            <div className="p-4 sm:p-8 flex flex-col md:flex-row gap-5 sm:gap-8 relative items-stretch overflow-y-auto">
+
               {/* TEAM A BOX */}
               <div className="flex-1 w-full bg-app dark:bg-[#121214] p-6 sm:p-8 rounded-3xl border border-subtle dark:border-zinc-800 shadow-sm flex flex-col">
                 <div className="flex items-center gap-4 mb-8">
@@ -1289,24 +1315,24 @@ export default function SessionDetails() {
                   <h4 className="font-black text-xl text-primary dark:text-white tracking-tight">Team A {session?.sessionType === 'sparring' && <span className="text-sm ml-2 text-muted-ink dark:text-zinc-500 font-bold">({communityData?.name})</span>}</h4>
                 </div>
                 <div className="flex flex-col gap-5">
-                  <PlayerSlotSelect 
+                  <PlayerSlotSelect
                     id="manual-ta1" key="manual-ta1"
-                    options={getOptionsFor('ta1')} value={manualPlayers.ta1} t={t} currentName={getMemberData(manualPlayers.ta1)?.name} currentGrade={getMemberData(manualPlayers.ta1)?.skillLevel} 
-                    swaps={getSwapListFor('ta1')} onSwap={(id: number) => handleSwapWithinMatch('ta1', id)} 
-                    onChange={(v: number) => setManualPlayers(prev => ({...prev, ta1: v}))} placeholder="- Select Player 1 -" 
+                    options={getOptionsFor('ta1')} value={manualPlayers.ta1} t={t} currentName={getMemberData(manualPlayers.ta1)?.name} currentGrade={getMemberData(manualPlayers.ta1)?.skillLevel}
+                    swaps={getSwapListFor('ta1')} onSwap={(id: number) => handleSwapWithinMatch('ta1', id)}
+                    onChange={(v: number) => updateManualPlayer('ta1', v)} placeholder="- Select Player 1 -"
                   />
-                  <PlayerSlotSelect 
+                  <PlayerSlotSelect
                     id="manual-ta2" key="manual-ta2"
-                    options={getOptionsFor('ta2')} value={manualPlayers.ta2} t={t} currentName={getMemberData(manualPlayers.ta2)?.name} currentGrade={getMemberData(manualPlayers.ta2)?.skillLevel} 
-                    swaps={getSwapListFor('ta2')} onSwap={(id: number) => handleSwapWithinMatch('ta2', id)} 
-                    onChange={(v: number) => setManualPlayers(prev => ({...prev, ta2: v}))} placeholder="- Select Player 2 -" 
+                    options={getOptionsFor('ta2')} value={manualPlayers.ta2} t={t} currentName={getMemberData(manualPlayers.ta2)?.name} currentGrade={getMemberData(manualPlayers.ta2)?.skillLevel}
+                    swaps={getSwapListFor('ta2')} onSwap={(id: number) => handleSwapWithinMatch('ta2', id)}
+                    onChange={(v: number) => updateManualPlayer('ta2', v)} placeholder="- Select Player 2 -"
                   />
                 </div>
               </div>
 
               <div className="hidden md:flex absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-full bg-surface dark:bg-[#18181b] border border-subtle dark:border-zinc-800 shadow-md items-center justify-center font-black text-muted-ink dark:text-zinc-500 z-10 text-lg">VS</div>
               <div className="md:hidden text-center text-muted-ink dark:text-zinc-600 font-black text-xl py-2">VS</div>
-              
+
               {/* TEAM B BOX */}
               <div className="flex-1 w-full bg-app dark:bg-[#121214] p-6 sm:p-8 rounded-3xl border border-subtle dark:border-zinc-800 shadow-sm flex flex-col">
                 <div className="flex items-center gap-4 mb-8 justify-end md:justify-start">
@@ -1315,18 +1341,18 @@ export default function SessionDetails() {
                   <div className="hidden md:flex w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 items-center justify-center font-black text-lg shadow-sm">B</div>
                 </div>
                 <div className="flex flex-col gap-5">
-                  <PlayerSlotSelect 
+                  <PlayerSlotSelect
                     id="manual-tb1" key="manual-tb1"
-                    options={getOptionsFor('tb1')} value={manualPlayers.tb1} t={t} currentName={getMemberData(manualPlayers.tb1)?.name} currentGrade={getMemberData(manualPlayers.tb1)?.skillLevel} 
-                    swaps={getSwapListFor('tb1')} onSwap={(id: number) => handleSwapWithinMatch('tb1', id)} 
-                    onChange={(v: number) => setManualPlayers(prev => ({...prev, tb1: v}))} placeholder="- Select Player 1 -" 
+                    options={getOptionsFor('tb1')} value={manualPlayers.tb1} t={t} currentName={getMemberData(manualPlayers.tb1)?.name} currentGrade={getMemberData(manualPlayers.tb1)?.skillLevel}
+                    swaps={getSwapListFor('tb1')} onSwap={(id: number) => handleSwapWithinMatch('tb1', id)}
+                    onChange={(v: number) => updateManualPlayer('tb1', v)} placeholder="- Select Player 1 -"
                   />
                   {/* PERFECTLY ISOLATED TB2 SLOT */}
-                  <PlayerSlotSelect 
+                  <PlayerSlotSelect
                     id="manual-tb2" key="manual-tb2"
-                    options={getOptionsFor('tb2')} value={manualPlayers.tb2} t={t} currentName={getMemberData(manualPlayers.tb2)?.name} currentGrade={getMemberData(manualPlayers.tb2)?.skillLevel} 
-                    swaps={getSwapListFor('tb2')} onSwap={(id: number) => handleSwapWithinMatch('tb2', id)} 
-                    onChange={(v: number) => setManualPlayers(prev => ({...prev, tb2: v}))} placeholder="- Select Player 2 -" 
+                    options={getOptionsFor('tb2')} value={manualPlayers.tb2} t={t} currentName={getMemberData(manualPlayers.tb2)?.name} currentGrade={getMemberData(manualPlayers.tb2)?.skillLevel}
+                    swaps={getSwapListFor('tb2')} onSwap={(id: number) => handleSwapWithinMatch('tb2', id)}
+                    onChange={(v: number) => updateManualPlayer('tb2', v)} placeholder="- Select Player 2 -"
                   />
                 </div>
               </div>
@@ -1357,7 +1383,7 @@ export default function SessionDetails() {
                  </select>
               </div>
               <div className="flex flex-col md:flex-row gap-6 sm:gap-8 relative items-stretch">
-                
+
                 {/* TEAM A BOX */}
                 <div className="flex-1 w-full bg-app dark:bg-[#121214] p-6 sm:p-8 rounded-3xl border border-subtle dark:border-zinc-800 shadow-sm flex flex-col">
                   <div className="flex items-center gap-4 mb-8">
@@ -1365,19 +1391,19 @@ export default function SessionDetails() {
                     <h4 className="font-black text-xl text-primary dark:text-white tracking-tight">Team A {session?.sessionType === 'sparring' && <span className="text-sm ml-2 text-muted-ink dark:text-zinc-500 font-bold">({communityData?.name})</span>}</h4>
                   </div>
                   <div className="flex flex-col gap-5">
-                    <PlayerSlotSelect 
+                    <PlayerSlotSelect
                       id="history-ta1" key="history-ta1"
-                      options={historyPlayerOptions.filter(m => m.id !== historyForm.ta2 && m.id !== historyForm.tb1 && m.id !== historyForm.tb2)} 
-                      value={historyForm.ta1} t={t} currentName={getMemberData(historyForm.ta1)?.name} currentGrade={getMemberData(historyForm.ta1)?.skillLevel} 
-                      swaps={getHistorySwapListFor('ta1')} onSwap={(id: number) => handleSwapWithinHistory('ta1', id)} 
-                      onChange={(v: number) => setHistoryForm(prev => ({...prev, ta1: v}))} placeholder="- Select Player 1 -" 
+                      options={historyPlayerOptions.filter(m => m.id !== historyForm.ta2 && m.id !== historyForm.tb1 && m.id !== historyForm.tb2)}
+                      value={historyForm.ta1} t={t} currentName={getMemberData(historyForm.ta1)?.name} currentGrade={getMemberData(historyForm.ta1)?.skillLevel}
+                      swaps={getHistorySwapListFor('ta1')} onSwap={(id: number) => handleSwapWithinHistory('ta1', id)}
+                      onChange={(v: number) => setHistoryForm(prev => ({...prev, ta1: v}))} placeholder="- Select Player 1 -"
                     />
-                    <PlayerSlotSelect 
+                    <PlayerSlotSelect
                       id="history-ta2" key="history-ta2"
-                      options={historyPlayerOptions.filter(m => m.id !== historyForm.ta1 && m.id !== historyForm.tb1 && m.id !== historyForm.tb2)} 
-                      value={historyForm.ta2} t={t} currentName={getMemberData(historyForm.ta2)?.name} currentGrade={getMemberData(historyForm.ta2)?.skillLevel} 
-                      swaps={getHistorySwapListFor('ta2')} onSwap={(id: number) => handleSwapWithinHistory('ta2', id)} 
-                      onChange={(v: number) => setHistoryForm(prev => ({...prev, ta2: v}))} placeholder="- Select Player 2 -" 
+                      options={historyPlayerOptions.filter(m => m.id !== historyForm.ta1 && m.id !== historyForm.tb1 && m.id !== historyForm.tb2)}
+                      value={historyForm.ta2} t={t} currentName={getMemberData(historyForm.ta2)?.name} currentGrade={getMemberData(historyForm.ta2)?.skillLevel}
+                      swaps={getHistorySwapListFor('ta2')} onSwap={(id: number) => handleSwapWithinHistory('ta2', id)}
+                      onChange={(v: number) => setHistoryForm(prev => ({...prev, ta2: v}))} placeholder="- Select Player 2 -"
                     />
                   </div>
                   <div className="mt-8 border-t border-subtle dark:border-zinc-800 pt-6">
@@ -1392,7 +1418,7 @@ export default function SessionDetails() {
 
                 <div className="hidden md:flex absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-full bg-surface dark:bg-[#18181b] border border-subtle dark:border-zinc-800 shadow-md items-center justify-center font-black text-muted-ink dark:text-zinc-500 z-10 text-lg">VS</div>
                 <div className="md:hidden text-center text-muted-ink dark:text-zinc-600 font-black text-xl py-2">VS</div>
-                
+
                 {/* TEAM B BOX */}
                 <div className="flex-1 w-full bg-app dark:bg-[#121214] p-6 sm:p-8 rounded-3xl border border-subtle dark:border-zinc-800 shadow-sm flex flex-col">
                   <div className="flex items-center gap-4 mb-8 justify-end md:justify-start">
@@ -1401,20 +1427,20 @@ export default function SessionDetails() {
                     <div className="hidden md:flex w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 items-center justify-center font-black text-lg shadow-sm">B</div>
                   </div>
                   <div className="flex flex-col gap-5">
-                    <PlayerSlotSelect 
+                    <PlayerSlotSelect
                       id="history-tb1" key="history-tb1"
-                      options={historyPlayerOptions.filter(m => m.id !== historyForm.ta1 && m.id !== historyForm.ta2 && m.id !== historyForm.tb2)} 
-                      value={historyForm.tb1} t={t} currentName={getMemberData(historyForm.tb1)?.name} currentGrade={getMemberData(historyForm.tb1)?.skillLevel} 
-                      swaps={getHistorySwapListFor('tb1')} onSwap={(id: number) => handleSwapWithinHistory('tb1', id)} 
-                      onChange={(v: number) => setHistoryForm(prev => ({...prev, tb1: v}))} placeholder="- Select Player 1 -" 
+                      options={historyPlayerOptions.filter(m => m.id !== historyForm.ta1 && m.id !== historyForm.ta2 && m.id !== historyForm.tb2)}
+                      value={historyForm.tb1} t={t} currentName={getMemberData(historyForm.tb1)?.name} currentGrade={getMemberData(historyForm.tb1)?.skillLevel}
+                      swaps={getHistorySwapListFor('tb1')} onSwap={(id: number) => handleSwapWithinHistory('tb1', id)}
+                      onChange={(v: number) => setHistoryForm(prev => ({...prev, tb1: v}))} placeholder="- Select Player 1 -"
                     />
                     {/* PERFECTLY ISOLATED TB2 SLOT */}
-                    <PlayerSlotSelect 
+                    <PlayerSlotSelect
                       id="history-tb2" key="history-tb2"
-                      options={historyPlayerOptions.filter(m => m.id !== historyForm.ta1 && m.id !== historyForm.ta2 && m.id !== historyForm.tb1)} 
-                      value={historyForm.tb2} t={t} currentName={getMemberData(historyForm.tb2)?.name} currentGrade={getMemberData(historyForm.tb2)?.skillLevel} 
-                      swaps={getHistorySwapListFor('tb2')} onSwap={(id: number) => handleSwapWithinHistory('tb2', id)} 
-                      onChange={(v: number) => setHistoryForm(prev => ({...prev, tb2: v}))} placeholder="- Select Player 2 -" 
+                      options={historyPlayerOptions.filter(m => m.id !== historyForm.ta1 && m.id !== historyForm.ta2 && m.id !== historyForm.tb1)}
+                      value={historyForm.tb2} t={t} currentName={getMemberData(historyForm.tb2)?.name} currentGrade={getMemberData(historyForm.tb2)?.skillLevel}
+                      swaps={getHistorySwapListFor('tb2')} onSwap={(id: number) => handleSwapWithinHistory('tb2', id)}
+                      onChange={(v: number) => setHistoryForm(prev => ({...prev, tb2: v}))} placeholder="- Select Player 2 -"
                     />
                   </div>
                   <div className="mt-8 border-t border-subtle dark:border-zinc-800 pt-6">
@@ -1509,17 +1535,17 @@ export default function SessionDetails() {
                 courts.filter(c => c.isActive && c.id !== swapCourtModal.courtId).map(c => {
                   const isOccupied = activeMatches.some(m => m.courtId === c.id && m.status === 'on_court');
                   return (
-                    <button 
+                    <button
                       type="button"
-                      disabled={isProcessing} 
-                      key={c.id} 
+                      disabled={isProcessing}
+                      key={c.id}
                       onClick={() => {
                         if (isOccupied) {
                           addToast("Cannot swap to this court. A match is currently ongoing. Please finish or cancel it first.", "error");
                         } else {
                           handleSwapCourt(swapCourtModal.id, c.id);
                         }
-                      }} 
+                      }}
                       className={`w-full text-left p-5 rounded-2xl border ${isOccupied ? 'border-rose-200 bg-rose-50/50 dark:border-rose-900/50 dark:bg-rose-900/10 cursor-not-allowed opacity-75' : 'border-subtle dark:border-zinc-800 bg-app dark:bg-[#121214] hover:bg-accent-soft hover:border-ink dark:hover:bg-zinc-800 dark:hover:dark:border-zinc-700 shadow-sm cursor-pointer'} transition-colors font-bold flex justify-between items-center`}
                     >
                       <div className="flex flex-col gap-1">
@@ -1590,7 +1616,7 @@ export default function SessionDetails() {
               <h3 className="font-black text-xl text-primary dark:text-white tracking-tight">{String(t('add_attendee', { defaultValue: 'Add Attendee' }))}</h3>
               <button type="button" disabled={isProcessing} onClick={() => setAttendeeModalOpen(false)} className="p-2 text-muted-ink dark:text-zinc-400 hover:bg-muted dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-white rounded-full transition-colors disabled:opacity-50 cursor-pointer"><X size={20}/></button>
             </div>
-            
+
             <div className="p-5 border-b border-subtle dark:border-zinc-800 shrink-0">
               <div className="relative w-full">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-ink dark:text-zinc-500" size={18} />
@@ -1599,7 +1625,7 @@ export default function SessionDetails() {
             </div>
 
             <div className="p-3 overflow-y-auto flex-1 bg-surface dark:bg-[#0f0f11]">
-              {availableMembersModal.length === 0 ? <div className="p-12 text-center font-medium text-muted-ink dark:text-zinc-500">{String(t('no_players', { defaultValue: 'No players found.' }))}</div> : 
+              {availableMembersModal.length === 0 ? <div className="p-12 text-center font-medium text-muted-ink dark:text-zinc-500">{String(t('no_players', { defaultValue: 'No players found.' }))}</div> :
                availableMembersModal.map((member: any) => (
                 <div key={member.id} className={`flex items-center p-4 hover:bg-app dark:hover:bg-white/5 rounded-2xl cursor-pointer transition-colors ${isProcessing ? 'pointer-events-none opacity-50' : ''}`} onClick={() => toggleSelectAttendee(member.id)}>
                   <div className="flex items-center gap-5 w-full">
