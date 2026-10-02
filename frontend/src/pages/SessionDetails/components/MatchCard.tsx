@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Play, Settings as SettingsIcon, Trash2, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ArrowRightLeft } from 'lucide-react';
+import { Play, Settings as SettingsIcon, Trash2, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ArrowRightLeft, Plus } from 'lucide-react';
 import { MatchTimer } from '../utils';
 
 export const MatchCard = ({ match, court, sessionStatus, maxSets, isProcessing, getMemberData, openEditMatchModal, handleAutoGenerateCourt, setSwapCourtModal, setConfirmDeleteMatchId, setConfirmResetMatchId, handleStartMatch, handleFinishMatch, handleReorderQueue, queueIndex, totalQueued, t }: any) => {
@@ -46,6 +46,9 @@ export const MatchCard = ({ match, court, sessionStatus, maxSets, isProcessing, 
   const tBName1 = getMemberData(match.teamB_player1)?.name?.split(' ')[0] || 'TBD';
   const tBName2 = getMemberData(match.teamB_player2)?.name?.split(' ')[0] || '';
 
+  const isTeamA = match.teamA_player1 || match.teamA_player2;
+  const isTeamB = match.teamB_player1 || match.teamB_player2;
+
   return (
     <div className={`bg-surface dark:bg-surface-dark border ${isActive ? 'border-emerald-300 dark:border-emerald-700 shadow-md ring-2 ring-emerald-500/20' : 'border-subtle dark:border-subtle-dark shadow-sm'} rounded-xl overflow-hidden flex flex-col h-full transition-all`}>
       <div className="p-3 flex justify-between items-center border-b border-subtle dark:border-subtle-dark bg-app dark:bg-app-dark">
@@ -85,35 +88,53 @@ export const MatchCard = ({ match, court, sessionStatus, maxSets, isProcessing, 
             
             <div className="flex border border-subtle dark:border-subtle-dark rounded-xl overflow-hidden shadow-sm">
               {/* Team A Badge - Highly Visible Blue */}
-              <div className="flex-1 p-2.5 sm:p-3 flex flex-col justify-center border-r border-blue-200 dark:border-blue-800 bg-blue-100 dark:bg-blue-900/40">
-                <div className="flex justify-between items-center mb-1.5 gap-2">
-                  <span className="font-bold text-xs sm:text-sm truncate text-blue-900 dark:text-blue-100">{getMemberData(match.teamA_player1)?.name || 'TBD'}</span>
-                  <span className="text-[9px] border px-1.5 py-0.5 rounded font-mono font-bold bg-white/60 dark:bg-black/30 border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-200 shrink-0">
-                    {getMemberData(match.teamA_player1)?.skillLevel || '-'}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center gap-2">
-                  <span className="font-bold text-xs sm:text-sm truncate text-blue-900 dark:text-blue-100">{getMemberData(match.teamA_player2)?.name || 'TBD'}</span>
-                  <span className="text-[9px] border px-1.5 py-0.5 rounded font-mono font-bold bg-white/60 dark:bg-black/30 border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-200 shrink-0">
-                    {getMemberData(match.teamA_player2)?.skillLevel || '-'}
-                  </span>
-                </div>
+              <div 
+                onClick={() => !isActive && openEditMatchModal(match)} 
+                className={`flex-1 p-2.5 sm:p-3 flex flex-col justify-center border-r border-blue-200 dark:border-blue-800 bg-blue-100 dark:bg-blue-900/40 ${!isActive ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+              >
+                {isTeamA ? (
+                  <>
+                    <div className="flex justify-between items-center mb-1.5 gap-2">
+                      <span className="font-bold text-xs sm:text-sm truncate text-blue-900 dark:text-blue-100">{getMemberData(match.teamA_player1)?.name || 'TBD'}</span>
+                      <span className="text-[9px] border px-1.5 py-0.5 rounded font-mono font-bold bg-white/60 dark:bg-black/30 border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-200 shrink-0">
+                        {getMemberData(match.teamA_player1)?.skillLevel || '-'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center gap-2">
+                      <span className="font-bold text-xs sm:text-sm truncate text-blue-900 dark:text-blue-100">{getMemberData(match.teamA_player2)?.name || 'TBD'}</span>
+                      <span className="text-[9px] border px-1.5 py-0.5 rounded font-mono font-bold bg-white/60 dark:bg-black/30 border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-200 shrink-0">
+                        {getMemberData(match.teamA_player2)?.skillLevel || '-'}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-xs font-bold text-blue-600 dark:text-blue-400 gap-1"><Plus size={14}/> Add Home</div>
+                )}
               </div>
               
               {/* Team B Badge - Highly Visible Rose */}
-              <div className="flex-1 p-2.5 sm:p-3 flex flex-col justify-center bg-rose-100 dark:bg-rose-900/40">
-                <div className="flex justify-between items-center mb-1.5 gap-2">
-                  <span className="font-bold text-xs sm:text-sm truncate text-rose-900 dark:text-rose-100">{getMemberData(match.teamB_player1)?.name || 'TBD'}</span>
-                  <span className="text-[9px] border px-1.5 py-0.5 rounded font-mono font-bold bg-white/60 dark:bg-black/30 border-rose-200 dark:border-rose-700 text-rose-800 dark:text-rose-200 shrink-0">
-                    {getMemberData(match.teamB_player1)?.skillLevel || '-'}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center gap-2">
-                  <span className="font-bold text-xs sm:text-sm truncate text-rose-900 dark:text-rose-100">{getMemberData(match.teamB_player2)?.name || 'TBD'}</span>
-                  <span className="text-[9px] border px-1.5 py-0.5 rounded font-mono font-bold bg-white/60 dark:bg-black/30 border-rose-200 dark:border-rose-700 text-rose-800 dark:text-rose-200 shrink-0">
-                    {getMemberData(match.teamB_player2)?.skillLevel || '-'}
-                  </span>
-                </div>
+              <div 
+                onClick={() => !isActive && openEditMatchModal(match)} 
+                className={`flex-1 p-2.5 sm:p-3 flex flex-col justify-center bg-rose-100 dark:bg-rose-900/40 ${!isActive ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+              >
+                {isTeamB ? (
+                  <>
+                    <div className="flex justify-between items-center mb-1.5 gap-2">
+                      <span className="font-bold text-xs sm:text-sm truncate text-rose-900 dark:text-rose-100">{getMemberData(match.teamB_player1)?.name || 'TBD'}</span>
+                      <span className="text-[9px] border px-1.5 py-0.5 rounded font-mono font-bold bg-white/60 dark:bg-black/30 border-rose-200 dark:border-rose-700 text-rose-800 dark:text-rose-200 shrink-0">
+                        {getMemberData(match.teamB_player1)?.skillLevel || '-'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center gap-2">
+                      <span className="font-bold text-xs sm:text-sm truncate text-rose-900 dark:text-rose-100">{getMemberData(match.teamB_player2)?.name || 'TBD'}</span>
+                      <span className="text-[9px] border px-1.5 py-0.5 rounded font-mono font-bold bg-white/60 dark:bg-black/30 border-rose-200 dark:border-rose-700 text-rose-800 dark:text-rose-200 shrink-0">
+                        {getMemberData(match.teamB_player2)?.skillLevel || '-'}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-xs font-bold text-rose-600 dark:text-rose-400 gap-1"><Plus size={14}/> Add Away</div>
+                )}
               </div>
             </div>
           </div>
@@ -131,7 +152,6 @@ export const MatchCard = ({ match, court, sessionStatus, maxSets, isProcessing, 
                   </div>
                 )}
                 
-                {/* Visual UI scoring enhancement! */}
                 <div className="flex items-center gap-3">
                   <div className="flex-1 flex flex-col items-center bg-blue-50/80 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3 shadow-inner">
                     <span className="text-[10px] font-bold text-blue-800 dark:text-blue-300 mb-2 truncate w-full text-center tracking-wide uppercase">

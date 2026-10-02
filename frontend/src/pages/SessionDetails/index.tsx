@@ -606,26 +606,102 @@ export default function SessionDetails() {
     } catch(e) { addToast("Failed to reorder queue", "error"); } 
     finally { setIsProcessing(false); }
   };
+
+  // ----------------------------------------
+  // MODAL ACTIONS
   // ----------------------------------------
   
-  const openEditMatchModal = (match: any) => { setManualPlayers({ ta1: match.teamA_player1 || 0, ta2: match.teamA_player2 || 0, tb1: match.teamB_player1 || 0, tb2: match.teamB_player2 || 0 }); setEditMatchModal(match); };
-  const handleSwapWithinMatch = (sourceKey: 'ta1'|'ta2'|'tb1'|'tb2', targetId: number) => { const targetKey = (Object.keys(manualPlayers) as Array<keyof typeof manualPlayers>).find(k => manualPlayers[k as keyof typeof manualPlayers] === targetId); if (targetKey) { setManualPlayers(prev => ({ ...prev, [sourceKey]: prev[targetKey as keyof typeof manualPlayers], [targetKey]: prev[sourceKey as keyof typeof manualPlayers] })); } };
+  const openEditMatchModal = (match: any) => { 
+    setManualPlayers({ 
+      ta1: match.teamA_player1 || 0, 
+      ta2: match.teamA_player2 || 0, 
+      tb1: match.teamB_player1 || 0, 
+      tb2: match.teamB_player2 || 0 
+    }); 
+    setEditMatchModal(match); 
+  };
+  
+  const handleSwapWithinMatch = (sourceKey: 'ta1'|'ta2'|'tb1'|'tb2', targetId: number) => { 
+    const targetKey = (Object.keys(manualPlayers) as Array<keyof typeof manualPlayers>).find(k => manualPlayers[k as keyof typeof manualPlayers] === targetId); 
+    if (targetKey) { 
+      setManualPlayers(prev => ({ 
+        ...prev, 
+        [sourceKey]: prev[targetKey as keyof typeof manualPlayers], 
+        [targetKey]: prev[sourceKey as keyof typeof manualPlayers] 
+      })); 
+    } 
+  };
+  
   const saveManualMatch = async () => {
     if (isProcessing) return; setIsProcessing(true);
     try {
       const payload = { teamA_player1: manualPlayers.ta1 || null, teamA_player2: manualPlayers.ta2 || null, teamB_player1: manualPlayers.tb1 || null, teamB_player2: manualPlayers.tb2 || null };
-      if (editMatchModal.id) { if (session?.sessionType === 'sparring') { await api.put(`/matches/${editMatchModal.id}/sparring`, payload); } else { await api.put(`/matches/${editMatchModal.id}/players`, payload); } addToast(String(t('match_updated', { defaultValue: "Players updated successfully" }))); } else { await api.post(`/matches/${id}/manual`, { ...payload, courtId: editMatchModal.courtId }); addToast("Manual match created successfully"); }
+      if (editMatchModal.id) { 
+        if (session?.sessionType === 'sparring') { 
+          await api.put(`/matches/${editMatchModal.id}/sparring`, payload); 
+        } else { 
+          await api.put(`/matches/${editMatchModal.id}/players`, payload); 
+        } 
+        addToast(String(t('match_updated', { defaultValue: "Players updated successfully" }))); 
+      } else { 
+        await api.post(`/matches/${id}/manual`, { ...payload, courtId: editMatchModal.courtId }); 
+        addToast("Manual match created successfully"); 
+      }
       setEditMatchModal(null); await fetchSessionData();
     } catch (err) { addToast("Error saving players", "error"); } finally { setIsProcessing(false); }
   };
 
-  const openEditHistoryModal = (match: any) => { setHistorySetView(1); setHistoryForm({ courtId: match.courtId || 0, ta1: match.teamA_player1 || 0, ta2: match.teamA_player2 || 0, tb1: match.teamB_player1 || 0, tb2: match.teamB_player2 || 0, sa1: match.scoreTeamA_set1 || 0, sb1: match.scoreTeamB_set1 || 0, sa2: match.scoreTeamA_set2 || 0, sb2: match.scoreTeamB_set2 || 0, sa3: match.scoreTeamA_set3 || 0, sb3: match.scoreTeamB_set3 || 0 }); setEditHistoryModal(match); };
-  const handleSwapWithinHistory = (sourceKey: 'ta1'|'ta2'|'tb1'|'tb2', targetId: number) => { const targetKey = (Object.keys(historyForm).filter(k=>k.startsWith('t'))).find(k => historyForm[k as keyof typeof historyForm] === targetId); if (targetKey) { setHistoryForm(prev => ({ ...prev, [sourceKey]: prev[targetKey as keyof typeof historyForm], [targetKey]: prev[sourceKey as keyof typeof historyForm] })); } };
+  const openEditHistoryModal = (match: any) => { 
+    setHistorySetView(1); 
+    setHistoryForm({ 
+      courtId: match.courtId || 0, 
+      ta1: match.teamA_player1 || 0, 
+      ta2: match.teamA_player2 || 0, 
+      tb1: match.teamB_player1 || 0, 
+      tb2: match.teamB_player2 || 0, 
+      sa1: match.scoreTeamA_set1 || 0, 
+      sb1: match.scoreTeamB_set1 || 0, 
+      sa2: match.scoreTeamA_set2 || 0, 
+      sb2: match.scoreTeamB_set2 || 0, 
+      sa3: match.scoreTeamA_set3 || 0, 
+      sb3: match.scoreTeamB_set3 || 0 
+    }); 
+    setEditHistoryModal(match); 
+  };
+  
+  const handleSwapWithinHistory = (sourceKey: 'ta1'|'ta2'|'tb1'|'tb2', targetId: number) => { 
+    const targetKey = (Object.keys(historyForm).filter(k=>k.startsWith('t'))).find(k => historyForm[k as keyof typeof historyForm] === targetId); 
+    if (targetKey) { 
+      setHistoryForm(prev => ({ 
+        ...prev, 
+        [sourceKey]: prev[targetKey as keyof typeof historyForm], 
+        [targetKey]: prev[sourceKey as keyof typeof historyForm] 
+      })); 
+    } 
+  };
+  
   const saveHistoryMatch = async () => {
     if (isProcessing) return; setIsProcessing(true);
     try {
-      const payload: any = { courtId: historyForm.courtId || null, teamA_player1: historyForm.ta1 || null, teamA_player2: historyForm.ta2 || null, teamB_player1: historyForm.tb1 || null, teamB_player2: historyForm.tb2 || null, scoreTeamA_set1: historyForm.sa1 || 0, scoreTeamB_set1: historyForm.sb1 || 0, scoreTeamA_set2: historyForm.sa2 || 0, scoreTeamB_set2: historyForm.sb2 || 0, scoreTeamA_set3: historyForm.sa3 || 0, scoreTeamB_set3: historyForm.sb3 || 0 };
-      if (session?.sessionType === 'sparring') { if (editHistoryModal.status === 'on_court') payload.status = 'finished'; await api.put(`/matches/${editHistoryModal.id}/sparring`, payload); } else { await api.put(`/matches/${editHistoryModal.id}/history`, payload); }
+      const payload: any = { 
+        courtId: historyForm.courtId || null, 
+        teamA_player1: historyForm.ta1 || null, 
+        teamA_player2: historyForm.ta2 || null, 
+        teamB_player1: historyForm.tb1 || null, 
+        teamB_player2: historyForm.tb2 || null, 
+        scoreTeamA_set1: historyForm.sa1 || 0, 
+        scoreTeamB_set1: historyForm.sb1 || 0, 
+        scoreTeamA_set2: historyForm.sa2 || 0, 
+        scoreTeamB_set2: historyForm.sb2 || 0, 
+        scoreTeamA_set3: historyForm.sa3 || 0, 
+        scoreTeamB_set3: historyForm.sb3 || 0 
+      };
+      if (session?.sessionType === 'sparring') { 
+        if (editHistoryModal.status === 'on_court') payload.status = 'finished'; 
+        await api.put(`/matches/${editHistoryModal.id}/sparring`, payload); 
+      } else { 
+        await api.put(`/matches/${editHistoryModal.id}/history`, payload); 
+      }
       setEditHistoryModal(null); await fetchSessionData(); addToast("Scores saved successfully");
     } catch (err) { addToast("Error saving score", "error"); } finally { setIsProcessing(false); }
   };
@@ -998,7 +1074,7 @@ export default function SessionDetails() {
               <h3 className="font-black text-lg tracking-tight text-primary dark:text-white">{String(t('available_players', { defaultValue: 'Available Players' }))}</h3>
               <span className="bg-app dark:bg-zinc-800 border border-subtle dark:border-zinc-700 text-ink dark:text-white font-bold px-2.5 py-1 rounded-lg text-xs shadow-sm">{waitingListPlayers.length}</span>
             </div>
-            <button type="button" onClick={() => setIsWaitingListOpen(false)} className="p-2 text-muted-ink dark:text-zinc-500 hover:text-primary dark:hover:text-white bg-app dark:bg-[#18181b] rounded-full transition-colors cursor-pointer"><X size={20}/></button>
+            <button type="button" onClick={() => setIsWaitingListOpen(false)} className="p-2 text-muted-ink dark:text-zinc-500 hover:text-primary dark:text-white bg-app dark:bg-[#18181b] rounded-full transition-colors cursor-pointer"><X size={20}/></button>
          </div>
          {renderWaitingListContent()}
       </div>
@@ -1205,18 +1281,33 @@ export default function SessionDetails() {
               <button type="button" onClick={() => setEditMatchModal(null)} className="p-2 text-muted-ink dark:text-zinc-400 hover:bg-muted dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-white rounded-full transition-colors cursor-pointer"><X size={20}/></button>
             </div>
             <div className="p-6 sm:p-8 flex flex-col md:flex-row gap-6 sm:gap-8 relative items-stretch min-h-[400px]">
+              
+              {/* TEAM A BOX */}
               <div className="flex-1 w-full bg-app dark:bg-[#121214] p-6 sm:p-8 rounded-3xl border border-subtle dark:border-zinc-800 shadow-sm flex flex-col">
                 <div className="flex items-center gap-4 mb-8">
                   <div className="w-10 h-10 rounded-xl bg-accent-soft dark:bg-zinc-800 border border-transparent dark:border-zinc-700 text-ink dark:text-white flex items-center justify-center font-black text-lg shadow-sm">A</div>
                   <h4 className="font-black text-xl text-primary dark:text-white tracking-tight">Team A {session?.sessionType === 'sparring' && <span className="text-sm ml-2 text-muted-ink dark:text-zinc-500 font-bold">({communityData?.name})</span>}</h4>
                 </div>
                 <div className="flex flex-col gap-5">
-                  <PlayerSlotSelect options={getOptionsFor('ta1')} value={manualPlayers.ta1} t={t} currentName={getMemberData(manualPlayers.ta1)?.name} currentGrade={getMemberData(manualPlayers.ta1)?.skillLevel} swaps={getSwapListFor('ta1')} onSwap={(id: number) => handleSwapWithinMatch('ta1', id)} onChange={(v: number) => setManualPlayers({...manualPlayers, ta1: v})} placeholder="- Select Player 1 -" />
-                  <PlayerSlotSelect options={getOptionsFor('ta2')} value={manualPlayers.ta2} t={t} currentName={getMemberData(manualPlayers.ta2)?.name} currentGrade={getMemberData(manualPlayers.ta2)?.skillLevel} swaps={getSwapListFor('ta2')} onSwap={(id: number) => handleSwapWithinMatch('ta2', id)} onChange={(v: number) => setManualPlayers({...manualPlayers, ta2: v})} placeholder="- Select Player 2 -" />
+                  <PlayerSlotSelect 
+                    id="manual-ta1" key="manual-ta1"
+                    options={getOptionsFor('ta1')} value={manualPlayers.ta1} t={t} currentName={getMemberData(manualPlayers.ta1)?.name} currentGrade={getMemberData(manualPlayers.ta1)?.skillLevel} 
+                    swaps={getSwapListFor('ta1')} onSwap={(id: number) => handleSwapWithinMatch('ta1', id)} 
+                    onChange={(v: number) => setManualPlayers(prev => ({...prev, ta1: v}))} placeholder="- Select Player 1 -" 
+                  />
+                  <PlayerSlotSelect 
+                    id="manual-ta2" key="manual-ta2"
+                    options={getOptionsFor('ta2')} value={manualPlayers.ta2} t={t} currentName={getMemberData(manualPlayers.ta2)?.name} currentGrade={getMemberData(manualPlayers.ta2)?.skillLevel} 
+                    swaps={getSwapListFor('ta2')} onSwap={(id: number) => handleSwapWithinMatch('ta2', id)} 
+                    onChange={(v: number) => setManualPlayers(prev => ({...prev, ta2: v}))} placeholder="- Select Player 2 -" 
+                  />
                 </div>
               </div>
+
               <div className="hidden md:flex absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-full bg-surface dark:bg-[#18181b] border border-subtle dark:border-zinc-800 shadow-md items-center justify-center font-black text-muted-ink dark:text-zinc-500 z-10 text-lg">VS</div>
               <div className="md:hidden text-center text-muted-ink dark:text-zinc-600 font-black text-xl py-2">VS</div>
+              
+              {/* TEAM B BOX */}
               <div className="flex-1 w-full bg-app dark:bg-[#121214] p-6 sm:p-8 rounded-3xl border border-subtle dark:border-zinc-800 shadow-sm flex flex-col">
                 <div className="flex items-center gap-4 mb-8 justify-end md:justify-start">
                   <div className="md:hidden w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black text-lg shadow-sm">B</div>
@@ -1224,10 +1315,22 @@ export default function SessionDetails() {
                   <div className="hidden md:flex w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 items-center justify-center font-black text-lg shadow-sm">B</div>
                 </div>
                 <div className="flex flex-col gap-5">
-                  <PlayerSlotSelect options={getOptionsFor('tb1')} value={manualPlayers.tb1} t={t} currentName={getMemberData(manualPlayers.tb1)?.name} currentGrade={getMemberData(manualPlayers.tb1)?.skillLevel} swaps={getSwapListFor('tb1')} onSwap={(id: number) => handleSwapWithinMatch('tb1', id)} onChange={(v: number) => setManualPlayers({...manualPlayers, tb1: v})} placeholder="- Select Player 1 -" />
-                  <PlayerSlotSelect options={getOptionsFor('tb2')} value={manualPlayers.tb2} t={t} currentName={getMemberData(manualPlayers.tb2)?.name} currentGrade={getMemberData(manualPlayers.tb2)?.skillLevel} swaps={getSwapListFor('tb2')} onSwap={(id: number) => handleSwapWithinMatch('tb2', id)} onChange={(v: number) => setManualPlayers({...manualPlayers, ta2: v})} placeholder="- Select Player 2 -" />
+                  <PlayerSlotSelect 
+                    id="manual-tb1" key="manual-tb1"
+                    options={getOptionsFor('tb1')} value={manualPlayers.tb1} t={t} currentName={getMemberData(manualPlayers.tb1)?.name} currentGrade={getMemberData(manualPlayers.tb1)?.skillLevel} 
+                    swaps={getSwapListFor('tb1')} onSwap={(id: number) => handleSwapWithinMatch('tb1', id)} 
+                    onChange={(v: number) => setManualPlayers(prev => ({...prev, tb1: v}))} placeholder="- Select Player 1 -" 
+                  />
+                  {/* PERFECTLY ISOLATED TB2 SLOT */}
+                  <PlayerSlotSelect 
+                    id="manual-tb2" key="manual-tb2"
+                    options={getOptionsFor('tb2')} value={manualPlayers.tb2} t={t} currentName={getMemberData(manualPlayers.tb2)?.name} currentGrade={getMemberData(manualPlayers.tb2)?.skillLevel} 
+                    swaps={getSwapListFor('tb2')} onSwap={(id: number) => handleSwapWithinMatch('tb2', id)} 
+                    onChange={(v: number) => setManualPlayers(prev => ({...prev, tb2: v}))} placeholder="- Select Player 2 -" 
+                  />
                 </div>
               </div>
+
             </div>
             <div className="p-6 border-t border-subtle dark:border-zinc-800 bg-app dark:bg-[#121214] flex justify-end gap-3 shrink-0 rounded-b-3xl">
               <button type="button" onClick={() => setEditMatchModal(null)} className="px-6 py-3 text-sm font-bold text-muted-ink dark:text-zinc-400 hover:bg-muted dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-white rounded-xl transition-colors cursor-pointer">Cancel</button>
@@ -1248,20 +1351,34 @@ export default function SessionDetails() {
             <div className="p-6 sm:p-8 flex flex-col gap-6 sm:gap-8 overflow-y-auto relative">
               <div className="w-full bg-app dark:bg-[#121214] p-5 sm:p-6 rounded-3xl border border-subtle dark:border-zinc-800 shadow-sm">
                  <label className={labelStyles}>Court Played On</label>
-                 <select disabled={isProcessing} value={historyForm.courtId} onChange={e => setHistoryForm({...historyForm, courtId: parseInt(e.target.value)})} className={inputStyles}>
+                 <select disabled={isProcessing} value={historyForm.courtId} onChange={e => setHistoryForm(prev => ({...prev, courtId: parseInt(e.target.value)}))} className={inputStyles}>
                    <option value={0}>Unknown / Deleted Court</option>
                    {courts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                  </select>
               </div>
               <div className="flex flex-col md:flex-row gap-6 sm:gap-8 relative items-stretch">
+                
+                {/* TEAM A BOX */}
                 <div className="flex-1 w-full bg-app dark:bg-[#121214] p-6 sm:p-8 rounded-3xl border border-subtle dark:border-zinc-800 shadow-sm flex flex-col">
                   <div className="flex items-center gap-4 mb-8">
                     <div className="w-10 h-10 rounded-xl bg-accent-soft dark:bg-zinc-800 border border-transparent dark:border-zinc-700 text-ink dark:text-white flex items-center justify-center font-black text-lg shadow-sm">A</div>
                     <h4 className="font-black text-xl text-primary dark:text-white tracking-tight">Team A {session?.sessionType === 'sparring' && <span className="text-sm ml-2 text-muted-ink dark:text-zinc-500 font-bold">({communityData?.name})</span>}</h4>
                   </div>
                   <div className="flex flex-col gap-5">
-                    <PlayerSlotSelect options={historyPlayerOptions.filter(m => m.id !== historyForm.ta2 && m.id !== historyForm.tb1 && m.id !== historyForm.tb2)} value={historyForm.ta1} t={t} currentName={getMemberData(historyForm.ta1)?.name} currentGrade={getMemberData(historyForm.ta1)?.skillLevel} swaps={getHistorySwapListFor('ta1')} onSwap={(id: number) => handleSwapWithinHistory('ta1', id)} onChange={(v: number) => setHistoryForm({...historyForm, ta1: v})} placeholder="- Select Player 1 -" />
-                    <PlayerSlotSelect options={historyPlayerOptions.filter(m => m.id !== historyForm.ta1 && m.id !== historyForm.tb1 && m.id !== historyForm.tb2)} value={historyForm.ta2} t={t} currentName={getMemberData(historyForm.ta2)?.name} currentGrade={getMemberData(historyForm.ta2)?.skillLevel} swaps={getHistorySwapListFor('ta2')} onSwap={(id: number) => handleSwapWithinHistory('ta2', id)} onChange={(v: number) => setHistoryForm({...historyForm, ta2: v})} placeholder="- Select Player 2 -" />
+                    <PlayerSlotSelect 
+                      id="history-ta1" key="history-ta1"
+                      options={historyPlayerOptions.filter(m => m.id !== historyForm.ta2 && m.id !== historyForm.tb1 && m.id !== historyForm.tb2)} 
+                      value={historyForm.ta1} t={t} currentName={getMemberData(historyForm.ta1)?.name} currentGrade={getMemberData(historyForm.ta1)?.skillLevel} 
+                      swaps={getHistorySwapListFor('ta1')} onSwap={(id: number) => handleSwapWithinHistory('ta1', id)} 
+                      onChange={(v: number) => setHistoryForm(prev => ({...prev, ta1: v}))} placeholder="- Select Player 1 -" 
+                    />
+                    <PlayerSlotSelect 
+                      id="history-ta2" key="history-ta2"
+                      options={historyPlayerOptions.filter(m => m.id !== historyForm.ta1 && m.id !== historyForm.tb1 && m.id !== historyForm.tb2)} 
+                      value={historyForm.ta2} t={t} currentName={getMemberData(historyForm.ta2)?.name} currentGrade={getMemberData(historyForm.ta2)?.skillLevel} 
+                      swaps={getHistorySwapListFor('ta2')} onSwap={(id: number) => handleSwapWithinHistory('ta2', id)} 
+                      onChange={(v: number) => setHistoryForm(prev => ({...prev, ta2: v}))} placeholder="- Select Player 2 -" 
+                    />
                   </div>
                   <div className="mt-8 border-t border-subtle dark:border-zinc-800 pt-6">
                     <div className="flex items-center justify-between mb-4">
@@ -1269,11 +1386,14 @@ export default function SessionDetails() {
                       <label className="block text-xs font-bold text-muted-ink dark:text-zinc-400 text-center uppercase tracking-widest">Score (Set {historySetView})</label>
                       <button type="button" onClick={() => setHistorySetView(v => v + 1)} disabled={historySetView >= maxSets || isProcessing} className="p-2 bg-surface dark:bg-[#18181b] border border-subtle dark:border-zinc-800 rounded-lg text-muted-ink dark:text-white hover:bg-muted dark:hover:bg-zinc-800 transition-colors disabled:opacity-40 shadow-sm cursor-pointer"><ChevronRight size={18}/></button>
                     </div>
-                    <input disabled={isProcessing} type="number" value={historyForm[`sa${historySetView}` as keyof typeof historyForm] || ''} placeholder="0" onChange={e => setHistoryForm({...historyForm, [`sa${historySetView}`]: parseInt(e.target.value) || 0})} className={`${inputStyles} text-center font-black text-3xl py-6 ${(historyForm[`sa${historySetView}` as keyof typeof historyForm] as number) > (historyForm[`sb${historySetView}` as keyof typeof historyForm] as number) ? 'border-emerald-500 ring-1 ring-emerald-500 text-emerald-600 dark:text-emerald-400' : ''}`} />
+                    <input disabled={isProcessing} type="number" value={historyForm[`sa${historySetView}` as keyof typeof historyForm] || ''} placeholder="0" onChange={e => setHistoryForm(prev => ({...prev, [`sa${historySetView}`]: parseInt(e.target.value) || 0}))} className={`${inputStyles} text-center font-black text-3xl py-6 ${(historyForm[`sa${historySetView}` as keyof typeof historyForm] as number) > (historyForm[`sb${historySetView}` as keyof typeof historyForm] as number) ? 'border-emerald-500 ring-1 ring-emerald-500 text-emerald-600 dark:text-emerald-400' : ''}`} />
                   </div>
                 </div>
+
                 <div className="hidden md:flex absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-full bg-surface dark:bg-[#18181b] border border-subtle dark:border-zinc-800 shadow-md items-center justify-center font-black text-muted-ink dark:text-zinc-500 z-10 text-lg">VS</div>
                 <div className="md:hidden text-center text-muted-ink dark:text-zinc-600 font-black text-xl py-2">VS</div>
+                
+                {/* TEAM B BOX */}
                 <div className="flex-1 w-full bg-app dark:bg-[#121214] p-6 sm:p-8 rounded-3xl border border-subtle dark:border-zinc-800 shadow-sm flex flex-col">
                   <div className="flex items-center gap-4 mb-8 justify-end md:justify-start">
                     <div className="md:hidden w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black text-lg shadow-sm">B</div>
@@ -1281,8 +1401,21 @@ export default function SessionDetails() {
                     <div className="hidden md:flex w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 items-center justify-center font-black text-lg shadow-sm">B</div>
                   </div>
                   <div className="flex flex-col gap-5">
-                    <PlayerSlotSelect options={historyPlayerOptions.filter(m => m.id !== historyForm.ta1 && m.id !== historyForm.ta2 && m.id !== historyForm.tb2)} value={historyForm.tb1} t={t} currentName={getMemberData(historyForm.tb1)?.name} currentGrade={getMemberData(historyForm.tb1)?.skillLevel} swaps={getHistorySwapListFor('tb1')} onSwap={(id: number) => handleSwapWithinHistory('tb1', id)} onChange={(v: number) => setHistoryForm({...historyForm, tb1: v})} placeholder="- Select Player 1 -" />
-                    <PlayerSlotSelect options={historyPlayerOptions.filter(m => m.id !== historyForm.ta1 && m.id !== historyForm.ta2 && m.id !== historyForm.tb1)} value={historyForm.tb2} t={t} currentName={getMemberData(historyForm.tb2)?.name} currentGrade={getMemberData(historyForm.tb2)?.skillLevel} swaps={getHistorySwapListFor('tb2')} onSwap={(id: number) => handleSwapWithinHistory('tb2', id)} onChange={(v: number) => setHistoryForm({...historyForm, ta2: v})} placeholder="- Select Player 2 -" />
+                    <PlayerSlotSelect 
+                      id="history-tb1" key="history-tb1"
+                      options={historyPlayerOptions.filter(m => m.id !== historyForm.ta1 && m.id !== historyForm.ta2 && m.id !== historyForm.tb2)} 
+                      value={historyForm.tb1} t={t} currentName={getMemberData(historyForm.tb1)?.name} currentGrade={getMemberData(historyForm.tb1)?.skillLevel} 
+                      swaps={getHistorySwapListFor('tb1')} onSwap={(id: number) => handleSwapWithinHistory('tb1', id)} 
+                      onChange={(v: number) => setHistoryForm(prev => ({...prev, tb1: v}))} placeholder="- Select Player 1 -" 
+                    />
+                    {/* PERFECTLY ISOLATED TB2 SLOT */}
+                    <PlayerSlotSelect 
+                      id="history-tb2" key="history-tb2"
+                      options={historyPlayerOptions.filter(m => m.id !== historyForm.ta1 && m.id !== historyForm.ta2 && m.id !== historyForm.tb1)} 
+                      value={historyForm.tb2} t={t} currentName={getMemberData(historyForm.tb2)?.name} currentGrade={getMemberData(historyForm.tb2)?.skillLevel} 
+                      swaps={getHistorySwapListFor('tb2')} onSwap={(id: number) => handleSwapWithinHistory('tb2', id)} 
+                      onChange={(v: number) => setHistoryForm(prev => ({...prev, tb2: v}))} placeholder="- Select Player 2 -" 
+                    />
                   </div>
                   <div className="mt-8 border-t border-subtle dark:border-zinc-800 pt-6">
                     <div className="flex items-center justify-between mb-4">
@@ -1290,9 +1423,10 @@ export default function SessionDetails() {
                       <label className="block text-xs font-bold text-muted-ink dark:text-zinc-400 text-center uppercase tracking-widest">Score (Set {historySetView})</label>
                       <button type="button" onClick={() => setHistorySetView(v => v + 1)} disabled={historySetView >= maxSets || isProcessing} className="p-2 bg-surface dark:bg-[#18181b] border border-subtle dark:border-zinc-800 rounded-lg text-muted-ink dark:text-white hover:bg-muted dark:hover:bg-zinc-800 transition-colors disabled:opacity-40 shadow-sm cursor-pointer"><ChevronRight size={18}/></button>
                     </div>
-                    <input disabled={isProcessing} type="number" value={historyForm[`sb${historySetView}` as keyof typeof historyForm] || ''} placeholder="0" onChange={e => setHistoryForm({...historyForm, [`sb${historySetView}`]: parseInt(e.target.value) || 0})} className={`${inputStyles} text-center font-black text-3xl py-6 ${(historyForm[`sb${historySetView}` as keyof typeof historyForm] as number) > (historyForm[`sa${historySetView}` as keyof typeof historyForm] as number) ? 'border-emerald-500 ring-1 ring-emerald-500 text-emerald-600 dark:text-emerald-400' : ''}`} />
+                    <input disabled={isProcessing} type="number" value={historyForm[`sb${historySetView}` as keyof typeof historyForm] || ''} placeholder="0" onChange={e => setHistoryForm(prev => ({...prev, [`sb${historySetView}`]: parseInt(e.target.value) || 0}))} className={`${inputStyles} text-center font-black text-3xl py-6 ${(historyForm[`sb${historySetView}` as keyof typeof historyForm] as number) > (historyForm[`sa${historySetView}` as keyof typeof historyForm] as number) ? 'border-emerald-500 ring-1 ring-emerald-500 text-emerald-600 dark:text-emerald-400' : ''}`} />
                   </div>
                 </div>
+
               </div>
             </div>
             <div className="p-6 border-t border-subtle dark:border-zinc-800 bg-app dark:bg-[#121214] flex justify-end gap-3 shrink-0 rounded-b-3xl">
@@ -1489,157 +1623,6 @@ export default function SessionDetails() {
           </div>
         </div>
       )}
-
-      {/* Walk-in Modal */}
-      {isWalkInModalOpen && (
-        <div className="fixed inset-0 flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in" style={{ zIndex: 9999 }}>
-          <div className="bg-surface dark:bg-[#0f0f11] w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border border-subtle dark:border-zinc-800">
-            <div className="flex justify-between items-center p-6 border-b border-subtle dark:border-zinc-800 bg-app dark:bg-[#121214]">
-              <h3 className="font-black text-xl text-primary dark:text-white tracking-tight">{String(t('add_walk_in', { defaultValue: 'Add Walk-In' }))}</h3>
-              <button type="button" disabled={isProcessing} onClick={() => setWalkInModalOpen(false)} className="p-2 text-muted-ink dark:text-zinc-400 hover:bg-muted dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-white rounded-full transition-colors disabled:opacity-50 cursor-pointer"><X size={20}/></button>
-            </div>
-            <form onSubmit={handleWalkIn} className="p-6 sm:p-8 flex flex-col gap-6">
-              <div>
-                <label className={labelStyles}>Name</label>
-                <input disabled={isProcessing} type="text" required placeholder="Walk-in Player Name" value={walkInForm.name} onChange={e => setWalkInForm({...walkInForm, name: e.target.value})} className={inputStyles} autoFocus />
-              </div>
-              
-              {session?.sessionType === 'sparring' && (
-                <div className="animate-in fade-in">
-                  <label className={labelStyles}>Team Assignment</label>
-                  <div className="relative">
-                    <select disabled={isProcessing} value={walkInForm.team} onChange={e => setWalkInForm({...walkInForm, team: e.target.value})} className={`${inputStyles} font-bold appearance-none pr-10 cursor-pointer`}>
-                      <option value="home">Home ({communityData?.name})</option>
-                      <option value="away">Away ({session.opposingCommunityName})</option>
-                    </select>
-                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-muted-ink dark:text-zinc-500" size={16}/>
-                  </div>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-5">
-                <div>
-                  <label className={labelStyles}>Gender</label>
-                  <div className="relative">
-                    <select disabled={isProcessing} value={walkInForm.gender} onChange={e => setWalkInForm({...walkInForm, gender: e.target.value})} className={`${inputStyles} font-bold appearance-none pr-10 cursor-pointer`}>
-                      <option value="male">♂ Male</option><option value="female">♀ Female</option>
-                    </select>
-                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-muted-ink dark:text-zinc-500" size={16}/>
-                  </div>
-                </div>
-                <div>
-                  <label className={labelStyles}>Skill Level</label>
-                  <div className="relative">
-                    <select disabled={isProcessing} value={walkInForm.skillLevel} onChange={e => setWalkInForm({...walkInForm, skillLevel: e.target.value})} className={`${inputStyles} font-bold appearance-none pr-10 cursor-pointer`}>
-                      {SKILL_LEVELS.map(lvl => <option key={lvl.id} value={lvl.id}>{lvl.id}</option>)}
-                    </select>
-                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-muted-ink dark:text-zinc-500" size={16}/>
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-4 justify-end mt-4 pt-6 border-t border-subtle dark:border-zinc-800">
-                <button type="button" disabled={isProcessing} onClick={() => setWalkInModalOpen(false)} className="flex-1 px-6 py-3 text-sm font-bold bg-app dark:bg-[#18181b] border border-subtle dark:border-zinc-700 hover:bg-muted dark:hover:bg-zinc-800 text-primary dark:text-white rounded-xl transition-colors shadow-sm disabled:opacity-50 cursor-pointer">Cancel</button>
-                <button type="submit" disabled={isProcessing} className="flex-1 px-8 py-3 text-sm font-bold text-white dark:text-zinc-900 bg-ink dark:bg-white hover:bg-ink-soft dark:hover:bg-zinc-200 rounded-xl shadow-sm transition-colors disabled:opacity-50 cursor-pointer">Add Walk-In</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Player Detail Modal */}
-      {playerDetailModal && selectedDetailPlayer && (
-        <div className="fixed inset-0 flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in" style={{ zIndex: 9999 }}>
-          <div className="bg-surface dark:bg-[#0f0f11] w-full max-w-4xl rounded-3xl shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden border border-subtle dark:border-zinc-800">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-6 border-b border-subtle dark:border-zinc-800 bg-app dark:bg-[#121214] shrink-0">
-              <div className="flex items-center gap-5 w-full sm:w-auto">
-                <div className="w-14 h-14 rounded-2xl bg-app dark:bg-[#18181b] border border-subtle dark:border-zinc-800 flex items-center justify-center text-primary dark:text-white font-black text-2xl shadow-sm shrink-0">
-                  {selectedDetailPlayer?.name?.charAt(0) || '?'}
-                </div>
-                <div>
-                  <h3 className="font-black text-xl leading-tight text-primary dark:text-white tracking-tight">{selectedDetailPlayer?.name}</h3>
-                  <div className="flex flex-wrap items-center gap-2 mt-2">
-                    <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold tracking-widest uppercase whitespace-nowrap ${getBadgeStyle(selectedDetailPlayer?.skillLevel)}`}>{getBadgeLabel(selectedDetailPlayer?.skillLevel)}</span>
-                    <span className="text-[10px] bg-purple-50 text-purple-700 dark:bg-[#3b0764]/60 dark:text-[#d8b4fe] border border-purple-200 dark:border-purple-800/60 px-2.5 py-1 rounded-md font-bold tracking-widest uppercase whitespace-nowrap">MMR: {selectedDetailPlayer?.hiddenMmr ?? 1200}</span>
-                    {normalizeGender(selectedDetailPlayer?.gender) === 'male' && <span className="text-sky-600 dark:text-[#0ea5e9] bg-sky-50 dark:bg-sky-500/10 border border-sky-200 dark:border-sky-500/20 px-2.5 py-1 rounded-md text-[10px] font-bold tracking-widest uppercase">♂ M</span>}
-                    {normalizeGender(selectedDetailPlayer?.gender) === 'female' && <span className="text-pink-600 dark:text-[#f472b6] bg-pink-50 dark:bg-[#f472b6]/10 border border-pink-200 dark:border-[#f472b6]/20 px-2.5 py-1 rounded-md text-[10px] font-bold tracking-widest uppercase">♀ F</span>}
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-                <button type="button" disabled={isProcessing} onClick={() => exportPlayerPDF(selectedDetailPlayer?.id || 0, selectedDetailPlayer?.name || 'Unknown', selectedDetailGames)} className="flex-1 sm:flex-none px-5 py-3 bg-app dark:bg-[#18181b] text-primary dark:text-white hover:bg-muted dark:hover:bg-zinc-800 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 border border-subtle dark:border-zinc-700 shadow-sm disabled:opacity-50 cursor-pointer">
-                  <FileDown size={18}/> <span className="hidden sm:block">{String(t('export_pdf', { defaultValue: 'Export PDF' }))}</span>
-                </button>
-                <button type="button" disabled={isProcessing} onClick={() => setPlayerDetailModal(null)} className="p-2.5 text-muted-ink dark:text-zinc-400 hover:bg-muted dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-white rounded-full transition-colors disabled:opacity-50 cursor-pointer"><X size={20}/></button>
-              </div>
-            </div>
-            
-            <div className="p-6 sm:p-8 overflow-y-auto flex-1">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 mb-10">
-                 <div className="bg-app dark:bg-[#121214] border border-subtle dark:border-zinc-800 p-5 rounded-3xl text-center shadow-sm flex flex-col justify-center min-h-[120px]">
-                   <div className="text-3xl font-black text-primary dark:text-white">{selectedDetailGames.length}</div>
-                   <div className="text-[10px] font-bold text-muted-ink dark:text-zinc-500 uppercase tracking-widest mt-2">{String(t('matches_played', { defaultValue: 'MATCHES PLAYED' }))}</div>
-                 </div>
-                 <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 p-5 rounded-3xl text-center shadow-sm flex flex-col justify-center min-h-[120px]">
-                   <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400">{selectedDetailGames.filter((g: any) => g.result === 'Won').length}</div>
-                   <div className="text-[10px] font-bold text-emerald-600/70 dark:text-emerald-500/70 uppercase tracking-widest mt-2">{String(t('won', { defaultValue: 'WON' }))}</div>
-                 </div>
-                 <div className="bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 p-5 rounded-3xl text-center shadow-sm flex flex-col justify-center min-h-[120px]">
-                   <div className="text-3xl font-black text-rose-600 dark:text-rose-500">{selectedDetailGames.filter((g: any) => g.result === 'Lost').length}</div>
-                   <div className="text-[10px] font-bold text-rose-600/70 dark:text-rose-500/70 uppercase tracking-widest mt-2">{String(t('lost', { defaultValue: 'LOST' }))}</div>
-                 </div>
-                 <div className="bg-ink dark:bg-white border border-transparent p-5 rounded-3xl text-center shadow-sm flex flex-col justify-center min-h-[120px]">
-                   <div className="text-3xl font-black text-white dark:text-zinc-900">
-                     {selectedDetailGames.filter((g: any) => g.result !== 'Ongoing').length > 0 
-                       ? Math.round((selectedDetailGames.filter((g: any) => g.result === 'Won').length / selectedDetailGames.filter((g: any) => g.result !== 'Ongoing').length) * 100) 
-                       : 0}%
-                   </div>
-                   <div className="text-[10px] font-bold text-white/70 dark:text-zinc-900/70 uppercase tracking-widest mt-2">{String(t('win_rate', { defaultValue: 'WIN RATE' }))}</div>
-                 </div>
-              </div>
-
-              <h4 className="font-black text-xl text-primary dark:text-white mb-6 tracking-tight">{String(t('history', { defaultValue: 'History' }))}</h4>
-              <div className="flex flex-col gap-4">
-                {selectedDetailGames.length === 0 ? <div className="p-12 text-center text-muted-ink dark:text-zinc-500 font-medium border border-subtle dark:border-zinc-800 rounded-2xl bg-app dark:bg-[#121214]">{String(t('no_history', { defaultValue: 'No history found' }))}</div> : 
-                 selectedDetailGames.map((g: any, i: number) => (
-                   <div key={i} className="flex flex-col sm:flex-row items-stretch sm:items-center bg-surface dark:bg-[#121214] border border-subtle dark:border-zinc-800 rounded-2xl overflow-hidden shadow-sm">
-                     <div className="p-5 flex-1 flex items-center justify-between">
-                       <div className="flex flex-col gap-1 w-1/3">
-                         <span className="text-[10px] font-bold text-muted-ink dark:text-zinc-500 uppercase tracking-widest">{String(t('partner', { defaultValue: 'PARTNER' }))}</span>
-                         <span className="font-bold text-base text-primary dark:text-zinc-100 truncate">{g.partnerName}</span>
-                       </div>
-                       <div className="flex flex-col items-center justify-center px-4 w-1/3 border-x border-subtle dark:border-zinc-800">
-                         <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold mb-2 border ${g.type === 'MD' ? 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-[#0c4a6e]/40 dark:text-[#7dd3fc] dark:border-[#0c4a6e]' : g.type === 'WD' ? 'bg-pink-50 text-pink-700 border-pink-200 dark:bg-[#831843]/40 dark:text-[#f9a8d4] dark:border-[#831843]' : g.type === 'XD' ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-[#3b0764]/60 dark:text-[#d8b4fe] dark:border-[#3b0764]' : 'bg-muted text-muted-ink border-subtle dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700'} whitespace-nowrap tracking-widest`}>{g.type}</span>
-                         <span className="font-black text-xl text-primary dark:text-white text-center whitespace-nowrap tracking-tight">
-                            {g.result === 'Ongoing' ? (
-                               <span className="text-ink dark:text-white text-sm font-bold">Playing...</span>
-                            ) : (
-                               g.scoreString || `${g.myScore} - ${g.oppScore}`
-                            )}
-                         </span>
-                       </div>
-                       <div className="flex flex-col gap-1 w-1/3 text-right">
-                         <span className="text-[10px] font-bold text-muted-ink dark:text-zinc-500 uppercase tracking-widest">{String(t('opponents', { defaultValue: 'OPPONENTS' }))}</span>
-                         <span className="font-bold text-sm text-primary dark:text-zinc-100 truncate">{g.opp1Name}</span>
-                         <span className="font-bold text-sm text-primary dark:text-zinc-100 truncate">{g.opp2Name}</span>
-                       </div>
-                     </div>
-                     <div className={`p-5 sm:w-32 shrink-0 flex items-center justify-center font-black text-sm uppercase tracking-widest ${
-                        g.result === 'Won' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' : 
-                        g.result === 'Lost' ? 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400' : 
-                        g.result === 'Ongoing' ? 'bg-accent-soft text-ink dark:bg-accent-soft-dark dark:text-white animate-pulse' :
-                        'bg-app text-muted-ink dark:bg-[#18181b] dark:text-zinc-500'
-                     }`}>
-                       {String(t(g.result.toLowerCase(), { defaultValue: g.result }))}
-                     </div>
-                   </div>
-                 ))
-                }
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }
