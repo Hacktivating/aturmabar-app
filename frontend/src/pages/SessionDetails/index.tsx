@@ -1649,6 +1649,56 @@ export default function SessionDetails() {
           </div>
         </div>
       )}
+      {/* Add Walk-In Modal */}
+      {isWalkInModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in" style={{ zIndex: 9999 }}>
+          <div className="bg-surface dark:bg-[#0f0f11] w-full max-w-md max-h-[90dvh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-subtle dark:border-zinc-800">
+            <div className="flex items-center justify-between gap-4 p-6 border-b border-subtle dark:border-zinc-800 bg-app dark:bg-[#121214] shrink-0">
+              <div>
+                <h3 className="font-black text-xl text-primary dark:text-white tracking-tight">{String(t('add_walk_in', { defaultValue: 'Add Walk-In' }))}</h3>
+                <p className="mt-1 text-xs font-medium text-muted-ink dark:text-zinc-500">Add a player who is not yet in the roster.</p>
+              </div>
+              <button type="button" disabled={isProcessing} onClick={() => setWalkInModalOpen(false)} className="p-2 text-muted-ink dark:text-zinc-400 hover:bg-muted dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-white rounded-full transition-colors disabled:opacity-50 cursor-pointer" aria-label={String(t('close', { defaultValue: 'Close' }))}>
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleWalkIn} className="p-6 sm:p-8 overflow-y-auto flex flex-col gap-5">
+              <div>
+                <label className={labelStyles}>{String(t('name', { defaultValue: 'Name' }))}</label>
+                <input autoFocus required disabled={isProcessing} value={walkInForm.name} onChange={e => setWalkInForm(prev => ({ ...prev, name: e.target.value }))} className={inputStyles} placeholder="Player name" />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <label className={labelStyles}>{String(t('gender', { defaultValue: 'Gender' }))}</label>
+                  <select disabled={isProcessing} value={walkInForm.gender} onChange={e => setWalkInForm(prev => ({ ...prev, gender: e.target.value }))} className={inputStyles}>
+                    <option value="male">♂ {String(t('male', { defaultValue: 'Male' }))}</option>
+                    <option value="female">♀ {String(t('female', { defaultValue: 'Female' }))}</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelStyles}>{String(t('skill_level', { defaultValue: 'Skill Level' }))}</label>
+                  <select disabled={isProcessing} value={walkInForm.skillLevel} onChange={e => setWalkInForm(prev => ({ ...prev, skillLevel: e.target.value }))} className={inputStyles}>
+                    {SKILL_LEVELS.map(level => <option key={level.id} value={level.id}>{level.label}</option>)}
+                  </select>
+                </div>
+              </div>
+              {session?.sessionType === 'sparring' && (
+                <div>
+                  <label className={labelStyles}>Team</label>
+                  <select disabled={isProcessing} value={walkInForm.team} onChange={e => setWalkInForm(prev => ({ ...prev, team: e.target.value }))} className={inputStyles}>
+                    <option value="home">{communityData?.name || 'Home Team'}</option>
+                    <option value="away">{session?.opposingCommunityName || 'Away Team'}</option>
+                  </select>
+                </div>
+              )}
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-2">
+                <button type="button" disabled={isProcessing} onClick={() => setWalkInModalOpen(false)} className="px-6 py-3 text-sm font-bold text-muted-ink dark:text-zinc-400 hover:bg-muted dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-white rounded-xl transition-colors disabled:opacity-50 cursor-pointer">{String(t('cancel', { defaultValue: 'Cancel' }))}</button>
+                <button type="submit" disabled={isProcessing || !walkInForm.name.trim()} className="px-6 py-3 text-sm font-bold text-white dark:text-zinc-900 bg-ink dark:bg-white hover:bg-ink-soft dark:hover:bg-zinc-200 rounded-xl shadow-sm transition-colors disabled:opacity-50 cursor-pointer">{isProcessing ? 'Adding…' : String(t('add_walk_in', { defaultValue: 'Add Walk-In' }))}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
