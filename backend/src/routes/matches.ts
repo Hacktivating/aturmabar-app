@@ -41,7 +41,6 @@ router.post("/:sessionId/auto-generate", async (req: AuthRequest, res) => {
     const activeMatches = await db.select().from(matches).where(
       and(eq(matches.sessionId, sessionId), or(eq(matches.status, 'queued'), eq(matches.status, 'on_court')))
     );
-
     const busyPlayerIds = new Set<number>();
     activeMatches.forEach(m => {
       if (m.teamA_player1) busyPlayerIds.add(m.teamA_player1);
@@ -255,6 +254,48 @@ router.post("/:sessionId/manual", async (req: AuthRequest, res) => {
     }).returning();
 
     res.status(201).json({ message: "Manual match created.", match: newMatch });
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+router.put("/:matchId/fill-empty", async (req: AuthRequest, res) => {
+  try {
+    const matchId = parseInt(String(req.params.matchId), 10);
+    const [match] = await db.select().from(matches).where(eq(matches.id, matchId));
+    if (!match) return res.status(404).json({ error: "Match not found." });
+    if (match.status !== "queued") return res.status(400).json({ error: "Only queued matches can fill empty player slots." });
+
+    const activeAttendances = await db.select({ member: members }).from(sessionAttendances)
+      .innerJoin(members, eq(sessionAttendances.memberId, members.id))
+      .where(and(eq(sessionAttendances.sessionId, match.sessionId), eq(sessionAttendances.status, "active")));
+    const sessionMatches = await db.select().from(matches).where(eq(matches.sessionId, match.sessionId));
+    const busyIds = new Set<number>();
+    sessionMatches.filter(item => item.id !== match.id && (item.status === "queued" || item.status === "on_court")).forEach(item => {
+      [item.teamA_player1, item.teamA_player2, item.teamB_player1, item.teamB_player2].filter(Boolean).forEach(id => busyIds.add(id as number));
+    });
+    const selectedIds = new Set<number>([match.teamA_player1, match.teamA_player2, match.teamB_player1, match.teamB_player2].filter(Boolean) as number[]);
+    const games = new Map<number, number>();
+    sessionMatches.forEach(item => [item.teamA_player1, item.teamA_player2, item.teamB_player1, item.teamB_player2].filter(Boolean).forEach(id => games.set(id as number, (games.get(id as number) || 0) + 1)));
+    const gradeWeight: Record<string, number> = { A1: 6, A2: 5, B1: 4, B2: 3, C1: 2, C2: 1 };
+    const emptySlots = (["teamA_player1", "teamA_player2", "teamB_player1", "teamB_player2"] as const).filter(slot => !match[slot]);
+    const next = { teamA_player1: match.teamA_player1, teamA_player2: match.teamA_player2, teamB_player1: match.teamB_player1, teamB_player2: match.teamB_player2 };
+    for (const slot of emptySlots) {
+      const teammateId = slot.startsWith("teamA") ? (next.teamA_player1 || next.teamA_player2) : (next.teamB_player1 || next.teamB_player2);
+      const teammate = activeAttendances.find(({ member }) => member.id === teammateId)?.member;
+      const candidates = activeAttendances.map(({ member }) => member).filter(member => !busyIds.has(member.id) && !selectedIds.has(member.id));
+      candidates.sort((a, b) => {
+        const aDistance = teammate ? Math.abs((gradeWeight[a.skillLevel] || 0) - (gradeWeight[teammate.skillLevel] || 0)) : 0;
+        const bDistance = teammate ? Math.abs((gradeWeight[b.skillLevel] || 0) - (gradeWeight[teammate.skillLevel] || 0)) : 0;
+        return aDistance - bDistance || (games.get(a.id) || 0) - (games.get(b.id) || 0) || a.name.localeCompare(b.name);
+      });
+      const picked = candidates[0];
+      if (!picked) break;
+      next[slot] = picked.id;
+      selectedIds.add(picked.id);
+    }
+    const [updated] = await db.update(matches).set(next).where(eq(matches.id, match.id)).returning();
+    res.status(200).json({ message: "Empty player slots filled.", match: updated });
   } catch (error) {
     res.status(500).json({ error: "Internal server error." });
   }

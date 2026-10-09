@@ -5,7 +5,7 @@ import { MatchTimer, getGradeColor } from '../utils';
 export const MatchesTab = ({
   session, courts, matches, activeMatches, queuedMatchesList, finishedMatches,
   waitingListPlayers, maxSets, isProcessing, getMemberData, getInitialCourtName,
-  openEditMatchModal, openEditHistoryModal, handleAutoGenerateCourt, setSwapCourtModal,
+  openEditMatchModal, openEditHistoryModal, handleAutoGenerateCourt, handleAutoFillEmptySlots, setSwapCourtModal,
   setConfirmDeleteMatchId, setConfirmResetMatchId, handleStartMatch, handleFinishMatch,
   handleReorderQueue, handleQueueMatch, handleAutoFillAllCourts, handleUpdateSparringMatch,
   updateAttendanceStatus, isWaitingListOpen, setIsWaitingListOpen, handleUpdateSessionRule, t
@@ -192,7 +192,7 @@ export const MatchesTab = ({
       )}
       
       <div className="flex flex-col lg:flex-row gap-6 items-start">
-        <div className="flex-1 w-full flex flex-col gap-8">
+        <div className={`flex-1 w-full flex flex-col gap-8 ${session?.sessionType !== 'sparring' ? 'pb-24' : ''}`}>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             
             <div className="flex items-center gap-3">
@@ -276,6 +276,7 @@ export const MatchesTab = ({
                       setSwapCourtModal={setSwapCourtModal}
                       handleStartMatch={handleStartMatch}
                       handleAutoGenerateCourt={handleAutoGenerateCourt}
+                      handleAutoFillEmptySlots={handleAutoFillEmptySlots}
                       t={t}
                     />
                   );
@@ -302,6 +303,7 @@ export const MatchesTab = ({
                         setSwapCourtModal={setSwapCourtModal} 
                         handleStartMatch={handleStartMatch} 
                         handleAutoGenerateCourt={handleAutoGenerateCourt} 
+                        handleAutoFillEmptySlots={handleAutoFillEmptySlots}
                         handleReorderQueue={handleReorderQueue}
                         queueIndex={index}
                         totalQueued={queuedMatchesList.length}
@@ -326,7 +328,7 @@ export const MatchesTab = ({
         )}
 
         {session?.sessionType !== 'sparring' && (
-          <div className="fixed bottom-6 left-0 right-0 z-40 flex justify-center lg:hidden pointer-events-none">
+          <div className="fixed bottom-24 left-0 right-0 z-40 flex justify-center lg:hidden pointer-events-none">
             <button 
               onClick={() => setIsWaitingListOpen(true)} 
               className="pointer-events-auto bg-ink shadow-xl shadow-blue-600/30 text-white px-6 py-3.5 rounded-full font-bold flex items-center gap-3 transition-transform active:scale-95"
@@ -349,6 +351,18 @@ export const MatchesTab = ({
            </div>
            {renderWaitingListContent()}
         </div>
+        {session?.sessionType !== 'sparring' && (
+          <div className="fixed bottom-3 left-1/2 z-[120] w-[calc(100%-1.5rem)] max-w-3xl -translate-x-1/2 pointer-events-none">
+            <div className="pointer-events-auto rounded-2xl border border-subtle bg-surface/95 p-2 shadow-2xl shadow-black/20 backdrop-blur-md dark:border-zinc-700 dark:bg-[#18181b]/95 sm:p-3">
+              <div className="mb-1 hidden px-2 text-[10px] font-black uppercase tracking-[0.16em] text-muted-ink dark:text-zinc-500 sm:block">Quick match actions</div>
+              <div className="grid grid-cols-3 gap-2">
+                <button type="button" disabled={session?.status !== 'active' || isProcessing} onClick={() => openEditMatchModal({ courtId: null, matchType: 'MD' })} className="flex min-h-12 items-center justify-center gap-1.5 rounded-xl border border-subtle bg-surface px-2 py-2 text-[11px] font-black text-primary shadow-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-[#121214] dark:text-white dark:hover:bg-zinc-800 sm:px-4 sm:text-sm"><Plus size={16} /> <span>Manual</span></button>
+                <button type="button" disabled={session?.status !== 'active' || isProcessing} onClick={handleQueueMatch} className="flex min-h-12 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-2 py-2 text-[11px] font-black text-white shadow-sm transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 sm:text-sm"><ListOrdered size={16} /> <span>Auto Queue</span></button>
+                <button type="button" disabled={session?.status !== 'active' || isProcessing} onClick={handleAutoFillAllCourts} className="flex min-h-12 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-2 py-2 text-[11px] font-black text-white shadow-sm transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 sm:text-sm"><Zap size={16} /> <span>Auto Fill Courts</span></button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

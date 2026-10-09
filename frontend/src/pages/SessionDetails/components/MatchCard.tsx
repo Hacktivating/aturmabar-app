@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Play, Settings as SettingsIcon, Trash2, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ArrowRightLeft, Plus } from 'lucide-react';
 import { MatchTimer } from '../utils';
 
-export const MatchCard = ({ match, court, sessionStatus, maxSets, isProcessing, getMemberData, openEditMatchModal, handleAutoGenerateCourt, setSwapCourtModal, setConfirmDeleteMatchId, setConfirmResetMatchId, handleStartMatch, handleFinishMatch, handleReorderQueue, queueIndex, totalQueued, t }: any) => {
+export const MatchCard = ({ match, court, sessionStatus, maxSets, isProcessing, getMemberData, openEditMatchModal, handleAutoGenerateCourt, handleAutoFillEmptySlots, setSwapCourtModal, setConfirmDeleteMatchId, setConfirmResetMatchId, handleStartMatch, handleFinishMatch, handleReorderQueue, queueIndex, totalQueued, t }: any) => {
   const [currentSet, setCurrentSet] = useState(1);
   const [scores, setScores] = useState({
     a1: match?.scoreTeamA_set1 || '', b1: match?.scoreTeamB_set1 || '',
@@ -48,6 +48,7 @@ export const MatchCard = ({ match, court, sessionStatus, maxSets, isProcessing, 
 
   const isTeamA = match.teamA_player1 || match.teamA_player2;
   const isTeamB = match.teamB_player1 || match.teamB_player2;
+  const hasEmptySlot = [match.teamA_player1, match.teamA_player2, match.teamB_player1, match.teamB_player2].some(Boolean) && [match.teamA_player1, match.teamA_player2, match.teamB_player1, match.teamB_player2].some((playerId) => !playerId);
 
   return (
     <div className={`bg-surface dark:bg-surface-dark border ${isActive ? 'border-emerald-300 dark:border-emerald-700 shadow-md ring-2 ring-emerald-500/20' : 'border-subtle dark:border-subtle-dark shadow-sm'} rounded-xl overflow-hidden flex flex-col h-full transition-all`}>
@@ -193,14 +194,18 @@ export const MatchCard = ({ match, court, sessionStatus, maxSets, isProcessing, 
           ) : court ? (
             <div className="w-full flex gap-2 mt-auto">
               <button disabled={isProcessing} onClick={() => setSwapCourtModal(match)} className="p-2.5 border border-subtle dark:border-subtle-dark rounded-lg text-faint hover:bg-app dark:hover:bg-elevated-dark dark:hover:text-white transition-colors disabled:opacity-50" title="Manage Court"><ArrowRightLeft size={16}/></button>
-              <button onClick={() => handleStartMatch(match.id)} disabled={isProcessing || sessionStatus !== 'active'} className="flex-1 bg-[#10B981] hover:bg-[#059669] text-white py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+              {hasEmptySlot && <button onClick={() => handleAutoFillEmptySlots(match.id)} disabled={isProcessing || sessionStatus !== 'active'} className="px-3 bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-lg text-[10px] font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Fill Empty</button>}
+              <button onClick={() => handleStartMatch(match.id)} disabled={isProcessing || sessionStatus !== 'active' || hasEmptySlot} className="flex-1 bg-[#10B981] hover:bg-[#059669] text-white py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
                 <Play fill="currentColor" size={14}/> {t('start', 'Start')}
               </button>
             </div>
           ) : (
-            <button disabled={isProcessing || sessionStatus !== 'active'} onClick={() => setSwapCourtModal(match)} className="w-full mt-auto py-2.5 bg-accent-soft hover:bg-accent-soft dark:bg-elevated-dark dark:hover:bg-strong-dark text-ink dark:text-primary-dark rounded-lg text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-              Move to Court
-            </button>
+            <div className="w-full mt-auto flex gap-2">
+              {hasEmptySlot && <button onClick={() => handleAutoFillEmptySlots(match.id)} disabled={isProcessing || sessionStatus !== 'active'} className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Fill Empty</button>}
+              <button disabled={isProcessing || sessionStatus !== 'active'} onClick={() => setSwapCourtModal(match)} className="flex-1 py-2.5 bg-accent-soft hover:bg-accent-soft dark:bg-elevated-dark dark:hover:bg-strong-dark text-ink dark:text-primary-dark rounded-lg text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                Move to Court
+              </button>
+            </div>
           )}
         </div>
       </div>
