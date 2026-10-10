@@ -1,4 +1,5 @@
-import { Plus, ListOrdered, Zap, AlertTriangle, Pause, Users, X, RotateCcw } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Plus, ListOrdered, Zap, AlertTriangle, Pause, X, RotateCcw, CircleHelp } from 'lucide-react';
 import { MatchCard } from '../components/MatchCard';
 import { MatchTimer, getGradeColor } from '../utils';
 
@@ -7,9 +8,13 @@ export const MatchesTab = ({
   waitingListPlayers, maxSets, isProcessing, getMemberData, getInitialCourtName,
   openEditMatchModal, openEditHistoryModal, handleAutoGenerateCourt, handleAutoFillEmptySlots, setSwapCourtModal,
   setConfirmDeleteMatchId, setConfirmResetMatchId, handleStartMatch, handleFinishMatch,
-  handleReorderQueue, handleQueueMatch, handleAutoFillAllCourts, handleUpdateSparringMatch,
-  updateAttendanceStatus, isWaitingListOpen, setIsWaitingListOpen, handleUpdateSessionRule, t
+  handleReorderQueue, handleQueueMatch, handleAutoFillAllCourts, handleUpdateSparringMatch, handleAddPreviewMatch,
+  updateAttendanceStatus, handleUpdateSessionRule, t
 }: any) => {
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [explanationMatch, setExplanationMatch] = useState<any>(null);
+  const [addedPreviewIndexes, setAddedPreviewIndexes] = useState<number[]>([]);
+  const previewGroups = useMemo(() => Array.from({ length: Math.min(3, Math.floor(waitingListPlayers.length / 4)) }, (_, index) => waitingListPlayers.slice(index * 4, index * 4 + 4)), [waitingListPlayers]);
 
   const renderWaitingListContent = () => (
     <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
@@ -214,19 +219,6 @@ export const MatchesTab = ({
               )}
             </div>
 
-            {session?.sessionType !== 'sparring' && (
-              <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-                <button disabled={session?.status !== 'active' || isProcessing} onClick={() => openEditMatchModal({ courtId: null, matchType: 'MD' })} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-surface dark:bg-elevated-dark hover:bg-app dark:hover:bg-strong-dark border border-subtle dark:border-strong-dark text-primary dark:text-primary-dark px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                  <Plus size={16}/> {String(t('manual_match', { defaultValue: 'Manual Match' }))}
-                </button>
-                <button disabled={session?.status !== 'active' || isProcessing} onClick={handleQueueMatch} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-muted dark:bg-elevated-dark hover:bg-elevated dark:hover:bg-strong-dark text-primary dark:text-primary-dark px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                  <ListOrdered size={16}/> {String(t('queue_match', { defaultValue: 'Queue Match' }))}
-                </button>
-                <button disabled={session?.status !== 'active' || isProcessing} onClick={handleAutoFillAllCourts} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-lg bg-ink px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-ink-soft disabled:cursor-not-allowed disabled:opacity-50 dark:bg-ink-dark dark:text-white dark:hover:bg-primary-dark">
-                  <Zap size={16}/> {String(t('auto_fill', { defaultValue: 'Auto Fill' }))}
-                </button>
-              </div>
-            )}
           </div>
 
           {session?.sessionType === 'sparring' && session?.matchQuotas && (
@@ -277,6 +269,7 @@ export const MatchesTab = ({
                       handleStartMatch={handleStartMatch}
                       handleAutoGenerateCourt={handleAutoGenerateCourt}
                       handleAutoFillEmptySlots={handleAutoFillEmptySlots}
+                      onExplainMatch={setExplanationMatch}
                       t={t}
                     />
                   );
@@ -304,6 +297,7 @@ export const MatchesTab = ({
                         handleStartMatch={handleStartMatch} 
                         handleAutoGenerateCourt={handleAutoGenerateCourt} 
                         handleAutoFillEmptySlots={handleAutoFillEmptySlots}
+                        onExplainMatch={setExplanationMatch}
                         handleReorderQueue={handleReorderQueue}
                         queueIndex={index}
                         totalQueued={queuedMatchesList.length}
@@ -328,39 +322,37 @@ export const MatchesTab = ({
         )}
 
         {session?.sessionType !== 'sparring' && (
-          <div className="fixed bottom-24 left-0 right-0 z-40 flex justify-center lg:hidden pointer-events-none">
-            <button 
-              onClick={() => setIsWaitingListOpen(true)} 
-              className="pointer-events-auto bg-ink shadow-xl shadow-blue-600/30 text-white px-6 py-3.5 rounded-full font-bold flex items-center gap-3 transition-transform active:scale-95"
-            >
-              <Users size={18} />
-              {String(t('waiting_list', { defaultValue: 'Waiting List' }))}
-              <span className="bg-surface text-ink px-2.5 py-0.5 rounded-full text-xs font-black">{waitingListPlayers.length}</span>
-            </button>
+          <div className="fixed bottom-3 left-1/2 z-[120] w-[calc(100%-1rem)] max-w-3xl -translate-x-1/2 pointer-events-none sm:w-[calc(100%-2rem)]">
+            <div className="pointer-events-auto rounded-2xl border border-subtle bg-surface/95 p-2 shadow-2xl shadow-black/20 backdrop-blur-md dark:border-zinc-700 dark:bg-[#18181b]/95 sm:p-3">
+              <div className="mb-1 hidden px-2 text-[10px] font-black uppercase tracking-[0.16em] text-muted-ink dark:text-zinc-500 sm:block">Quick match actions</div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <button type="button" disabled={session?.status !== 'active' || isProcessing} onClick={() => openEditMatchModal({ courtId: null, matchType: 'MD' })} className="flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-xl border border-subtle bg-surface px-2 py-2 text-[10px] font-black text-primary shadow-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-[#121214] dark:text-white dark:hover:bg-zinc-800 sm:min-h-12 sm:px-4 sm:text-sm"><Plus size={16} /> <span className="truncate">Manual</span></button>
+                <button type="button" disabled={session?.status !== 'active' || isProcessing} onClick={handleQueueMatch} className="flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-2 py-2 text-[10px] font-black text-white shadow-sm transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-12 sm:px-4 sm:text-sm"><ListOrdered size={16} /> <span className="truncate">Auto Queue</span></button>
+                <button type="button" disabled={session?.status !== 'active' || isProcessing} onClick={handleAutoFillAllCourts} className="flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-2 py-2 text-[10px] font-black text-white shadow-sm transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-12 sm:px-4 sm:text-sm"><Zap size={16} /> <span className="truncate">Auto Fill</span></button>
+                <button type="button" onClick={() => setIsPreviewOpen(true)} className="flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-xl border border-subtle bg-surface px-2 py-2 text-[10px] font-black text-primary shadow-sm transition-colors hover:bg-muted dark:border-zinc-700 dark:bg-[#121214] dark:text-white dark:hover:bg-zinc-800 sm:min-h-12 sm:px-4 sm:text-sm"><CircleHelp size={16} /> <span className="truncate">Preview</span></button>
+              </div>
+            </div>
           </div>
         )}
 
-        <div className={`fixed inset-0 z-[100] bg-ink/60 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${isWaitingListOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsWaitingListOpen(false)} />
-        <div className={`fixed inset-y-0 right-0 z-[110] w-full max-w-[320px] bg-app dark:bg-surface-dark shadow-2xl transform transition-transform duration-300 ease-in-out lg:hidden flex flex-col border-l border-subtle dark:border-subtle-dark ${isWaitingListOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-           <div className="p-4 border-b border-subtle dark:border-subtle-dark bg-surface dark:bg-app-dark flex justify-between items-center shrink-0 mt-safe">
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-sm tracking-wide text-primary dark:text-primary-dark uppercase">{String(t('available_players', { defaultValue: 'Available Players' }))}</h3>
-                <span className="bg-accent-soft text-ink dark:bg-accent-soft-dark dark:text-ink-dark font-bold px-2 py-0.5 rounded-full text-xs">{waitingListPlayers.length}</span>
+        {isPreviewOpen && (
+          <div className="fixed inset-0 z-[9999] flex items-end justify-center bg-ink/70 p-0 backdrop-blur-sm sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="matches-preview-title">
+            <div className="flex max-h-[90dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl border border-subtle bg-surface shadow-2xl dark:border-zinc-800 dark:bg-[#0f0f11] sm:rounded-3xl">
+              <div className="flex items-start justify-between border-b border-subtle bg-app px-5 py-4 dark:border-zinc-800 dark:bg-[#121214] sm:px-6"><div><p className="text-[10px] font-black uppercase tracking-widest text-muted-ink dark:text-zinc-500">Matchmaking preview</p><h2 id="matches-preview-title" className="mt-1 text-xl font-black text-primary dark:text-white">Next available groups</h2><p className="mt-1 text-xs font-medium text-muted-ink dark:text-zinc-400">Preview only. No match is created.</p></div><button type="button" onClick={() => setIsPreviewOpen(false)} className="rounded-full p-2 text-muted-ink hover:bg-muted dark:text-zinc-400 dark:hover:bg-zinc-800"><X size={20}/></button></div>
+              <div className="min-h-0 overflow-y-auto p-4 sm:p-5">
+                {previewGroups.length === 0 ? <div className="rounded-2xl border border-dashed border-subtle p-10 text-center text-sm font-bold text-muted-ink dark:border-zinc-800 dark:text-zinc-500">Not enough idle players for a preview.</div> : <div className="space-y-4">{previewGroups.map((group: any[], index: number) => {
+                  const alreadyAdded = addedPreviewIndexes.includes(index);
+                  return <div key={index} className="rounded-2xl border border-subtle bg-app p-4 dark:border-zinc-800 dark:bg-[#121214]"><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><span className="text-xs font-black uppercase tracking-widest text-muted-ink dark:text-zinc-500">Preview match {index + 1}</span><span className="rounded-full bg-accent-soft px-2 py-1 text-[10px] font-black text-ink dark:bg-zinc-800 dark:text-zinc-200">Least played first</span></div><div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">{group.map((player: any) => <div key={player.id} className="min-w-0 rounded-xl border border-subtle bg-surface px-3 py-2 dark:border-zinc-700 dark:bg-[#18181b]"><div className="truncate text-sm font-bold text-primary dark:text-white">{player.name}</div><div className="mt-1 text-[10px] font-bold text-muted-ink dark:text-zinc-500">{player.skillLevel} · {player.gamesPlayed} played</div></div>)}</div><button type="button" disabled={alreadyAdded || isProcessing || !handleAddPreviewMatch} onClick={async () => { const added = await handleAddPreviewMatch(group); if (added !== false) setAddedPreviewIndexes(previous => [...previous, index]); }} className={`mt-3 w-full rounded-xl px-4 py-2.5 text-xs font-black transition-colors disabled:cursor-not-allowed ${alreadyAdded ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' : 'bg-ink text-white hover:bg-ink-soft dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200'}`}>{alreadyAdded ? 'Added to queue' : 'Add this match to queue'}</button></div>;
+                })}</div>}
               </div>
-              <button onClick={() => setIsWaitingListOpen(false)} className="p-2 text-faint hover:text-muted-ink bg-muted dark:bg-elevated-dark rounded-full"><X size={18}/></button>
-           </div>
-           {renderWaitingListContent()}
-        </div>
-        {session?.sessionType !== 'sparring' && (
-          <div className="fixed bottom-3 left-1/2 z-[120] w-[calc(100%-1.5rem)] max-w-3xl -translate-x-1/2 pointer-events-none">
-            <div className="pointer-events-auto rounded-2xl border border-subtle bg-surface/95 p-2 shadow-2xl shadow-black/20 backdrop-blur-md dark:border-zinc-700 dark:bg-[#18181b]/95 sm:p-3">
-              <div className="mb-1 hidden px-2 text-[10px] font-black uppercase tracking-[0.16em] text-muted-ink dark:text-zinc-500 sm:block">Quick match actions</div>
-              <div className="grid grid-cols-3 gap-2">
-                <button type="button" disabled={session?.status !== 'active' || isProcessing} onClick={() => openEditMatchModal({ courtId: null, matchType: 'MD' })} className="flex min-h-12 items-center justify-center gap-1.5 rounded-xl border border-subtle bg-surface px-2 py-2 text-[11px] font-black text-primary shadow-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-[#121214] dark:text-white dark:hover:bg-zinc-800 sm:px-4 sm:text-sm"><Plus size={16} /> <span>Manual</span></button>
-                <button type="button" disabled={session?.status !== 'active' || isProcessing} onClick={handleQueueMatch} className="flex min-h-12 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-2 py-2 text-[11px] font-black text-white shadow-sm transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 sm:text-sm"><ListOrdered size={16} /> <span>Auto Queue</span></button>
-                <button type="button" disabled={session?.status !== 'active' || isProcessing} onClick={handleAutoFillAllCourts} className="flex min-h-12 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-2 py-2 text-[11px] font-black text-white shadow-sm transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 sm:text-sm"><Zap size={16} /> <span>Auto Fill Courts</span></button>
-              </div>
+              <div className="flex justify-end border-t border-subtle bg-app px-5 py-4 dark:border-zinc-800"><button type="button" onClick={() => setIsPreviewOpen(false)} className="rounded-xl bg-ink px-5 py-3 text-sm font-black text-white dark:bg-white dark:text-zinc-900">Close</button></div>
             </div>
+          </div>
+        )}
+
+        {explanationMatch && (
+          <div className="fixed inset-0 z-[9999] flex items-end justify-end bg-ink/50 backdrop-blur-sm sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="match-explanation-title">
+            <div className="flex h-full w-full max-w-md flex-col border-l border-subtle bg-surface shadow-2xl dark:border-zinc-800 dark:bg-[#0f0f11] sm:h-auto sm:max-h-[90dvh] sm:rounded-3xl sm:border"><div className="flex items-start justify-between border-b border-subtle bg-app px-5 py-4 dark:border-zinc-800 dark:bg-[#121214]"><div><p className="text-[10px] font-black uppercase tracking-widest text-muted-ink dark:text-zinc-500">Organizer view</p><h2 id="match-explanation-title" className="mt-1 text-xl font-black text-primary dark:text-white">Why this match?</h2></div><button type="button" onClick={() => setExplanationMatch(null)} className="rounded-full p-2 text-muted-ink hover:bg-muted dark:text-zinc-400 dark:hover:bg-zinc-800"><X size={20}/></button></div><div className="space-y-4 overflow-y-auto p-6"><div className="rounded-2xl border border-subtle bg-app p-4 dark:border-zinc-800 dark:bg-[#121214]"><p className="text-xs font-bold uppercase tracking-widest text-muted-ink dark:text-zinc-500">Status</p><p className="mt-1 text-lg font-black text-primary dark:text-white">{explanationMatch.status === 'on_court' ? 'Playing' : explanationMatch.status === 'finished' ? 'Finished' : 'Queued'}</p></div><div className="space-y-3 text-sm font-medium leading-relaxed text-muted-ink dark:text-zinc-400"><p>• Players already in another active match are excluded.</p><p>• Lower games played is prioritized for the next selection.</p><p>• Grade proximity follows the selected matchmaking strictness.</p><p>• This view explains the inputs only; it does not change match generation.</p></div></div></div>
           </div>
         )}
       </div>

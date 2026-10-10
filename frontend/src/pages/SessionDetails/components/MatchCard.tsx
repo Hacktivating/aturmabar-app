@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Play, Settings as SettingsIcon, Trash2, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ArrowRightLeft, Plus } from 'lucide-react';
-import { MatchTimer } from '../utils';
+import { Play, Settings as SettingsIcon, Trash2, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ArrowRightLeft, Plus, CircleHelp } from 'lucide-react';
 
-export const MatchCard = ({ match, court, sessionStatus, maxSets, isProcessing, getMemberData, openEditMatchModal, handleAutoGenerateCourt, handleAutoFillEmptySlots, setSwapCourtModal, setConfirmDeleteMatchId, setConfirmResetMatchId, handleStartMatch, handleFinishMatch, handleReorderQueue, queueIndex, totalQueued, t }: any) => {
+export const MatchCard = ({ match, court, sessionStatus, maxSets, isProcessing, getMemberData, openEditMatchModal, handleAutoGenerateCourt, handleAutoFillEmptySlots, onExplainMatch, setSwapCourtModal, setConfirmDeleteMatchId, setConfirmResetMatchId, handleStartMatch, handleFinishMatch, handleReorderQueue, queueIndex, totalQueued, t }: any) => {
   const [currentSet, setCurrentSet] = useState(1);
   const [scores, setScores] = useState({
     a1: match?.scoreTeamA_set1 || '', b1: match?.scoreTeamB_set1 || '',
@@ -26,7 +25,7 @@ export const MatchCard = ({ match, court, sessionStatus, maxSets, isProcessing, 
           <div className="flex items-center gap-2">
             <h3 className="font-bold text-sm text-primary dark:text-primary-dark tracking-wide">{court?.name || 'Queued'}</h3>
           </div>
-          <div className="text-faint dark:text-muted-ink text-[10px] font-bold tracking-widest uppercase">{t('empty', 'EMPTY')}</div>
+          <div className="rounded-full border border-subtle px-2 py-1 text-[10px] font-bold tracking-widest uppercase text-faint dark:border-zinc-700 dark:text-zinc-400">{t('empty', 'EMPTY')}</div>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center gap-3 py-6 px-4">
           <button disabled={sessionStatus !== 'active' || isProcessing} onClick={() => handleAutoGenerateCourt(court.id)} className="px-4 py-2.5 bg-ink hover:bg-ink-soft text-white text-xs font-bold rounded-lg shadow-sm transition-colors w-full disabled:opacity-50 disabled:cursor-not-allowed">{t('auto_fill', 'Auto-Fill Courts')}</button>
@@ -59,7 +58,7 @@ export const MatchCard = ({ match, court, sessionStatus, maxSets, isProcessing, 
           {court && <span className="bg-accent-soft text-ink dark:bg-accent-soft-dark dark:text-ink text-[9px] px-1.5 py-0.5 rounded border border-accent dark:border-strong-dark uppercase tracking-wider font-bold">AUTO</span>}
         </div>
         <div className="flex items-center gap-3">
-          {isActive ? <MatchTimer startedAt={match.startedAt} /> : <div className="text-ink dark:text-ink text-[10px] font-bold tracking-widest uppercase">{court ? t('ready', 'READY') : ''}</div>}
+          <div className={`rounded-full px-2 py-1 text-[10px] font-black tracking-widest uppercase ${isActive ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : hasEmptySlot ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300' : court ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300' : 'bg-muted text-muted-ink dark:bg-zinc-800 dark:text-zinc-400'}`}>{isActive ? 'PLAYING' : hasEmptySlot ? 'PARTIAL' : court ? 'READY' : 'QUEUED'}</div>
           
           {!isActive && (
             <div className="flex items-center gap-1 border-l border-subtle dark:border-default-dark pl-2 ml-1">
@@ -69,6 +68,7 @@ export const MatchCard = ({ match, court, sessionStatus, maxSets, isProcessing, 
               {!court && queueIndex < totalQueued - 1 && (
                 <button disabled={isProcessing} onClick={() => handleReorderQueue(queueIndex, 'down')} className="p-1 text-faint hover:text-ink transition-colors disabled:opacity-50"><ChevronDown size={16}/></button>
               )}
+              {onExplainMatch && <button disabled={isProcessing} onClick={() => onExplainMatch(match)} className="p-1 text-faint hover:text-ink transition-colors disabled:opacity-50" title="Why this match?"><CircleHelp size={14}/></button>}
               <button disabled={isProcessing} onClick={() => openEditMatchModal(match)} className="p-1 text-faint hover:text-ink transition-colors disabled:opacity-50"><SettingsIcon size={14}/></button>
               <button disabled={isProcessing} onClick={() => setConfirmDeleteMatchId(match.id)} className="p-1 text-faint hover:text-rose-500 transition-colors disabled:opacity-50"><Trash2 size={14}/></button>
             </div>

@@ -570,6 +570,26 @@ export default function SessionDetails() {
   };
 
   const handleQueueMatch = async () => { if (isProcessing) return; setIsProcessing(true); try { await api.post(`/matches/${id}/auto-generate`, { courtId: null }); await fetchSessionData(); addToast(String(t('match_queued', { defaultValue: "Match added to queue" }))); } catch (err: any) { addToast(err.response?.data?.error || "Error generating match", "error"); } finally { setIsProcessing(false); } };
+  const handleAddPreviewMatch = async (group: any[]) => {
+    if (isProcessing || group.length < 4) return false;
+    setIsProcessing(true);
+    try {
+      await api.post(`/matches/${id}/manual`, {
+        teamA_player1: group[0].id,
+        teamA_player2: group[1].id,
+        teamB_player1: group[2].id,
+        teamB_player2: group[3].id,
+        courtId: null,
+        matchType: 'MD'
+      });
+      await fetchSessionData();
+      addToast(String(t('match_queued', { defaultValue: "Preview match added to queue" })));
+      return true;
+    } catch (err: any) {
+      addToast(err.response?.data?.error || "Error adding preview match to queue", "error");
+      return false;
+    } finally { setIsProcessing(false); }
+  };
   const handleAutoFillEmptySlots = async (matchId: number) => { if (isProcessing) return; setIsProcessing(true); try { await api.put(`/matches/${matchId}/fill-empty`); await fetchSessionData(); addToast("Empty player slots filled"); } catch (err: any) { addToast(err.response?.data?.error || "No suitable idle players available", "error"); } finally { setIsProcessing(false); } };
   const handleStartMatch = async (matchId: number) => { if (isProcessing) return; setIsProcessing(true); try { await api.put(`/matches/${matchId}/start`); await fetchSessionData(); addToast(String(t('match_started', { defaultValue: "Match started" }))); } catch (err) { addToast("Error starting match", "error"); } finally { setIsProcessing(false); } };
 
@@ -924,7 +944,7 @@ export default function SessionDetails() {
              <CourtsTab courts={courts} editCourtId={editCourtId} setEditCourtId={setEditCourtId} courtName={courtName} setCourtName={setCourtName} handleAddCourt={handleAddCourt} handleUpdateCourt={handleUpdateCourt} setConfirmDeleteCourtId={setConfirmDeleteCourtId} isProcessing={isProcessing} t={t} inputStyles={inputStyles} />
           )}
           {activeTab === 'matches' && (
-             <MatchesTab session={session} communityData={communityData} courts={courts} matches={matches} activeMatches={activeMatches} queuedMatchesList={queuedMatchesList} finishedMatches={finishedMatches} waitingListPlayers={waitingListPlayers} maxSets={maxSets} isProcessing={isProcessing} getMemberData={getMemberData} getInitialCourtName={getInitialCourtName} openEditMatchModal={openEditMatchModal} openEditHistoryModal={openEditHistoryModal} handleAutoGenerateCourt={handleAutoGenerateCourt} handleAutoFillEmptySlots={handleAutoFillEmptySlots} setSwapCourtModal={setSwapCourtModal} setConfirmDeleteMatchId={setConfirmDeleteMatchId} setConfirmResetMatchId={setConfirmResetMatchId} handleStartMatch={handleStartMatch} handleFinishMatch={handleFinishMatch} handleReorderQueue={handleReorderQueue} handleQueueMatch={handleQueueMatch} handleAutoFillAllCourts={handleAutoFillAllCourts} handleUpdateSparringMatch={handleUpdateSparringMatch} updateAttendanceStatus={updateAttendanceStatus} isWaitingListOpen={isWaitingListOpen} setIsWaitingListOpen={setIsWaitingListOpen} handleUpdateSessionRule={handleUpdateSessionRule} t={t} />
+             <MatchesTab session={session} communityData={communityData} courts={courts} matches={matches} activeMatches={activeMatches} queuedMatchesList={queuedMatchesList} finishedMatches={finishedMatches} waitingListPlayers={waitingListPlayers} maxSets={maxSets} isProcessing={isProcessing} getMemberData={getMemberData} getInitialCourtName={getInitialCourtName} openEditMatchModal={openEditMatchModal} openEditHistoryModal={openEditHistoryModal} handleAutoGenerateCourt={handleAutoGenerateCourt} handleAutoFillEmptySlots={handleAutoFillEmptySlots} setSwapCourtModal={setSwapCourtModal} setConfirmDeleteMatchId={setConfirmDeleteMatchId} setConfirmResetMatchId={setConfirmResetMatchId} handleStartMatch={handleStartMatch} handleFinishMatch={handleFinishMatch} handleReorderQueue={handleReorderQueue} handleQueueMatch={handleQueueMatch} handleAddPreviewMatch={handleAddPreviewMatch} handleAutoFillAllCourts={handleAutoFillAllCourts} handleUpdateSparringMatch={handleUpdateSparringMatch} updateAttendanceStatus={updateAttendanceStatus} isWaitingListOpen={isWaitingListOpen} setIsWaitingListOpen={setIsWaitingListOpen} handleUpdateSessionRule={handleUpdateSessionRule} t={t} />
           )}
           {activeTab === 'billing' && (
              <BillingTab billingAttendances={billingAttendances} totalIncome={totalIncome} totalExpense={totalExpense} netBalance={netBalance} defaultFee={defaultFee} setDefaultFee={setDefaultFee} memberDefaultFee={memberDefaultFee} setMemberDefaultFee={setMemberDefaultFee} billingSearch={billingSearch} setBillingSearch={setBillingSearch} editingPaymentId={editingPaymentId} setEditingPaymentId={setEditingPaymentId} editPaymentValue={editPaymentValue} setEditPaymentValue={setEditPaymentValue} isProcessing={isProcessing} handleOpenImportModal={handleOpenImportModal} handleUpdateDefaultFee={handleUpdateDefaultFee} handleResetBilling={handleResetBilling} savePaymentAmount={savePaymentAmount} handleStatusChange={handleStatusChange} expenses={expenses} expenseForm={expenseForm} setExpenseForm={setExpenseForm} handleAddExpense={handleAddExpense} handleDeleteExpense={handleDeleteExpense} t={t} inputStyles={inputStyles} />
@@ -1083,7 +1103,7 @@ export default function SessionDetails() {
       {/* --- SHARED MOBILE DRAWER --- */}
       {/* Works seamlessly for Normal Mode AND Simple Mode matches view! */}
       {activeTab === 'matches' && session?.sessionType !== 'sparring' && (
-        <div className="fixed bottom-6 left-0 right-0 z-40 flex justify-center lg:hidden pointer-events-none">
+        <div className="fixed bottom-24 left-0 right-0 z-40 flex justify-center lg:hidden pointer-events-none">
           <button
             type="button"
             onClick={() => setIsWaitingListOpen(true)}
