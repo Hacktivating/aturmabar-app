@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Search, UserPlus, Plus, Info, Pause, Check, X, ChevronDown, ArrowUpDown } from 'lucide-react';
 
 const SKILL_LEVELS = [
@@ -25,15 +25,15 @@ export const AttendanceTab = ({
   setAttendanceSearch,
   openWalkInModal,
   openAttendeeModal,
-  setPlayerDetailModal,
+  onPlayerClick,
   handleUpdateGrade,
   updateAttendanceStatus,
   isProcessing,
   t
 }: any) => {
-  
+
   const [editingGradeId, setEditingGradeId] = useState<number | null>(null);
-  
+
   // Sorting State - Defaults to Arrival Time (Oldest First)
   const [sortConfig, setSortConfig] = useState({ key: 'arrivedAt', direction: 'asc' });
 
@@ -42,7 +42,7 @@ export const AttendanceTab = ({
     let sortable = [...visibleAttendances];
     sortable.sort((a, b) => {
       if (sortConfig.key === 'name') {
-        return sortConfig.direction === 'asc' 
+        return sortConfig.direction === 'asc'
           ? a.member.name.localeCompare(b.member.name)
           : b.member.name.localeCompare(a.member.name);
       }
@@ -86,7 +86,7 @@ export const AttendanceTab = ({
         {editingGradeId === member.id && (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setEditingGradeId(null)}></div>
-            <div 
+            <div
               className={`absolute ${isNearBottom ? 'bottom-full mb-2' : 'top-full mt-2'} left-0 w-32 bg-surface dark:bg-[#18181b] border border-subtle dark:border-zinc-800 rounded-xl shadow-2xl z-50 flex flex-col p-2 animate-in fade-in zoom-in-95 duration-200`}
             >
               <div className="px-2 py-1 text-[10px] font-bold text-muted-ink dark:text-zinc-500 uppercase tracking-widest border-b border-subtle dark:border-zinc-800 mb-1.5 pb-1.5 text-center">
@@ -105,8 +105,8 @@ export const AttendanceTab = ({
                         setEditingGradeId(null);
                       }}
                       className={`py-1.5 text-xs font-black rounded-lg transition-colors flex items-center justify-center border shadow-sm ${
-                        isSelected 
-                          ? 'bg-ink border-ink text-white dark:bg-white dark:border-white dark:text-zinc-900' 
+                        isSelected
+                          ? 'bg-ink border-ink text-white dark:bg-white dark:border-white dark:text-zinc-900'
                           : 'bg-app dark:bg-[#121214] border-subtle dark:border-zinc-800 hover:bg-muted dark:hover:bg-zinc-800 text-primary dark:text-zinc-300'
                       }`}
                     >
@@ -124,7 +124,7 @@ export const AttendanceTab = ({
 
   return (
     <div className="animate-in fade-in duration-200 flex flex-col h-full bg-surface dark:bg-[#121214] border border-subtle dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden">
-      
+
       {/* Tab Header & Controls */}
       <div className="p-4 sm:p-6 border-b border-subtle dark:border-zinc-800 bg-app dark:bg-[#121214] shrink-0">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
@@ -134,7 +134,7 @@ export const AttendanceTab = ({
               <span className="bg-muted dark:bg-[#18181b] border border-subtle dark:border-zinc-800 text-muted-ink dark:text-zinc-400 px-3 py-1 rounded-lg text-sm font-bold shadow-sm">{visibleAttendances.length}</span>
             </div>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto shrink-0 mt-2 lg:mt-0">
             <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
               {/* Search Bar */}
@@ -142,10 +142,10 @@ export const AttendanceTab = ({
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-ink dark:text-zinc-500" size={16} />
                 <input type="text" placeholder={t('search_players', 'Search...')} value={attendanceSearch} onChange={(e) => setAttendanceSearch(e.target.value)} className="w-full pl-10 pr-4 py-2.5 sm:py-3 bg-surface dark:bg-[#18181b] border border-subtle dark:border-zinc-800 rounded-xl shadow-sm outline-none focus:ring-2 focus:ring-ink text-sm font-medium text-primary dark:text-white transition-all"/>
               </div>
-              
+
               {/* Sort Dropdown */}
               <div className="relative shrink-0">
-                <select 
+                <select
                    value={`${sortConfig.key}-${sortConfig.direction}`}
                    onChange={(e) => {
                      const [key, dir] = e.target.value.split('-');
@@ -166,16 +166,16 @@ export const AttendanceTab = ({
             </div>
 
             <div className="flex gap-3 w-full sm:w-auto shrink-0">
-              <button 
-                type="button" 
-                onClick={(e) => { e.preventDefault(); openWalkInModal(); }} 
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); openWalkInModal(); }}
                 className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-surface hover:bg-muted dark:bg-[#18181b] dark:hover:bg-zinc-800 border border-subtle dark:border-zinc-700 text-primary dark:text-white px-4 py-2.5 sm:py-3 rounded-xl text-sm font-bold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
               >
                 <UserPlus size={16}/> <span>{t('add_walk_in', 'Add Walk-In')}</span>
               </button>
-              <button 
-                type="button" 
-                onClick={(e) => { e.preventDefault(); openAttendeeModal(); }} 
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); openAttendeeModal(); }}
                 className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-ink hover:bg-ink-soft dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 px-5 py-2.5 sm:py-3 rounded-xl text-sm font-bold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
               >
                 <Plus size={16}/> <span>{t('add_attendee', 'Add Attendee')}</span>
@@ -195,7 +195,7 @@ export const AttendanceTab = ({
           </div>
         )}
       </div>
-      
+
       {/* Desktop Table View */}
       <div className="hidden sm:block overflow-x-auto">
         <table className="w-full text-left border-collapse min-w-[600px]">
@@ -208,14 +208,14 @@ export const AttendanceTab = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/50">
-            {sortedAttendances.length === 0 ? <tr><td colSpan={4} className="p-12 text-center text-muted-ink dark:text-zinc-500 font-medium">No players found</td></tr> : 
+            {sortedAttendances.length === 0 ? <tr><td colSpan={4} className="p-12 text-center text-muted-ink dark:text-zinc-500 font-medium">No players found</td></tr> :
              sortedAttendances.map(({ attendance, member }: any, index: number) => (
               <tr key={attendance.id} className="hover:bg-app dark:hover:bg-white/5 transition-colors group">
                 <td className="p-4 pl-6">
                   <div className="flex items-center gap-4">
-                    <span 
-                      className="font-bold text-base text-primary dark:text-zinc-100 hover:text-ink dark:hover:text-white transition-colors cursor-pointer truncate max-w-[220px]" 
-                      onClick={(e) => { e.preventDefault(); setPlayerDetailModal(member.id); }}
+                    <span
+                      className="font-bold text-base text-primary dark:text-zinc-100 hover:text-ink dark:hover:text-white transition-colors cursor-pointer truncate max-w-[220px]"
+                      onClick={(e) => { e.preventDefault(); onPlayerClick(member.id); }}
                     >
                       {member.name}
                     </span>
@@ -231,10 +231,10 @@ export const AttendanceTab = ({
                 </td>
                 <td className="p-4 text-right pr-6">
                   <div className="flex justify-end gap-2">
-                    <button 
-                      type="button" 
-                      onClick={(e) => { e.preventDefault(); setPlayerDetailModal(member.id); }} 
-                      className="p-2 text-muted-ink dark:text-zinc-400 bg-surface dark:bg-[#18181b] border border-subtle dark:border-zinc-700 hover:bg-muted dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-white rounded-lg transition-colors cursor-pointer shadow-sm" 
+                    <button
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); onPlayerClick(member.id); }}
+                      className="p-2 text-muted-ink dark:text-zinc-400 bg-surface dark:bg-[#18181b] border border-subtle dark:border-zinc-700 hover:bg-muted dark:hover:bg-zinc-800 hover:text-primary dark:hover:text-white rounded-lg transition-colors cursor-pointer shadow-sm"
                       title="Player Details"
                     >
                       <Info size={18}/>
@@ -255,15 +255,15 @@ export const AttendanceTab = ({
 
       {/* Mobile High-Density Card View */}
       <div className="sm:hidden flex flex-col divide-y divide-slate-100 dark:divide-zinc-800/50">
-        {sortedAttendances.length === 0 ? <div className="p-10 text-center text-muted-ink dark:text-zinc-500 font-medium">{t('no_players', 'No players found')}</div> : 
+        {sortedAttendances.length === 0 ? <div className="p-10 text-center text-muted-ink dark:text-zinc-500 font-medium">{t('no_players', 'No players found')}</div> :
          sortedAttendances.map(({ attendance, member }: any, index: number) => (
           <div key={attendance.id} className="p-3 hover:bg-app dark:hover:bg-white/5 transition-colors flex items-center justify-between gap-2">
-            
+
             <div className="min-w-0 flex-1 flex flex-col gap-1.5">
               <div className="flex items-center gap-2">
-                <span 
-                  className="font-bold text-sm text-primary dark:text-zinc-100 truncate cursor-pointer hover:underline" 
-                  onClick={(e) => { e.preventDefault(); setPlayerDetailModal(member.id); }}
+                <span
+                  className="font-bold text-sm text-primary dark:text-zinc-100 truncate cursor-pointer hover:underline"
+                  onClick={(e) => { e.preventDefault(); onPlayerClick(member.id); }}
                 >
                   {member.name}
                 </span>
@@ -282,9 +282,9 @@ export const AttendanceTab = ({
                 {attendance.status === 'active' ? t('status_active', 'ACTIVE') : t('resting', 'RESTING')}
               </span>
               <div className="flex gap-1.5">
-                <button 
-                  type="button" 
-                  onClick={(e) => { e.preventDefault(); setPlayerDetailModal(member.id); }} 
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); onPlayerClick(member.id); }}
                   className="p-1.5 text-muted-ink dark:text-zinc-400 bg-app dark:bg-[#18181b] border border-subtle dark:border-zinc-700 rounded-md transition-colors shadow-sm cursor-pointer"
                 >
                   <Info size={14}/>

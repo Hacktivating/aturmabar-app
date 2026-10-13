@@ -1,4 +1,3 @@
-import React from 'react';
 import { Search, Edit2, Trash2 } from 'lucide-react';
 
 export const HistoryTab = ({

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { CheckCircle2, Loader2, CloudAlert } from 'lucide-react';
@@ -10,7 +10,7 @@ export const NotesTab = ({ session, fetchSessionData }: any) => {
   
   const lastSavedContent = useRef(session?.notes || '');
   const currentContent = useRef(content);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     currentContent.current = content;

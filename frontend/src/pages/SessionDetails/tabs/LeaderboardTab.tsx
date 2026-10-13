@@ -1,4 +1,3 @@
-import React from 'react';
 import { Search, Medal, ChevronDown } from 'lucide-react';
 import { getGradeColor } from '../utils';
 

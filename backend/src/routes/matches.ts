@@ -58,14 +58,14 @@ router.post("/:sessionId/auto-generate", async (req: AuthRequest, res) => {
     // Build Play History Ledger
     const sessionMatches = await db.select().from(matches).where(eq(matches.sessionId, sessionId));
     const playerStats = new Map<number, { games: number, pastPartners: Set<number>, pastOpponents: Set<number> }>();
-    
+
     eligibleAttendances.forEach(({ member }) => playerStats.set(member.id, { games: 0, pastPartners: new Set(), pastOpponents: new Set() }));
 
     sessionMatches.forEach(match => {
       const teamA = [match.teamA_player1, match.teamA_player2].filter(Boolean) as number[];
       const teamB = [match.teamB_player1, match.teamB_player2].filter(Boolean) as number[];
       const all = [...teamA, ...teamB];
-      
+
       all.forEach(id => {
         if (playerStats.has(id)) {
           const stats = playerStats.get(id)!;
@@ -115,7 +115,7 @@ router.post("/:sessionId/auto-generate", async (req: AuthRequest, res) => {
     } else if (session.pairingRule === 'moderate') {
       // 30% chance to prioritize a strict match
       const prioritizeStrict = Math.random() < 0.3;
-      
+
       if (prioritizeStrict) {
         tiers = [
           { t: 0, m: 0, h: 0 },
@@ -147,7 +147,7 @@ router.post("/:sessionId/auto-generate", async (req: AuthRequest, res) => {
       if (type === 'partner') return !statsA.pastPartners.has(b.id);
       if (type === 'opponent') {
         if (strictness === 0) return !statsA.pastOpponents.has(b.id) && !statsA.pastPartners.has(b.id);
-        if (strictness === 1) return !statsA.pastPartners.has(b.id); 
+        if (strictness === 1) return !statsA.pastPartners.has(b.id);
       }
       return true;
     };
@@ -156,7 +156,7 @@ router.post("/:sessionId/auto-generate", async (req: AuthRequest, res) => {
       const diffA = Math.abs(pa.weight - pb.weight);
       const diffB = Math.abs(pc.weight - pd.weight);
       if (diffA > t || diffB > t) return false;
-      
+
       const teamAWeight = pa.weight + pb.weight;
       const teamBWeight = pc.weight + pd.weight;
       if (Math.abs(teamAWeight - teamBWeight) > m) return false;
@@ -178,7 +178,7 @@ router.post("/:sessionId/auto-generate", async (req: AuthRequest, res) => {
           for (let k = j + 1; k < pool.length; k++) {
             const p2 = pool[i], p3 = pool[j], p4 = pool[k];
             const perms = [[p2, p3, p4], [p3, p2, p4], [p4, p2, p3]];
-            
+
             for (const [part, opp1, opp2] of perms) {
               if (validateMatch(p1, part, opp1, opp2, tier.h, tier.t, tier.m)) {
                 validMatchesForTier.push([p1, part, opp1, opp2]);
@@ -231,10 +231,10 @@ router.post("/:sessionId/manual", async (req: AuthRequest, res) => {
   try {
     const sessionId = parseInt(String(req.params.sessionId), 10);
     const { courtId, teamA_player1, teamA_player2, teamB_player1, teamB_player2 } = req.body;
-    
+
     const playerIds = [teamA_player1, teamA_player2, teamB_player1, teamB_player2].filter(Boolean) as number[];
     let matchType = 'MD';
-    
+
     if (playerIds.length > 0) {
       const players = await db.select().from(members).where(inArray(members.id, playerIds));
       const genders = players.map(p => p.gender);
@@ -322,74 +322,17 @@ router.put("/:matchId/score", async (req: AuthRequest, res) => {
   }
 });
 
-// PUT: Finish and clear match, UPDATE HIDDEN MMR
+// PUT: Finish and clear match
 router.put("/:matchId/finish", async (req: AuthRequest, res) => {
   try {
     const matchId = parseInt(String(req.params.matchId), 10);
     const { scoreTeamA_set1, scoreTeamB_set1, scoreTeamA_set2, scoreTeamB_set2, scoreTeamA_set3, scoreTeamB_set3 } = req.body;
-    
+
     // Find the finishing match
     const [finishingMatch] = await db.select().from(matches).where(eq(matches.id, matchId));
     if (!finishingMatch) return res.status(404).json({ error: "Match not found." });
 
-    // 1. Process MMR Updates (ELO Logic)
-    const playerIds = [
-      finishingMatch.teamA_player1, finishingMatch.teamA_player2,
-      finishingMatch.teamB_player1, finishingMatch.teamB_player2
-    ].filter(Boolean) as number[];
-
-    if (playerIds.length === 4) {
-      const matchPlayers = await db.select().from(members).where(inArray(members.id, playerIds));
-      
-      const getP = (id: number | null) => matchPlayers.find(p => p.id === id);
-      const pA1 = getP(finishingMatch.teamA_player1); const pA2 = getP(finishingMatch.teamA_player2);
-      const pB1 = getP(finishingMatch.teamB_player1); const pB2 = getP(finishingMatch.teamB_player2);
-
-      if (pA1 && pA2 && pB1 && pB2) {
-        // Evaluate Match Outcome
-        let setsA = 0, setsB = 0;
-        const processSet = (a: number|null, b: number|null) => {
-          if (a && b) { if (a > b) setsA++; else if (b > a) setsB++; }
-        };
-        processSet(scoreTeamA_set1, scoreTeamB_set1);
-        processSet(scoreTeamA_set2, scoreTeamB_set2);
-        processSet(scoreTeamA_set3, scoreTeamB_set3);
-
-        const sA = setsA > setsB ? 1 : (setsA < setsB ? 0 : 0.5);
-        const sB = 1 - sA;
-
-        // Hidden MMR Fallback (default to 1200 if not found/null)
-        // NOTE: Requires `hiddenMmr` field in members schema
-        const mmrA1 = (pA1 as any).hiddenMmr ?? 1200;
-        const mmrA2 = (pA2 as any).hiddenMmr ?? 1200;
-        const mmrB1 = (pB1 as any).hiddenMmr ?? 1200;
-        const mmrB2 = (pB2 as any).hiddenMmr ?? 1200;
-
-        const rA = (mmrA1 + mmrA2) / 2;
-        const rB = (mmrB1 + mmrB2) / 2;
-
-        const eA = 1 / (1 + Math.pow(10, (rB - rA) / 400));
-        const eB = 1 / (1 + Math.pow(10, (rA - rB) / 400));
-
-        const K = 32;
-        const diffA = Math.round(K * (sA - eA));
-        const diffB = Math.round(K * (sB - eB));
-
-        // Attempt to update MMRs (fails silently if column doesn't exist in schema yet)
-        try {
-          await Promise.all([
-            db.update(members).set({ hiddenMmr: mmrA1 + diffA } as any).where(eq(members.id, pA1.id)),
-            db.update(members).set({ hiddenMmr: mmrA2 + diffA } as any).where(eq(members.id, pA2.id)),
-            db.update(members).set({ hiddenMmr: mmrB1 + diffB } as any).where(eq(members.id, pB1.id)),
-            db.update(members).set({ hiddenMmr: mmrB2 + diffB } as any).where(eq(members.id, pB2.id)),
-          ]);
-        } catch (e) {
-          console.warn("Could not update Hidden MMR. Check if 'hiddenMmr' exists in DB schema.");
-        }
-      }
-    }
-
-    // 2. Update the finished match
+    // Update the finished match
     const finishData: any = { status: "finished", endedAt: new Date() };
     if (scoreTeamA_set1 !== undefined) finishData.scoreTeamA_set1 = scoreTeamA_set1;
     if (scoreTeamB_set1 !== undefined) finishData.scoreTeamB_set1 = scoreTeamB_set1;
@@ -411,7 +354,7 @@ router.put("/:matchId/finish", async (req: AuthRequest, res) => {
       }
     }
 
-    res.status(200).json({ message: "Match finished and MMR updated." });
+    res.status(200).json({ message: "Match finished." });
   } catch (error) {
     res.status(500).json({ error: "Internal server error." });
   }
@@ -432,10 +375,10 @@ router.put("/:matchId/swap-court", async (req: AuthRequest, res) => {
   try {
     const matchId = parseInt(String(req.params.matchId), 10);
     const { targetCourtId } = req.body;
-    
+
     const [sourceMatch] = await db.select().from(matches).where(eq(matches.id, matchId));
     if (!sourceMatch) return res.status(404).json({error: "Match not found"});
-    
+
     const [targetMatch] = await db.select().from(matches).where(
       and(eq(matches.courtId, targetCourtId), or(eq(matches.status, 'queued'), eq(matches.status, 'on_court')))
     );
@@ -466,8 +409,8 @@ router.put("/:matchId/history", async (req: AuthRequest, res) => {
   try {
     const matchId = parseInt(String(req.params.matchId), 10);
     const { courtId, teamA_player1, teamA_player2, teamB_player1, teamB_player2, scoreTeamA_set1, scoreTeamB_set1, scoreTeamA_set2, scoreTeamB_set2, scoreTeamA_set3, scoreTeamB_set3 } = req.body;
-    
-    await db.update(matches).set({ 
+
+    await db.update(matches).set({
       courtId: courtId || null,
       teamA_player1: teamA_player1 || null,
       teamA_player2: teamA_player2 || null,
@@ -480,7 +423,7 @@ router.put("/:matchId/history", async (req: AuthRequest, res) => {
       scoreTeamA_set3: scoreTeamA_set3 || 0,
       scoreTeamB_set3: scoreTeamB_set3 || 0
     }).where(eq(matches.id, matchId));
-    
+
     res.status(200).json({ message: "History updated." });
   } catch (error) {
     res.status(500).json({ error: "Internal server error." });
@@ -491,12 +434,12 @@ router.put("/:id/reset", async (req: AuthRequest, res) => {
   try {
     const matchId = parseInt(String(req.params.id), 10);
     await db.update(matches)
-      .set({ 
-        status: 'queued', 
-        startedAt: null, 
+      .set({
+        status: 'queued',
+        startedAt: null,
         scoreTeamA_set1: 0, scoreTeamB_set1: 0,
         scoreTeamA_set2: 0, scoreTeamB_set2: 0,
-        scoreTeamA_set3: 0, scoreTeamB_set3: 0 
+        scoreTeamA_set3: 0, scoreTeamB_set3: 0
       })
       .where(eq(matches.id, matchId));
     res.status(200).json({ message: "Match reset successfully." });

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { 
-  Plus, X, Search, Edit2, Trash2, ChevronLeft, ChevronRight, Check, ArrowUpDown, 
+import {
+  Plus, X, Search, Edit2, Trash2, ChevronLeft, ChevronRight, Check, ArrowUpDown,
   Zap, Globe, Sun, Moon, Settings, LogOut, ArrowLeft, Phone, Calendar, Users,
   Sparkles, CheckCircle, AlertCircle
 } from 'lucide-react';
@@ -62,7 +62,7 @@ const SearchableMultiSelect = ({ options, value, onChange, placeholder }: any) =
             const opt = options.find((o: any) => o.id === id);
             return opt ? (
               <span key={id} className="bg-surface dark:bg-zinc-800 border border-subtle dark:border-zinc-700 text-ink dark:text-zinc-200 px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm">
-                {opt.name} 
+                {opt.name}
                 <X size={14} className="cursor-pointer text-muted-ink hover:text-rose-500 dark:text-zinc-400 dark:hover:text-rose-400 transition-colors" onClick={(e) => { e.stopPropagation(); toggleSelect(id); }}/>
               </span>
             ) : null;
@@ -116,7 +116,7 @@ export default function Members() {
   };
 
   const [tourStep, setTourStep] = useState(() => parseInt(localStorage.getItem('app_tour_step') || '0', 10) || 0);
-  
+
   const advanceTour = (step: number) => {
     setTourStep(step);
     localStorage.setItem('app_tour_step', step.toString());
@@ -365,7 +365,7 @@ export default function Members() {
 
   return (
     <div className="min-h-screen bg-app dark:bg-[#09090b] text-primary dark:text-zinc-100 font-sans flex flex-col relative transition-colors duration-200">
-      
+
       {/* Toast Container */}
       <div className="fixed top-20 right-4 z-[100001] flex flex-col gap-3 pointer-events-none">
         {toasts.map(toastItem => (
@@ -420,22 +420,22 @@ export default function Members() {
 
       <main className="flex-1 relative p-4 sm:p-8 max-w-6xl mx-auto w-full flex flex-col z-10">
         <div className="flex items-center gap-5 mb-8 shrink-0">
-          
-          <Link 
-            id="tour-back-btn" 
-            to="/dashboard" 
-            onClick={() => { if (tourStep === 8) advanceTour(9); }} 
+
+          <Link
+            id="tour-back-btn"
+            to="/dashboard"
+            onClick={() => { if (tourStep === 8) advanceTour(9); }}
             className="block p-2.5 bg-surface dark:bg-[#121214] border border-subtle dark:border-zinc-800 rounded-xl hover:bg-muted dark:hover:bg-zinc-800 text-primary dark:text-zinc-300 transition-colors shadow-sm"
           >
             <ArrowLeft size={20} />
           </Link>
-          
+
           <div className="flex gap-6 border-b border-transparent">
              <button onClick={() => setActiveTab('roster')} className={`text-lg sm:text-xl font-bold tracking-wide pb-3 border-b-2 transition-all ${activeTab === 'roster' ? 'border-ink dark:border-white text-primary dark:text-white' : 'border-transparent text-muted-ink dark:text-zinc-500 hover:text-ink dark:hover:text-zinc-300'}`}>Roster</button>
-             
-             <button 
-               id="tour-memberships-tab" 
-               onClick={() => { setActiveTab('memberships'); if (tourStep === 5) advanceTour(6); }} 
+
+             <button
+               id="tour-memberships-tab"
+               onClick={() => { setActiveTab('memberships'); if (tourStep === 5) advanceTour(6); }}
                className={`text-lg sm:text-xl font-bold tracking-wide pb-3 border-b-2 transition-all ${activeTab === 'memberships' ? 'border-ink dark:border-white text-primary dark:text-white' : 'border-transparent text-muted-ink dark:text-zinc-500 hover:text-ink dark:hover:text-zinc-300'}`}
              >
                Memberships
@@ -456,10 +456,10 @@ export default function Members() {
                   {SKILL_LEVELS.map(lvl => <option key={lvl.id} value={lvl.id}>{lvl.label}</option>)}
                 </select>
               </div>
-              
-              <button 
-                id="tour-add-player" 
-                onClick={openCreateModal} 
+
+              <button
+                id="tour-add-player"
+                onClick={openCreateModal}
                 className="w-full sm:w-auto flex items-center justify-center gap-2 bg-ink dark:bg-[#f3f4f6] hover:bg-ink-soft dark:hover:bg-white text-white dark:text-zinc-900 px-6 py-3 rounded-xl text-sm font-bold transition-all shadow-sm shrink-0"
               >
                 <Plus size={18} /> {t('add_player', 'Add Player')}
@@ -498,7 +498,7 @@ export default function Members() {
                       <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/50">
                         {paginatedMembers.map((member) => (
                           <tr key={member.id} className="hover:bg-app dark:hover:bg-white/5 transition-colors group">
-                            <td className="p-5 font-bold text-sm text-primary dark:text-zinc-100">{member.name}</td>
+                            <td className="p-5 font-bold text-sm text-primary dark:text-zinc-100"><button type="button" onClick={() => navigate(`/members/${member.id}`)} className="text-left hover:text-ink dark:hover:text-white hover:underline transition-colors">{member.name}</button></td>
                             <td className="p-5 text-sm font-bold">
                               {normalizeGender(member.gender) === 'male' ? (
                                 <span className="text-sky-600 dark:text-[#0ea5e9] flex items-center gap-1.5">♂ {t('male', 'Male')}</span>
@@ -531,7 +531,7 @@ export default function Members() {
                     {paginatedMembers.map((member) => (
                       <div key={member.id} className="p-5 flex flex-col gap-4 hover:bg-app dark:hover:bg-white/5 transition-colors">
                         <div className="flex justify-between items-center">
-                          <div className="font-bold text-base text-primary dark:text-zinc-100">{member.name}</div>
+                          <button type="button" onClick={() => navigate(`/members/${member.id}`)} className="font-bold text-base text-primary dark:text-zinc-100 text-left hover:underline">{member.name}</button>
                           <div className="flex items-center gap-2">
                             <button onClick={() => openEditModal(member)} className="p-2 text-zinc-400 hover:text-sky-600 hover:bg-sky-50 dark:text-zinc-500 dark:hover:text-sky-400 dark:hover:bg-sky-500/10 rounded-lg transition-colors"><Edit2 size={18}/></button>
                             <button onClick={() => handleDelete(member.id)} className="p-2 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:text-zinc-500 dark:hover:text-rose-400 dark:hover:bg-rose-500/10 rounded-lg transition-colors"><Trash2 size={18}/></button>
@@ -582,14 +582,14 @@ export default function Members() {
           <div className="flex flex-col lg:flex-row gap-6 flex-1 items-start animate-in fade-in">
             {/* Sidebar: Periods */}
             <div className="w-full lg:w-80 flex flex-col gap-5">
-              <button 
-                id="tour-create-period" 
-                onClick={() => { if(tourStep === 6) { advanceTour(7); setIsPeriodModalOpen(true); } else { setIsPeriodModalOpen(true); } }} 
+              <button
+                id="tour-create-period"
+                onClick={() => { if(tourStep === 6) { advanceTour(7); setIsPeriodModalOpen(true); } else { setIsPeriodModalOpen(true); } }}
                 className="w-full bg-ink dark:bg-[#f3f4f6] hover:bg-ink-soft dark:hover:bg-white text-white dark:text-zinc-900 font-bold rounded-2xl p-4 flex items-center justify-center gap-2 shadow-sm transition-all"
               >
                 <Plus size={18} /> Create Membership Period
               </button>
-              
+
               <div className="flex flex-col gap-3">
                 {periods.length === 0 ? <p className="text-muted-ink dark:text-zinc-500 text-sm text-center py-8 font-medium">No periods found.</p> :
                   periods.map(period => (
@@ -659,7 +659,7 @@ export default function Members() {
       {isModalOpen && (
         <div className="fixed inset-0 z-[2147483647] flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in duration-200">
           <div id="tour-add-player-modal" className="bg-surface dark:bg-[#0f0f11] w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90dvh] relative border border-subtle dark:border-zinc-800">
-            
+
             {tourStep === 4 && (
                <div className="bg-amber-50 dark:bg-amber-500/10 border-b border-amber-200 dark:border-amber-500/20 p-5 text-amber-700 dark:text-amber-400 flex items-start gap-3">
                  <Sparkles className="shrink-0 mt-0.5" size={20} />
@@ -744,7 +744,7 @@ export default function Members() {
       {isPeriodModalOpen && (
         <div className="fixed inset-0 z-[2147483647] flex items-center justify-center p-4 bg-ink/80 backdrop-blur-sm animate-in fade-in duration-200">
           <div id="tour-period-form-modal" className="bg-surface dark:bg-[#0f0f11] w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-subtle dark:border-zinc-800 relative">
-            
+
             {tourStep === 7 && (
                <div className="bg-amber-50 dark:bg-amber-500/10 border-b border-amber-200 dark:border-amber-500/20 p-5 text-amber-700 dark:text-amber-400 flex items-start gap-3">
                  <Sparkles className="shrink-0 mt-0.5" size={20} />
@@ -816,7 +816,7 @@ export default function Members() {
                         {selectedPeriodMembers.includes(member.id) && <Check size={16} strokeWidth={3} />}
                       </div>
                       <div>
-                        <div className="font-bold text-base text-primary dark:text-zinc-100">{member.name}</div>
+                        <button type="button" onClick={() => navigate(`/members/${member.id}`)} className="font-bold text-base text-primary dark:text-zinc-100 text-left hover:underline">{member.name}</button>
                         <div className="text-sm font-medium text-muted-ink dark:text-zinc-500 mt-0.5">{member.skillLevel}</div>
                       </div>
                     </div>

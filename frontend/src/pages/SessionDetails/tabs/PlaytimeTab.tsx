@@ -1,4 +1,3 @@
-import React from 'react';
 import { Search } from 'lucide-react';
 
 const SKILL_LEVELS = [
@@ -24,10 +23,10 @@ const getMatchTypeStyle = (type: string) => {
   }
 };
 
-export const PlaytimeTab = ({ playtimeSearch, setPlaytimeSearch, playtimeData, setPlayerDetailModal, t }: any) => {
+export const PlaytimeTab = ({ playtimeSearch, setPlaytimeSearch, playtimeData, onPlayerClick, t }: any) => {
   return (
     <div className="animate-in fade-in duration-200 flex flex-col h-full bg-surface dark:bg-[#121214] border border-subtle dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden">
-      
+
       {/* High-Density Header & Controls */}
       <div className="p-4 sm:p-5 border-b border-subtle dark:border-zinc-800 bg-app dark:bg-[#121214] shrink-0">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -35,20 +34,20 @@ export const PlaytimeTab = ({ playtimeSearch, setPlaytimeSearch, playtimeData, s
             <h2 className="text-xl font-black text-primary dark:text-white tracking-tight">{t('playtime', 'Playtime')}</h2>
             <span className="bg-muted dark:bg-[#18181b] border border-subtle dark:border-zinc-800 text-muted-ink dark:text-zinc-400 px-2 py-0.5 rounded-md text-[10px] font-bold shadow-sm">{playtimeData.length}</span>
           </div>
-          
+
           <div className="relative w-full sm:w-64 shrink-0">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-ink dark:text-zinc-500" size={14} />
-            <input 
-              type="text" 
-              placeholder={String(t('search_players', { defaultValue: 'Search players...' }))} 
-              value={playtimeSearch} 
-              onChange={(e) => setPlaytimeSearch(e.target.value)} 
+            <input
+              type="text"
+              placeholder={String(t('search_players', { defaultValue: 'Search players...' }))}
+              value={playtimeSearch}
+              onChange={(e) => setPlaytimeSearch(e.target.value)}
               className="w-full pl-9 pr-3 py-2 bg-surface dark:bg-[#18181b] border border-subtle dark:border-zinc-800 rounded-lg shadow-sm outline-none focus:ring-1 focus:ring-ink text-xs font-medium text-primary dark:text-white transition-all"
             />
           </div>
         </div>
       </div>
-      
+
       {/* Desktop Table View */}
       <div className="hidden sm:block overflow-x-auto flex-1">
         <table className="w-full text-left border-collapse min-w-[600px]">
@@ -68,9 +67,9 @@ export const PlaytimeTab = ({ playtimeSearch, setPlaytimeSearch, playtimeData, s
                 <tr key={member.id} className="hover:bg-app dark:hover:bg-white/5 transition-colors">
                   <td className="px-5 py-2">
                     <div className="flex items-center gap-3">
-                      <span 
-                        className="font-bold text-sm text-primary dark:text-zinc-100 truncate cursor-pointer hover:text-ink dark:hover:text-white transition-colors max-w-[200px]" 
-                        onClick={(e) => { e.preventDefault(); setPlayerDetailModal(member.id); }}
+                      <span
+                        className="font-bold text-sm text-primary dark:text-zinc-100 truncate cursor-pointer hover:text-ink dark:hover:text-white transition-colors max-w-[200px]"
+                        onClick={(e) => { e.preventDefault(); onPlayerClick(member.id); }}
                       >
                         {member.name}
                       </span>
@@ -79,10 +78,10 @@ export const PlaytimeTab = ({ playtimeSearch, setPlaytimeSearch, playtimeData, s
                       </span>
                     </div>
                   </td>
-                  
+
                   <td className="px-2.5 py-2 relative">
                     <div className="flex flex-wrap gap-1.5">
-                      {playedGames.length === 0 ? <span className="text-xs font-medium text-muted-ink dark:text-zinc-500 italic">No matches yet</span> : 
+                      {playedGames.length === 0 ? <span className="text-xs font-medium text-muted-ink dark:text-zinc-500 italic">No matches yet</span> :
                         playedGames.map((g: any, i: number) => {
                           const style = getMatchTypeStyle(g.type);
                           return (
@@ -90,19 +89,19 @@ export const PlaytimeTab = ({ playtimeSearch, setPlaytimeSearch, playtimeData, s
                               <span className={`px-2 py-0.5 text-[9px] font-black tracking-widest uppercase rounded border transition-colors ${style.badge} ${g.result === 'Ongoing' && 'animate-pulse ring-1 ring-blue-400'}`}>
                                 {g.type}
                               </span>
-                              
+
                               {/* Symmetrical Scoreboard Tooltip */}
                               <div className="hidden group-hover:flex group-focus:flex absolute z-[100] bottom-full left-1/2 -translate-x-1/2 mb-2 w-[300px] bg-surface dark:bg-[#18181b] p-4 rounded-2xl shadow-2xl border border-subtle dark:border-zinc-700 ring-1 ring-black/5 flex-col gap-4">
                                 <div className="flex justify-between items-center w-full">
                                   <span className={`font-black uppercase tracking-widest text-[10px] whitespace-nowrap ${style.text}`}>{g.type} MATCH</span>
                                   <span className={`px-2 py-0.5 rounded font-bold text-[10px] uppercase tracking-widest whitespace-nowrap border ${
-                                    g.result === 'Won' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400' : 
-                                    g.result === 'Lost' ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:border-rose-500/20 dark:text-rose-400' : 
+                                    g.result === 'Won' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400' :
+                                    g.result === 'Lost' ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:border-rose-500/20 dark:text-rose-400' :
                                     g.result === 'Ongoing' ? 'bg-accent-soft text-ink border-transparent dark:bg-accent-soft-dark dark:text-white animate-pulse' :
                                     'bg-app text-muted-ink border-subtle dark:bg-[#121214] dark:border-zinc-800 dark:text-zinc-500'
                                   }`}>{String(t(g.result.toLowerCase(), { defaultValue: g.result }))}</span>
                                 </div>
-                                
+
                                 <div className="flex items-center justify-between gap-3">
                                   <div className="flex flex-col flex-1 text-right min-w-0">
                                     <span className="font-bold text-sm text-primary dark:text-white truncate">{member.name}</span>
@@ -131,11 +130,11 @@ export const PlaytimeTab = ({ playtimeSearch, setPlaytimeSearch, playtimeData, s
                       }
                     </div>
                   </td>
-                  
+
                   <td className="px-2.5 py-2 text-center">
                     <span className="font-black text-lg text-primary dark:text-white">{playedGames.length}</span>
                   </td>
-                  
+
                   <td className="px-5 py-2 text-right">
                     <span className={`px-2 py-1 rounded-md text-[9px] font-bold tracking-widest uppercase border inline-block ${attendance.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400' : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-400'}`}>
                       {attendance.status === 'active' ? t('status_active', 'ACTIVE') : t('resting', 'RESTING')}
@@ -155,12 +154,12 @@ export const PlaytimeTab = ({ playtimeSearch, setPlaytimeSearch, playtimeData, s
         ) : (
           playtimeData.map(({ member, attendance, playedGames }: any) => (
             <div key={member.id} className="p-3 hover:bg-app dark:hover:bg-white/5 transition-colors flex flex-col gap-2.5">
-              
+
               <div className="flex justify-between items-start gap-2">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <span 
-                    className="font-bold text-sm text-primary dark:text-zinc-100 truncate cursor-pointer hover:underline" 
-                    onClick={(e) => { e.preventDefault(); setPlayerDetailModal(member.id); }}
+                  <span
+                    className="font-bold text-sm text-primary dark:text-zinc-100 truncate cursor-pointer hover:underline"
+                    onClick={(e) => { e.preventDefault(); onPlayerClick(member.id); }}
                   >
                     {member.name}
                   </span>
@@ -168,7 +167,7 @@ export const PlaytimeTab = ({ playtimeSearch, setPlaytimeSearch, playtimeData, s
                     {member.skillLevel ? member.skillLevel.split(' ')[0] : 'C1'}
                   </span>
                 </div>
-                
+
                 <div className="flex items-center gap-2 shrink-0">
                   <div className="flex items-center gap-1 bg-app dark:bg-[#18181b] border border-subtle dark:border-zinc-800 px-2 py-0.5 rounded-md shadow-sm">
                     <span className="font-black text-sm text-primary dark:text-white leading-none">{playedGames.length}</span>
@@ -179,9 +178,9 @@ export const PlaytimeTab = ({ playtimeSearch, setPlaytimeSearch, playtimeData, s
                   </span>
                 </div>
               </div>
-              
+
               <div className="flex flex-wrap gap-1.5">
-                {playedGames.length === 0 ? <span className="text-xs font-medium text-muted-ink dark:text-zinc-500 italic">No matches yet</span> : 
+                {playedGames.length === 0 ? <span className="text-xs font-medium text-muted-ink dark:text-zinc-500 italic">No matches yet</span> :
                   playedGames.map((g: any, i: number) => {
                     const style = getMatchTypeStyle(g.type);
                     return (
@@ -189,19 +188,19 @@ export const PlaytimeTab = ({ playtimeSearch, setPlaytimeSearch, playtimeData, s
                         <span className={`px-2 py-0.5 text-[9px] font-black tracking-widest uppercase rounded border transition-colors ${style.badge} ${g.result === 'Ongoing' && 'animate-pulse ring-1 ring-blue-400'}`}>
                           {g.type}
                         </span>
-                        
+
                         {/* Mobile Hover Tooltip */}
                         <div className="hidden group-hover:flex group-focus:flex absolute z-[100] top-full mt-2 left-0 sm:left-1/2 sm:-translate-x-1/2 w-[280px] bg-surface dark:bg-[#18181b] p-3 rounded-xl shadow-2xl border border-subtle dark:border-zinc-700 ring-1 ring-black/5 flex-col gap-3">
                           <div className="flex justify-between items-center w-full border-b border-subtle dark:border-zinc-800 pb-2">
                             <span className={`font-black uppercase tracking-widest text-[10px] whitespace-nowrap ${style.text}`}>{g.type} MATCH</span>
                             <span className={`px-2 py-0.5 rounded font-bold text-[10px] uppercase tracking-widest whitespace-nowrap border ${
-                              g.result === 'Won' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400' : 
-                              g.result === 'Lost' ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:border-rose-500/20 dark:text-rose-400' : 
+                              g.result === 'Won' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400' :
+                              g.result === 'Lost' ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:border-rose-500/20 dark:text-rose-400' :
                               g.result === 'Ongoing' ? 'bg-accent-soft text-ink border-transparent dark:bg-accent-soft-dark dark:text-white animate-pulse' :
                               'bg-app text-muted-ink border-subtle dark:bg-[#121214] dark:border-zinc-800 dark:text-zinc-500'
                             }`}>{String(t(g.result.toLowerCase(), { defaultValue: g.result }))}</span>
                           </div>
-                          
+
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex flex-col flex-1 text-right min-w-0">
                               <span className="font-bold text-xs text-primary dark:text-white truncate">{member.name}</span>
@@ -229,7 +228,7 @@ export const PlaytimeTab = ({ playtimeSearch, setPlaytimeSearch, playtimeData, s
                   })
                 }
               </div>
-              
+
             </div>
           ))
         )}

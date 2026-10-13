@@ -13,6 +13,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const VerifyEmailChange = lazy(() => import('./pages/VerifyEmailChange'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const Members = lazy(() => import('./pages/Members'));
+const MemberDetail = lazy(() => import('./pages/MemberDetail'));
 const Sessions = lazy(() => import('./pages/Sessions'));
 const SessionDetails = lazy(() => import('./pages/SessionDetails'));
 const Leaderboard = lazy(() => import('./pages/Leaderboard'));
@@ -47,6 +48,7 @@ function App() {
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/verify-email-change" element={<VerifyEmailChange />} />
           <Route path="/members" element={<ProtectedRoute><Members /></ProtectedRoute>} />
+          <Route path="/members/:id" element={<ProtectedRoute><MemberDetail /></ProtectedRoute>} />
           <Route path="/sessions" element={<ProtectedRoute><Sessions /></ProtectedRoute>} />
           <Route path="/sessions/:id" element={<ProtectedRoute><SessionDetails /></ProtectedRoute>} />
           <Route path="/leaderboard" element={<Leaderboard />} />

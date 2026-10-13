@@ -6,13 +6,13 @@ import {
   Check, Pause, X, Zap, Globe, Sun, Moon, LogOut, ChevronDown, Search,
   ArrowRightLeft, ListOrdered, AlertCircle, AlertTriangle, FileDown, Square,
   Trophy, Wallet, RotateCcw, CircleHelp,
-  ChevronLeft, ChevronRight, Lock, Unlock, Info, PlayCircle, StickyNote, Medal
+  ChevronLeft, ChevronRight, Lock, Unlock, Info, PlayCircle, StickyNote
 } from 'lucide-react';
 import api from '../../api/axios';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-import { SessionGlobalTimer, getMatchTypeColor } from './utils';
+import { SessionGlobalTimer } from './utils';
 import { PlayerSlotSelect } from './components/PlayerSlotSelect';
 import { MatchCard } from './components/MatchCard';
 
@@ -38,13 +38,6 @@ const TABS = [
   { id: 'settings', label: 'settings', icon: <SettingsIcon size={16} /> }
 ];
 
-const normalizeGender = (value: unknown): 'male' | 'female' | null => {
-  const gender = String(value ?? '').trim().toLowerCase();
-  if (['male', 'man', 'm', 'laki-laki', 'laki laki', 'pria'].includes(gender)) return 'male';
-  if (['female', 'woman', 'f', 'perempuan', 'wanita'].includes(gender)) return 'female';
-  return null;
-};
-
 const SKILL_LEVELS = [
   { id: 'A1', label: 'A1 - Pro', color: 'bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-200 border border-slate-200 dark:border-zinc-700' },
   { id: 'A2', label: 'A2 - Advanced', color: 'bg-purple-50 text-purple-700 dark:bg-[#3b0764]/60 dark:text-[#d8b4fe] border border-purple-200 dark:border-purple-800/60' },
@@ -55,7 +48,6 @@ const SKILL_LEVELS = [
 ];
 
 const getBadgeStyle = (levelId?: string) => SKILL_LEVELS.find(s => s.id === levelId)?.color || 'bg-muted text-primary-soft dark:bg-zinc-800 dark:text-zinc-400 border border-transparent dark:border-zinc-700';
-const getBadgeLabel = (levelId?: string) => SKILL_LEVELS.find(s => s.id === levelId)?.label || levelId || 'N/A';
 
 export default function SessionDetails() {
   const { id } = useParams();
@@ -95,7 +87,6 @@ export default function SessionDetails() {
 
   const [editCourtId, setEditCourtId] = useState<number | null>(null);
   const [courtName, setCourtName] = useState('');
-  const [playerDetailModal, setPlayerDetailModal] = useState<number | null>(null);
   const [isWaitingListOpen, setIsWaitingListOpen] = useState(false);
   const [isFairnessModalOpen, setIsFairnessModalOpen] = useState(false);
 
@@ -409,8 +400,6 @@ export default function SessionDetails() {
   const getSwapListFor = (currentKey: 'ta1'|'ta2'|'tb1'|'tb2') => Object.entries(manualPlayers).filter(([k, v]) => k !== currentKey && v !== 0).map(([, v]) => ({ id: v, name: getMemberData(v)?.name || '' }));
   const getHistorySwapListFor = (currentKey: 'ta1'|'ta2'|'tb1'|'tb2') => Object.entries(historyForm).filter(([k]) => k.startsWith('t')).filter(([k, v]) => k !== currentKey && v !== 0).map(([, v]) => ({ id: v, name: getMemberData(v as number)?.name || '' }));
 
-  const selectedDetailPlayer = playerDetailModal ? getMemberData(playerDetailModal) : null;
-  const selectedDetailGames = playerDetailModal ? calculatePlayerGames(selectedDetailPlayer) : [];
 
   // ACTIONS
   const handleStartSession = async () => { if(isProcessing) return; setIsProcessing(true); try { await api.put(`/sessions/${id}/start`); await fetchSessionData(); addToast("Session started successfully"); } catch(err) { addToast("Error starting session", "error"); } finally { setIsProcessing(false); } };
@@ -498,12 +487,6 @@ export default function SessionDetails() {
     });
     autoTable(doc, { startY: tableStartY, head: [['Type', 'Details', 'Team A', 'Score', 'Team B']], body: tableData.map(row => row.slice(0, 5)), theme: 'grid', headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' }, styles: { font: 'helvetica', fontSize: 10, cellPadding: 5, lineColor: [226, 232, 240] }, alternateRowStyles: { fillColor: [248, 250, 252] }, didParseCell: function (data) { if (data.section === 'body') { const winner = tableData[data.row.index][5]; if (data.column.index === 1) { data.cell.styles.textColor = [100, 116, 139]; data.cell.styles.fontSize = 8; } if (winner === 'A') { if (data.column.index === 2 || data.column.index === 3) { data.cell.styles.textColor = [5, 150, 105]; data.cell.styles.fontStyle = 'bold'; } } else if (winner === 'B') { if (data.column.index === 4 || data.column.index === 3) { data.cell.styles.textColor = [5, 150, 105]; data.cell.styles.fontStyle = 'bold'; } } } } });
     doc.save(`Session_${session?.name}_Report.pdf`); addToast("Session PDF Exported successfully!");
-  };
-
-  const exportPlayerPDF = (_memberId: number, memberName: string, playedGames: any[]) => {
-    const doc = new jsPDF(); const tableStartY = applyPDFHeaderFooter(doc, `Player Report: ${memberName}`, `Session: ${session?.name} | Date: ${new Date(session?.date).toLocaleString(i18n.language)}`);
-    autoTable(doc, { startY: tableStartY, head: [['Type', 'Details', 'Partner', 'Score', 'Opponents', 'Result']], body: playedGames.map(g => [g.type, `${g.courtName}\n${g.duration}`, g.partnerName, g.scoreString, `${g.opp1Name} & ${g.opp2Name}`, g.result]), theme: 'grid', headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' }, styles: { font: 'helvetica', fontSize: 10, cellPadding: 5, lineColor: [226, 232, 240] }, alternateRowStyles: { fillColor: [248, 250, 252] }, didParseCell: function (data) { if (data.section === 'body') { const result = (data.row.raw as any[])[5]; if (data.column.index === 1) { data.cell.styles.textColor = [100, 116, 139]; data.cell.styles.fontSize = 8; } if (result === 'Won') { if (data.column.index === 2 || data.column.index === 3 || data.column.index === 5) { data.cell.styles.textColor = [5, 150, 105]; data.cell.styles.fontStyle = 'bold'; } } else if (result === 'Lost') { if (data.column.index === 4) { data.cell.styles.textColor = [5, 150, 105]; data.cell.styles.fontStyle = 'bold'; } if (data.column.index === 5) { data.cell.styles.textColor = [225, 29, 72]; data.cell.styles.fontStyle = 'bold'; } } else if (result === 'Ongoing') { if (data.column.index === 5) { data.cell.styles.textColor = [37, 99, 235]; } } } } });
-    doc.save(`Player_${memberName}_Report.pdf`); addToast("Player PDF Exported successfully!");
   };
 
   const openAttendeeModal = () => { setSelectedAttendees([]); setModalSearch(''); setAttendeeModalOpen(true); };
@@ -938,7 +921,7 @@ export default function SessionDetails() {
         <Suspense fallback={<div className="rounded-2xl border border-subtle bg-surface p-12 text-center text-sm font-medium text-muted-ink dark:border-zinc-800 dark:bg-[#121214] dark:text-zinc-500">Loading tab…</div>}>
           <div className={isSimpleMode ? 'hidden' : 'contents'}>
           {activeTab === 'attendance' && (
-             <AttendanceTab visibleAttendances={visibleAttendances} session={session} communityData={communityData} attendanceTeamTab={attendanceTeamTab} setAttendanceTeamTab={setAttendanceTeamTab} attendanceSearch={attendanceSearch} setAttendanceSearch={setAttendanceSearch} openWalkInModal={openWalkInModal} openAttendeeModal={openAttendeeModal} setPlayerDetailModal={setPlayerDetailModal} handleUpdateGrade={handleUpdateGrade} updateAttendanceStatus={updateAttendanceStatus} isProcessing={isProcessing} t={t} />
+             <AttendanceTab visibleAttendances={visibleAttendances} session={session} communityData={communityData} attendanceTeamTab={attendanceTeamTab} setAttendanceTeamTab={setAttendanceTeamTab} attendanceSearch={attendanceSearch} setAttendanceSearch={setAttendanceSearch} openWalkInModal={openWalkInModal} openAttendeeModal={openAttendeeModal} onPlayerClick={(memberId: number) => navigate(`/members/${memberId}`)} handleUpdateGrade={handleUpdateGrade} updateAttendanceStatus={updateAttendanceStatus} isProcessing={isProcessing} t={t} />
           )}
           {activeTab === 'courts' && (
              <CourtsTab courts={courts} editCourtId={editCourtId} setEditCourtId={setEditCourtId} courtName={courtName} setCourtName={setCourtName} handleAddCourt={handleAddCourt} handleUpdateCourt={handleUpdateCourt} setConfirmDeleteCourtId={setConfirmDeleteCourtId} isProcessing={isProcessing} t={t} inputStyles={inputStyles} />
@@ -956,7 +939,7 @@ export default function SessionDetails() {
              <LeaderboardTab session={session} communityData={communityData} leaderboardSearch={leaderboardSearch} setLeaderboardSearch={setLeaderboardSearch} lbLimitType={lbLimitType} setLbLimitType={setLbLimitType} lbCustomLimit={lbCustomLimit} setLbCustomLimit={setLbCustomLimit} sessionLeaderboardData={sessionLeaderboardData} sparringScore={sparringScore} t={t} inputStyles={inputStyles} />
           )}
           {activeTab === 'playtime' && (
-             <PlaytimeTab playtimeSearch={playtimeSearch} setPlaytimeSearch={setPlaytimeSearch} playtimeData={playtimeData} setPlayerDetailModal={setPlayerDetailModal} t={t} inputStyles={inputStyles} />
+             <PlaytimeTab playtimeSearch={playtimeSearch} setPlaytimeSearch={setPlaytimeSearch} playtimeData={playtimeData} onPlayerClick={(memberId: number) => navigate(`/members/${memberId}`)} t={t} inputStyles={inputStyles} />
           )}
           {activeTab === 'notes' && (
              <NotesTab session={session} fetchSessionData={fetchSessionData} t={t} />
@@ -1095,7 +1078,7 @@ export default function SessionDetails() {
 
           {/* Attendance View inside Simple Mode */}
           <div className={`${activeTab === 'attendance' ? 'block' : 'hidden'} bg-surface dark:bg-[#121214] p-5 sm:p-8 rounded-3xl border border-subtle dark:border-zinc-800 shadow-sm`}>
-             <AttendanceTab visibleAttendances={visibleAttendances} session={session} communityData={communityData} attendanceTeamTab={attendanceTeamTab} setAttendanceTeamTab={setAttendanceTeamTab} attendanceSearch={attendanceSearch} setAttendanceSearch={setAttendanceSearch} openWalkInModal={openWalkInModal} openAttendeeModal={openAttendeeModal} setPlayerDetailModal={setPlayerDetailModal} handleUpdateGrade={handleUpdateGrade} updateAttendanceStatus={updateAttendanceStatus} isProcessing={isProcessing} t={t} />
+             <AttendanceTab visibleAttendances={visibleAttendances} session={session} communityData={communityData} attendanceTeamTab={attendanceTeamTab} setAttendanceTeamTab={setAttendanceTeamTab} attendanceSearch={attendanceSearch} setAttendanceSearch={setAttendanceSearch} openWalkInModal={openWalkInModal} openAttendeeModal={openAttendeeModal} onPlayerClick={(memberId: number) => navigate(`/members/${memberId}`)} handleUpdateGrade={handleUpdateGrade} updateAttendanceStatus={updateAttendanceStatus} isProcessing={isProcessing} t={t} />
           </div>
         </div>
       </main>

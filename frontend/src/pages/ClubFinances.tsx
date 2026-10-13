@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Wallet, Search, ArrowUpRight, ArrowDownRight, 
   Download, ChevronDown, RefreshCcw, X, Plus, LogOut, 
-  Globe, Sun, Moon, Settings as SettingsIcon, TrendingUp,
+  Globe, Sun, Moon, Settings as SettingsIcon,
   ChevronLeft, ChevronRight, Zap, Activity, PieChart, BarChart2
 } from 'lucide-react';
 import api from '../api/axios';
@@ -248,16 +248,6 @@ export default function ClubFinances() {
   }, [hoveredCat, categoryData]);
 
   // CSS Donut Chart Generator
-  const donutGradient = useMemo(() => {
-    if (categoryData.list.length === 0) return 'conic-gradient(#27272a 0% 100%)';
-    let gradientStops = [];
-    let currentPercent = 0;
-    for (const cat of categoryData.list) {
-      gradientStops.push(`${cat.color} ${currentPercent}% ${currentPercent + cat.percent}%`);
-      currentPercent += cat.percent;
-    }
-    return `conic-gradient(${gradientStops.join(', ')})`;
-  }, [categoryData]);
 
   // Recent Sessions Trend Data
   const trendData = useMemo(() => {
