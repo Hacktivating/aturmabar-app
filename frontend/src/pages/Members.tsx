@@ -296,7 +296,7 @@ export default function Members() {
       addToast(t('delete_success', 'Player deleted'), 'success');
       const res = await api.get('/members');
       setMembers(res.data);
-    } catch (err) { addToast(t('delete_failed'), 'error'); }
+    } catch (err: any) { addToast(err.response?.data?.error || t('delete_failed'), 'error'); }
   };
 
   const handleCreatePeriod = async (e: React.FormEvent) => {
