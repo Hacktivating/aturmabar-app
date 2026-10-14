@@ -30,6 +30,47 @@ export const MatchesTab = ({
     return Array.from({ length: Math.min(3, Math.floor(rotatedPool.length / 4)) }, (_, index) => rotatedPool.slice(index * 4, index * 4 + 4));
   }, [previewPool, previewCycle]);
 
+  const getMatchExplanation = (match: any) => {
+    const playerIds = [match.teamA_player1, match.teamA_player2, match.teamB_player1, match.teamB_player2].filter(Boolean).map(Number);
+    const players = playerIds.map(playerId => getMemberData(playerId)).filter(Boolean);
+    const names = players.map((player: any) => player.name).filter(Boolean);
+    const grades = players.map((player: any) => player.skillLevel).filter(Boolean);
+    const gradeSet = [...new Set(grades)];
+    const waitingStats = players.map((player: any) => waitingListPlayers.find((waiting: any) => Number(waiting.id) === Number(player.id))).filter(Boolean);
+    const playedValues = waitingStats.map((player: any) => Number(player.gamesPlayed)).filter(Number.isFinite);
+    const lowestPlayed = playedValues.length ? Math.min(...playedValues) : null;
+    const highestPlayed = playedValues.length ? Math.max(...playedValues) : null;
+    const status = match.status === 'on_court' ? 'playing' : match.status === 'finished' ? 'finished' : 'queued';
+    const strictness = session?.pairingRule;
+    const isSparring = session?.sessionType === 'sparring';
+    const nameLine = names.length ? names.slice(0, 4).join(', ').replace(/, ([^,]*)$/, ' and $1') : 'the selected players';
+    const variations = [
+      `This group is a practical next step for ${nameLine}. It keeps the session moving while leaving the court in front of them undisturbed.`,
+      `The pairing looks like a sensible fit for the current queue: ${nameLine} are grouped without pulling players out of an ongoing game.`,
+      `This is a balanced-looking option for the next turn. The goal here is to give ${nameLine} a fair opportunity while the rotation continues.`,
+      `The organizer view points to this group because it fits the next available turn, rather than forcing a reshuffle of matches already in progress.`
+    ];
+    const lead = variations[Number(match.id || 0) % variations.length];
+    const details: string[] = [];
+    if (status === 'playing') details.push('The match is already on court, so the player assignments are being kept stable until it is finished or canceled.');
+    else if (status === 'finished') details.push('This is a record of a completed match; the notes below describe the selection context, not a new recommendation.');
+    else details.push('The match is waiting for its turn and can be moved or edited without changing any match that is currently playing.');
+    if (!isSparring && strictness) {
+      const strictLabel = strictness === 'very_strict' ? 'Very Strict' : strictness === 'strict' ? 'Strict' : strictness === 'moderate' ? 'Moderate' : 'Randomize';
+      details.push(strictness === 'randomize' ? 'The session is using a more flexible rotation, so grade similarity is not treated as the only deciding factor.' : `The ${strictLabel} setting gives grade compatibility a ${strictness === 'very_strict' ? 'very strong' : 'strong'} influence when the next group is chosen.`);
+    } else if (isSparring) {
+      details.push('This is a sparring fixture, so the two sides follow the session sequence instead of the normal grade-based rotation.');
+    }
+    if (gradeSet.length === 1 && gradeSet[0]) details.push(`Everyone shown here is in ${gradeSet[0]}, which keeps the level of play consistent.`);
+    else if (gradeSet.length > 1) details.push(`The group spans ${gradeSet.join(' and ')}; that wider mix is shown here so you can review the trade-off before starting it.`);
+    if (lowestPlayed !== null && highestPlayed !== null) {
+      details.push(lowestPlayed === highestPlayed ? `The visible rotation counts are even at ${lowestPlayed} game${lowestPlayed === 1 ? '' : 's'} played.` : `The visible rotation counts range from ${lowestPlayed} to ${highestPlayed} games played, helping the next turn stay reasonably even.`);
+    } else {
+      details.push('Recent-turn counts are kept in the waiting-list view, where you can compare who has played least before making a change.');
+    }
+    return { lead, details };
+  };
+
   const renderWaitingListContent = () => (
     <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
       {waitingListPlayers.length === 0 ? (
@@ -368,11 +409,17 @@ export const MatchesTab = ({
           </div>
         )}
 
-        {explanationMatch && (
-          <div className="fixed inset-0 z-[9999] flex items-end justify-end bg-ink/50 backdrop-blur-sm sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="match-explanation-title">
-            <div className="flex h-full w-full max-w-md flex-col border-l border-subtle bg-surface shadow-2xl dark:border-zinc-800 dark:bg-[#0f0f11] sm:h-auto sm:max-h-[90dvh] sm:rounded-3xl sm:border"><div className="flex items-start justify-between border-b border-subtle bg-app px-5 py-4 dark:border-zinc-800 dark:bg-[#121214]"><div><p className="text-[10px] font-black uppercase tracking-widest text-muted-ink dark:text-zinc-500">Organizer view</p><h2 id="match-explanation-title" className="mt-1 text-xl font-black text-primary dark:text-white">Why this match?</h2></div><button type="button" onClick={() => setExplanationMatch(null)} className="rounded-full p-2 text-muted-ink hover:bg-muted dark:text-zinc-400 dark:hover:bg-zinc-800"><X size={20}/></button></div><div className="space-y-4 overflow-y-auto p-6"><div className="rounded-2xl border border-subtle bg-app p-4 dark:border-zinc-800 dark:bg-[#121214]"><p className="text-xs font-bold uppercase tracking-widest text-muted-ink dark:text-zinc-500">Status</p><p className="mt-1 text-lg font-black text-primary dark:text-white">{explanationMatch.status === 'on_court' ? 'Playing' : explanationMatch.status === 'finished' ? 'Finished' : 'Queued'}</p></div><div className="space-y-3 text-sm font-medium leading-relaxed text-muted-ink dark:text-zinc-400"><p>• Players already in another active match are excluded.</p><p>• Lower games played is prioritized for the next selection.</p><p>• Grade proximity follows the selected matchmaking strictness.</p><p>• This view explains the inputs only; it does not change match generation.</p></div></div></div>
-          </div>
-        )}
+        {explanationMatch && (() => {
+          const explanation = getMatchExplanation(explanationMatch);
+          return (
+            <div className="fixed inset-0 z-[9999] flex items-end justify-end bg-ink/50 backdrop-blur-sm sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="match-explanation-title">
+              <div className="flex h-full w-full max-w-md flex-col border-l border-subtle bg-surface shadow-2xl dark:border-zinc-800 dark:bg-[#0f0f11] sm:h-auto sm:max-h-[90dvh] sm:rounded-3xl sm:border">
+                <div className="flex items-start justify-between border-b border-subtle bg-app px-5 py-4 dark:border-zinc-800 dark:bg-[#121214]"><div><p className="text-[10px] font-black uppercase tracking-widest text-muted-ink dark:text-zinc-500">Organizer view</p><h2 id="match-explanation-title" className="mt-1 text-xl font-black text-primary dark:text-white">Why this match?</h2><p className="mt-1 text-xs font-medium text-muted-ink dark:text-zinc-400">A plain-language look at the choice, not a technical log.</p></div><button type="button" onClick={() => setExplanationMatch(null)} className="rounded-full p-2 text-muted-ink hover:bg-muted dark:text-zinc-400 dark:hover:bg-zinc-800"><X size={20}/></button></div>
+                <div className="space-y-4 overflow-y-auto p-6"><div className="rounded-2xl border border-subtle bg-app p-4 dark:border-zinc-800 dark:bg-[#121214]"><p className="text-xs font-bold uppercase tracking-widest text-muted-ink dark:text-zinc-500">At a glance</p><p className="mt-2 text-base font-black leading-snug text-primary dark:text-white">{explanation.lead}</p></div><div className="space-y-3 text-sm font-medium leading-relaxed text-muted-ink dark:text-zinc-400">{explanation.details.map((detail: string, index: number) => <div key={`${explanationMatch.id}-${index}`} className="flex gap-3"><span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-ink/60 dark:bg-zinc-500"/><p>{detail}</p></div>)}</div><div className="rounded-xl border border-dashed border-subtle px-4 py-3 text-xs font-medium leading-relaxed text-muted-ink dark:border-zinc-800 dark:text-zinc-500">Use this panel as a quick review before changing the match. It explains the current inputs; it does not alter how matches are generated.</div></div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
