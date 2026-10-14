@@ -89,6 +89,7 @@ export default function SessionDetails() {
   const [courtName, setCourtName] = useState('');
   const [isWaitingListOpen, setIsWaitingListOpen] = useState(false);
   const [isFairnessModalOpen, setIsFairnessModalOpen] = useState(false);
+  const [isEndSessionModalOpen, setIsEndSessionModalOpen] = useState(false);
 
   // --- SIMPLE MODE STATES (HARDENED SECURITY) ---
   const [isSimpleMode, setIsSimpleMode] = useState(() => localStorage.getItem(`simple_mode_${id}`) === 'true');
@@ -403,7 +404,8 @@ export default function SessionDetails() {
 
   // ACTIONS
   const handleStartSession = async () => { if(isProcessing) return; setIsProcessing(true); try { await api.put(`/sessions/${id}/start`); await fetchSessionData(); addToast("Session started successfully"); } catch(err) { addToast("Error starting session", "error"); } finally { setIsProcessing(false); } };
-  const handleEndSession = async () => { if(isProcessing || !window.confirm("Are you sure you want to end this session? All ongoing matches will need to be finished manually.")) return; setIsProcessing(true); try { await api.put(`/sessions/${id}/finish`); await fetchSessionData(); addToast("Session ended successfully"); } catch(err) { addToast("Error ending session", "error"); } finally { setIsProcessing(false); } };
+  const handleEndSession = () => { if (!isProcessing) setIsEndSessionModalOpen(true); };
+  const confirmEndSession = async () => { if(isProcessing) return; setIsProcessing(true); try { await api.put(`/sessions/${id}/finish`); setIsEndSessionModalOpen(false); await fetchSessionData(); addToast("Session ended successfully"); } catch(err) { addToast("Error ending session", "error"); } finally { setIsProcessing(false); } };
 
   const handleUpdateSessionRule = async (rule: string) => {
     if (isProcessing) return; setIsProcessing(true);
@@ -1029,6 +1031,7 @@ export default function SessionDetails() {
                            isProcessing={isProcessing}
                            getMemberData={getMemberData}
                            openEditMatchModal={openEditMatchModal}
+                           openEditHistoryModal={openEditHistoryModal}
                            handleFinishMatch={handleFinishMatch}
                            setConfirmDeleteMatchId={setConfirmDeleteMatchId}
                            setConfirmResetMatchId={setConfirmResetMatchId}
@@ -1060,6 +1063,7 @@ export default function SessionDetails() {
                          isProcessing={isProcessing}
                          getMemberData={getMemberData}
                          openEditMatchModal={openEditMatchModal}
+                         openEditHistoryModal={openEditHistoryModal}
                          handleFinishMatch={handleFinishMatch}
                          setConfirmDeleteMatchId={setConfirmDeleteMatchId}
                          setConfirmResetMatchId={setConfirmResetMatchId}
@@ -1128,6 +1132,17 @@ export default function SessionDetails() {
         ALL MODALS - WITH EXPLICIT Z-INDEX 9999 TO FIX OVERLAPS
         =========================================================
       */}
+
+      {isEndSessionModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center bg-ink/80 p-4 backdrop-blur-sm animate-in fade-in" style={{ zIndex: 9999 }}>
+          <div role="dialog" aria-modal="true" aria-labelledby="end-session-title" className="w-full max-w-md rounded-3xl border border-subtle bg-surface p-7 text-center shadow-2xl dark:border-zinc-800 dark:bg-[#0f0f11]">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-200 bg-amber-50 text-amber-600 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300"><Square size={28} fill="currentColor" /></div>
+            <h3 id="end-session-title" className="text-xl font-black text-primary dark:text-white">End this session?</h3>
+            <p className="mt-3 text-sm font-medium leading-relaxed text-muted-ink dark:text-zinc-400">All ongoing matches will remain available for manual completion. You can restart the session later if needed.</p>
+            <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row"><button type="button" disabled={isProcessing} onClick={() => setIsEndSessionModalOpen(false)} className="h-11 flex-1 rounded-xl border border-subtle bg-app text-sm font-bold text-primary hover:bg-muted disabled:opacity-50 dark:border-zinc-700 dark:bg-[#18181b] dark:text-white dark:hover:bg-zinc-800">Keep session open</button><button type="button" disabled={isProcessing} onClick={confirmEndSession} className="h-11 flex-1 rounded-xl bg-rose-600 text-sm font-black text-white hover:bg-rose-500 disabled:opacity-50">{isProcessing ? 'Ending…' : 'End session'}</button></div>
+          </div>
+        </div>
+      )}
 
       {/* --- SIMPLE MODE SPECIFIC MODALS --- */}
 

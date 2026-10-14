@@ -276,6 +276,7 @@ export const MatchesTab = ({
                       isProcessing={isProcessing}
                       getMemberData={getMemberData}
                       openEditMatchModal={openEditMatchModal}
+                      openEditHistoryModal={openEditHistoryModal}
                       handleFinishMatch={handleFinishMatch}
                       setConfirmDeleteMatchId={setConfirmDeleteMatchId}
                       setConfirmResetMatchId={setConfirmResetMatchId}
@@ -303,7 +304,7 @@ export const MatchesTab = ({
                         sessionStatus={session?.status} 
                         isProcessing={isProcessing} 
                         getMemberData={getMemberData} 
-                        openEditMatchModal={openEditMatchModal} 
+                        openEditMatchModal={openEditMatchModal} openEditHistoryModal={openEditHistoryModal}
                         handleFinishMatch={handleFinishMatch} 
                         setConfirmDeleteMatchId={setConfirmDeleteMatchId} 
                         setConfirmResetMatchId={setConfirmResetMatchId}
