@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import { db } from "../db";
-import { members, communities, membershipPeriods, membershipPayments } from "../db/schema";
+import { members, communities, membershipPeriods, membershipPayments, matches, sessions } from "../db/schema";
 import { verifyAuth, AuthRequest } from "../middleware/auth";
 
 const router = Router();
@@ -57,9 +57,35 @@ router.put("/:id", async (req: AuthRequest, res) => {
 router.delete("/:id", async (req: AuthRequest, res) => {
   try {
     const memberId = parseInt(String(req.params.id), 10);
-    await db.delete(members).where(eq(members.id, memberId));
+    const community = await getCommunity(req.user!.userId);
+    if (!community) return res.status(404).json({ error: "Community not found." });
+
+    const [member] = await db.select({ id: members.id })
+      .from(members)
+      .where(and(eq(members.id, memberId), eq(members.communityId, community.id)));
+    if (!member) return res.status(404).json({ error: "Member not found or unauthorized." });
+
+    const communitySessions = await db.select({ id: sessions.id })
+      .from(sessions)
+      .where(eq(sessions.communityId, community.id));
+    const sessionIds = communitySessions.map(session => session.id);
+
+    // Keep completed/history rows intact while removing the FK dependency.
+    // The deleted player appears as an empty slot/TBD in old match records.
+    // Clear only the deleted player's slots so partners and opponents remain intact.
+    if (sessionIds.length > 0) {
+      await db.update(matches).set({ teamA_player1: null }).where(and(inArray(matches.sessionId, sessionIds), eq(matches.teamA_player1, memberId)));
+      await db.update(matches).set({ teamA_player2: null }).where(and(inArray(matches.sessionId, sessionIds), eq(matches.teamA_player2, memberId)));
+      await db.update(matches).set({ teamB_player1: null }).where(and(inArray(matches.sessionId, sessionIds), eq(matches.teamB_player1, memberId)));
+      await db.update(matches).set({ teamB_player2: null }).where(and(inArray(matches.sessionId, sessionIds), eq(matches.teamB_player2, memberId)));
+    }
+
+    await db.delete(members).where(and(eq(members.id, memberId), eq(members.communityId, community.id)));
     res.status(200).json({ message: "Member deleted successfully." });
-  } catch (error) { res.status(500).json({ error: "Internal server error." }); }
+  } catch (error) {
+    console.error("DELETE /members/:id Error:", error);
+    res.status(500).json({ error: "Unable to delete member. Historical match records were preserved." });
+  }
 });
 
 // --- MEMBERSHIP PERIODS & PAYMENTS ---
