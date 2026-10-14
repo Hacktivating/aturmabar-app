@@ -1,13 +1,24 @@
-import { useState, useEffect } from 'react';
-import { Play, Settings as SettingsIcon, Trash2, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ArrowRightLeft, Plus, CircleHelp } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ArrowRightLeft, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, CircleHelp, Play, Plus, Settings as SettingsIcon, Trash2 } from 'lucide-react';
+
+const teamStyles = {
+  home: {
+    panel: 'border-blue-200 bg-blue-50/80 dark:border-blue-900/70 dark:bg-blue-950/30',
+    name: 'text-blue-900 dark:text-blue-100',
+    badge: 'border-blue-200 bg-white/70 text-blue-800 dark:border-blue-800 dark:bg-blue-950/50 dark:text-blue-200',
+    input: 'border-blue-200 focus:border-blue-500 focus:ring-blue-500/20 text-blue-900 dark:border-blue-900 dark:bg-[#101827] dark:text-blue-100'
+  },
+  away: {
+    panel: 'border-rose-200 bg-rose-50/80 dark:border-rose-900/70 dark:bg-rose-950/30',
+    name: 'text-rose-900 dark:text-rose-100',
+    badge: 'border-rose-200 bg-white/70 text-rose-800 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200',
+    input: 'border-rose-200 focus:border-rose-500 focus:ring-rose-500/20 text-rose-900 dark:border-rose-900 dark:bg-[#1b1017] dark:text-rose-100'
+  }
+};
 
 export const MatchCard = ({ match, court, sessionStatus, maxSets, isProcessing, getMemberData, openEditMatchModal, handleAutoGenerateCourt, handleAutoFillEmptySlots, onExplainMatch, setSwapCourtModal, setConfirmDeleteMatchId, setConfirmResetMatchId, handleStartMatch, handleFinishMatch, handleReorderQueue, queueIndex, totalQueued, t }: any) => {
   const [currentSet, setCurrentSet] = useState(1);
-  const [scores, setScores] = useState({
-    a1: match?.scoreTeamA_set1 || '', b1: match?.scoreTeamB_set1 || '',
-    a2: match?.scoreTeamA_set2 || '', b2: match?.scoreTeamB_set2 || '',
-    a3: match?.scoreTeamA_set3 || '', b3: match?.scoreTeamB_set3 || ''
-  });
+  const [scores, setScores] = useState({ a1: '', b1: '', a2: '', b2: '', a3: '', b3: '' });
 
   useEffect(() => {
     setCurrentSet(1);
@@ -18,197 +29,42 @@ export const MatchCard = ({ match, court, sessionStatus, maxSets, isProcessing, 
     });
   }, [match?.id]);
 
+  const cardShell = 'rounded-2xl border border-subtle bg-surface shadow-sm dark:border-zinc-800 dark:bg-[#121214]';
   if (!match) {
-    return (
-      <div className="bg-surface dark:bg-surface-dark border border-subtle dark:border-subtle-dark rounded-xl overflow-hidden shadow-sm flex flex-col h-full">
-        <div className="p-3 flex justify-between items-center border-b border-subtle dark:border-subtle-dark bg-app dark:bg-app-dark">
-          <div className="flex items-center gap-2">
-            <h3 className="font-bold text-sm text-primary dark:text-primary-dark tracking-wide">{court?.name || 'Queued'}</h3>
-          </div>
-          <div className="rounded-full border border-subtle px-2 py-1 text-[10px] font-bold tracking-widest uppercase text-faint dark:border-zinc-700 dark:text-zinc-400">{t('empty', 'EMPTY')}</div>
-        </div>
-        <div className="flex-1 flex flex-col items-center justify-center gap-3 py-6 px-4">
-          <button disabled={sessionStatus !== 'active' || isProcessing} onClick={() => handleAutoGenerateCourt(court.id)} className="px-4 py-2.5 bg-ink hover:bg-ink-soft text-white text-xs font-bold rounded-lg shadow-sm transition-colors w-full disabled:opacity-50 disabled:cursor-not-allowed">{t('auto_fill', 'Auto-Fill Courts')}</button>
-          <span className="text-[10px] text-faint font-bold uppercase tracking-widest">OR</span>
-          <button disabled={sessionStatus !== 'active' || isProcessing} onClick={() => openEditMatchModal({ courtId: court.id, matchType: 'MD' })} className="px-4 py-2.5 bg-muted hover:bg-muted dark:bg-elevated-dark dark:hover:bg-strong-dark text-primary dark:text-primary-dark text-xs font-bold rounded-lg transition-colors w-full disabled:opacity-50 disabled:cursor-not-allowed">{t('manual_match', 'Manual Match')}</button>
-        </div>
-      </div>
-    );
+    return <div className={`${cardShell} flex min-h-[270px] flex-col overflow-hidden`}>
+      <div className="flex h-16 items-center justify-between border-b border-subtle bg-app px-5 dark:border-zinc-800 dark:bg-[#18181b]"><div><p className="text-[10px] font-black uppercase tracking-widest text-muted-ink dark:text-zinc-500">Court</p><h3 className="mt-0.5 text-base font-black text-primary dark:text-white">{court?.name || 'Queued'}</h3></div><span className="rounded-full border border-subtle px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-muted-ink dark:border-zinc-700 dark:text-zinc-400">{t('empty', 'Empty')}</span></div>
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 p-5"><button type="button" disabled={sessionStatus !== 'active' || isProcessing} onClick={() => handleAutoGenerateCourt(court.id)} className="h-11 w-full rounded-xl bg-ink px-4 text-sm font-black text-white transition-colors hover:bg-ink-soft disabled:cursor-not-allowed disabled:opacity-50">{t('auto_fill', 'Auto-Fill Court')}</button><span className="text-[10px] font-black uppercase tracking-widest text-muted-ink dark:text-zinc-500">or</span><button type="button" disabled={sessionStatus !== 'active' || isProcessing} onClick={() => openEditMatchModal({ courtId: court.id, matchType: 'MD' })} className="h-11 w-full rounded-xl border border-subtle bg-app px-4 text-sm font-black text-primary transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-[#18181b] dark:text-white dark:hover:bg-zinc-800">{t('manual_match', 'Manual Match')}</button></div>
+    </div>;
   }
 
   const isActive = match.status === 'on_court';
-  const numA = parseInt(scores[`a${currentSet}` as keyof typeof scores]) || 0;
-  const numB = parseInt(scores[`b${currentSet}` as keyof typeof scores]) || 0;
+  const isTeamA = Boolean(match.teamA_player1 || match.teamA_player2);
+  const isTeamB = Boolean(match.teamB_player1 || match.teamB_player2);
+  const hasEmptySlot = [match.teamA_player1, match.teamA_player2, match.teamB_player1, match.teamB_player2].some(Boolean) && [match.teamA_player1, match.teamA_player2, match.teamB_player1, match.teamB_player2].some(playerId => !playerId);
+  const numA = Number(scores[`a${currentSet}` as keyof typeof scores]) || 0;
+  const numB = Number(scores[`b${currentSet}` as keyof typeof scores]) || 0;
+  const teamName = (playerId: number | null, fallback = 'TBD') => getMemberData(playerId)?.name || fallback;
+  const teamGrade = (playerId: number | null) => getMemberData(playerId)?.skillLevel || '-';
+  const teamLine = (first: number | null, second: number | null) => [teamName(first), second ? teamName(second) : 'TBD'];
+  const homeNames = teamLine(match.teamA_player1, match.teamA_player2);
+  const awayNames = teamLine(match.teamB_player1, match.teamB_player2);
+  const statusLabel = isActive ? 'Playing' : hasEmptySlot ? 'Partial' : court ? 'Ready' : 'Queued';
+  const statusTone = isActive ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' : hasEmptySlot ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300' : court ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300' : 'bg-muted text-muted-ink dark:bg-zinc-800 dark:text-zinc-400';
+  const updateScore = (side: 'a' | 'b', value: string) => setScores(previous => ({ ...previous, [`${side}${currentSet}`]: value }));
+  const teamPanel = (side: 'home' | 'away', names: string[], firstId: number | null, secondId: number | null, filled: boolean) => {
+    const styles = teamStyles[side];
+    return <div className={`min-w-0 rounded-xl border p-3 ${styles.panel} ${!isActive ? 'cursor-pointer transition-colors hover:brightness-[0.98]' : ''}`} onClick={() => !isActive && openEditMatchModal(match)} role={!isActive ? 'button' : undefined}>
+      <div className="mb-2 flex items-center justify-between gap-2"><span className={`text-[10px] font-black uppercase tracking-[0.16em] ${styles.name}`}>{side === 'home' ? 'Home' : 'Away'}</span><span className="rounded-md bg-white/50 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-muted-ink dark:bg-black/20 dark:text-zinc-400">{side === 'home' ? 'A' : 'B'}</span></div>
+      {filled ? <div className="space-y-2">{[firstId, secondId].map((playerId, index) => <div key={`${side}-${index}`} className="flex h-9 items-center justify-between gap-2 rounded-lg bg-white/65 px-2.5 dark:bg-black/20"><span className={`min-w-0 truncate text-sm font-black ${styles.name}`}>{names[index]}</span><span className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[9px] font-black ${styles.badge}`}>{teamGrade(playerId)}</span></div>)}</div> : <div className={`flex h-[86px] items-center justify-center gap-1 text-sm font-black ${styles.name}`}><Plus size={15} /> Add {side === 'home' ? 'home' : 'away'} team</div>}
+    </div>;
+  };
 
-  const tAName1 = getMemberData(match.teamA_player1)?.name?.split(' ')[0] || 'TBD';
-  const tAName2 = getMemberData(match.teamA_player2)?.name?.split(' ')[0] || '';
-  const tBName1 = getMemberData(match.teamB_player1)?.name?.split(' ')[0] || 'TBD';
-  const tBName2 = getMemberData(match.teamB_player2)?.name?.split(' ')[0] || '';
-
-  const isTeamA = match.teamA_player1 || match.teamA_player2;
-  const isTeamB = match.teamB_player1 || match.teamB_player2;
-  const hasEmptySlot = [match.teamA_player1, match.teamA_player2, match.teamB_player1, match.teamB_player2].some(Boolean) && [match.teamA_player1, match.teamA_player2, match.teamB_player1, match.teamB_player2].some((playerId) => !playerId);
-
-  return (
-    <div className={`bg-surface dark:bg-surface-dark border ${isActive ? 'border-emerald-300 dark:border-emerald-700 shadow-md ring-2 ring-emerald-500/20' : 'border-subtle dark:border-subtle-dark shadow-sm'} rounded-xl overflow-hidden flex flex-col h-full transition-all`}>
-      <div className="p-3 flex justify-between items-center border-b border-subtle dark:border-subtle-dark bg-app dark:bg-app-dark">
-        <div className="flex items-center gap-2">
-          <h3 className="font-bold text-sm text-primary dark:text-primary-dark tracking-wide">{court ? court.name : 'Queued'}</h3>
-          {!court && <span className="bg-muted dark:bg-elevated-dark text-muted-ink dark:text-muted-dark text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">#{queueIndex + 1}</span>}
-          {court && <span className="bg-accent-soft text-ink dark:bg-accent-soft-dark dark:text-ink text-[9px] px-1.5 py-0.5 rounded border border-accent dark:border-strong-dark uppercase tracking-wider font-bold">AUTO</span>}
-        </div>
-        <div className="flex items-center gap-3">
-          <div className={`rounded-full px-2 py-1 text-[10px] font-black tracking-widest uppercase ${isActive ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : hasEmptySlot ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300' : court ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300' : 'bg-muted text-muted-ink dark:bg-zinc-800 dark:text-zinc-400'}`}>{isActive ? 'PLAYING' : hasEmptySlot ? 'PARTIAL' : court ? 'READY' : 'QUEUED'}</div>
-          
-          {!isActive && (
-            <div className="flex items-center gap-1 border-l border-subtle dark:border-default-dark pl-2 ml-1">
-              {!court && queueIndex > 0 && (
-                <button disabled={isProcessing} onClick={() => handleReorderQueue(queueIndex, 'up')} className="p-1 text-faint hover:text-ink transition-colors disabled:opacity-50"><ChevronUp size={16}/></button>
-              )}
-              {!court && queueIndex < totalQueued - 1 && (
-                <button disabled={isProcessing} onClick={() => handleReorderQueue(queueIndex, 'down')} className="p-1 text-faint hover:text-ink transition-colors disabled:opacity-50"><ChevronDown size={16}/></button>
-              )}
-              {onExplainMatch && <button disabled={isProcessing} onClick={() => onExplainMatch(match)} className="p-1 text-faint hover:text-ink transition-colors disabled:opacity-50" title="Why this match?"><CircleHelp size={14}/></button>}
-              <button disabled={isProcessing} onClick={() => openEditMatchModal(match)} className="p-1 text-faint hover:text-ink transition-colors disabled:opacity-50"><SettingsIcon size={14}/></button>
-              <button disabled={isProcessing} onClick={() => setConfirmDeleteMatchId(match.id)} className="p-1 text-faint hover:text-rose-500 transition-colors disabled:opacity-50"><Trash2 size={14}/></button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="p-3 sm:p-4 flex-1 flex flex-col">
-        {court && isActive && (
-          <div className="flex justify-end mb-3">
-            <button disabled={isProcessing} onClick={() => openEditMatchModal(match)} className="p-1.5 border border-subtle dark:border-strong-dark rounded-md bg-app dark:bg-elevated-dark/50 text-muted-ink hover:text-ink dark:hover:text-white transition-colors shadow-sm disabled:opacity-50"><SettingsIcon size={12}/></button>
-          </div>
-        )}
-        
-        <div className="flex flex-col mb-4">
-          <div className="relative mt-1">
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-surface dark:bg-surface-dark px-2 text-[10px] text-muted-ink font-black uppercase tracking-widest z-10 border border-subtle dark:border-subtle-dark rounded-full shadow-sm">{match.matchType}</div>
-            
-            <div className="flex border border-subtle dark:border-subtle-dark rounded-xl overflow-hidden shadow-sm">
-              {/* Team A Badge - Highly Visible Blue */}
-              <div 
-                onClick={() => !isActive && openEditMatchModal(match)} 
-                className={`flex-1 p-2.5 sm:p-3 flex flex-col justify-center border-r border-blue-200 dark:border-blue-800 bg-blue-100 dark:bg-blue-900/40 ${!isActive ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
-              >
-                {isTeamA ? (
-                  <>
-                    <div className="flex justify-between items-center mb-1.5 gap-2">
-                      <span className="font-bold text-xs sm:text-sm truncate text-blue-900 dark:text-blue-100">{getMemberData(match.teamA_player1)?.name || 'TBD'}</span>
-                      <span className="text-[9px] border px-1.5 py-0.5 rounded font-mono font-bold bg-white/60 dark:bg-black/30 border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-200 shrink-0">
-                        {getMemberData(match.teamA_player1)?.skillLevel || '-'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center gap-2">
-                      <span className="font-bold text-xs sm:text-sm truncate text-blue-900 dark:text-blue-100">{getMemberData(match.teamA_player2)?.name || 'TBD'}</span>
-                      <span className="text-[9px] border px-1.5 py-0.5 rounded font-mono font-bold bg-white/60 dark:bg-black/30 border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-200 shrink-0">
-                        {getMemberData(match.teamA_player2)?.skillLevel || '-'}
-                      </span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="h-full flex items-center justify-center text-xs font-bold text-blue-600 dark:text-blue-400 gap-1"><Plus size={14}/> Add Home</div>
-                )}
-              </div>
-              
-              {/* Team B Badge - Highly Visible Rose */}
-              <div 
-                onClick={() => !isActive && openEditMatchModal(match)} 
-                className={`flex-1 p-2.5 sm:p-3 flex flex-col justify-center bg-rose-100 dark:bg-rose-900/40 ${!isActive ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
-              >
-                {isTeamB ? (
-                  <>
-                    <div className="flex justify-between items-center mb-1.5 gap-2">
-                      <span className="font-bold text-xs sm:text-sm truncate text-rose-900 dark:text-rose-100">{getMemberData(match.teamB_player1)?.name || 'TBD'}</span>
-                      <span className="text-[9px] border px-1.5 py-0.5 rounded font-mono font-bold bg-white/60 dark:bg-black/30 border-rose-200 dark:border-rose-700 text-rose-800 dark:text-rose-200 shrink-0">
-                        {getMemberData(match.teamB_player1)?.skillLevel || '-'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center gap-2">
-                      <span className="font-bold text-xs sm:text-sm truncate text-rose-900 dark:text-rose-100">{getMemberData(match.teamB_player2)?.name || 'TBD'}</span>
-                      <span className="text-[9px] border px-1.5 py-0.5 rounded font-mono font-bold bg-white/60 dark:bg-black/30 border-rose-200 dark:border-rose-700 text-rose-800 dark:text-rose-200 shrink-0">
-                        {getMemberData(match.teamB_player2)?.skillLevel || '-'}
-                      </span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="h-full flex items-center justify-center text-xs font-bold text-rose-600 dark:text-rose-400 gap-1"><Plus size={14}/> Add Away</div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-auto flex gap-2">
-          {isActive ? (
-            <form onSubmit={(e) => { e.preventDefault(); if(!isProcessing) handleFinishMatch(match.id, true, scores, court?.id); }} className="w-full flex flex-col gap-2 mt-auto">
-              <div className="bg-app dark:bg-app-dark border border-subtle dark:border-subtle-dark p-3 rounded-xl relative">
-                {maxSets > 1 && (
-                  <div className="flex items-center justify-between mb-3 bg-surface dark:bg-surface-dark rounded-md p-1 border border-subtle dark:border-subtle-dark">
-                    <button type="button" onClick={() => setCurrentSet(c => c - 1)} disabled={currentSet <= 1 || isProcessing} className="p-1 text-muted-ink hover:text-ink disabled:opacity-30 transition-colors"><ChevronLeft size={14}/></button>
-                    <span className="text-[9px] font-bold text-muted-ink dark:text-muted-dark uppercase tracking-widest">Set {currentSet} of {maxSets}</span>
-                    <button type="button" onClick={() => setCurrentSet(c => c + 1)} disabled={currentSet >= maxSets || isProcessing} className="p-1 text-muted-ink hover:text-ink disabled:opacity-30 transition-colors"><ChevronRight size={14}/></button>
-                  </div>
-                )}
-                
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 flex flex-col items-center bg-blue-50/80 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3 shadow-inner">
-                    <span className="text-[10px] font-bold text-blue-800 dark:text-blue-300 mb-2 truncate w-full text-center tracking-wide uppercase">
-                      {tAName1} {match.teamA_player2 && `& ${tAName2}`}
-                    </span>
-                    <input 
-                      type="number" placeholder="0" disabled={isProcessing}
-                      onWheel={(e) => e.currentTarget.blur()}
-                      value={scores[`a${currentSet}` as keyof typeof scores]} 
-                      onChange={(e) => setScores(p => ({...p, [`a${currentSet}`]: e.target.value}))} 
-                      className={`w-full bg-white dark:bg-app-dark border-2 ${numA > numB && numA > 0 ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-blue-100 dark:border-blue-900/50 text-blue-900 dark:text-blue-100 focus:border-blue-400'} rounded-lg py-3 sm:py-4 text-center font-black text-3xl outline-none transition-all disabled:opacity-50 shadow-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`} 
-                    />
-                  </div>
-
-                  <div className="text-faint dark:text-muted-dark font-black text-sm uppercase tracking-widest shrink-0">VS</div>
-
-                  <div className="flex-1 flex flex-col items-center bg-rose-50/80 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-xl p-3 shadow-inner">
-                    <span className="text-[10px] font-bold text-rose-800 dark:text-rose-300 mb-2 truncate w-full text-center tracking-wide uppercase">
-                      {tBName1} {match.teamB_player2 && `& ${tBName2}`}
-                    </span>
-                    <input 
-                      type="number" placeholder="0" disabled={isProcessing}
-                      onWheel={(e) => e.currentTarget.blur()}
-                      value={scores[`b${currentSet}` as keyof typeof scores]} 
-                      onChange={(e) => setScores(p => ({...p, [`b${currentSet}`]: e.target.value}))} 
-                      className={`w-full bg-white dark:bg-app-dark border-2 ${numB > numA && numB > 0 ? 'border-rose-500 text-rose-600 dark:text-rose-400' : 'border-rose-100 dark:border-rose-900/50 text-rose-900 dark:text-rose-100 focus:border-rose-400'} rounded-lg py-3 sm:py-4 text-center font-black text-3xl outline-none transition-all disabled:opacity-50 shadow-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`} 
-                    />
-                  </div>
-                </div>
-
-              </div>
-              <button type="submit" disabled={isProcessing} className="w-full bg-ink hover:bg-ink-soft text-white py-3 rounded-lg text-sm font-bold transition-colors shadow-sm mt-2 disabled:opacity-50">
-                {t('finish_free_court', 'Finish & Free Court')}
-              </button>
-              <button type="button" disabled={isProcessing} onClick={() => setConfirmResetMatchId(match.id)} className="w-full bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-500 py-2.5 rounded-lg text-xs font-bold transition-colors mt-1 disabled:opacity-50">
-                Cancel Match
-              </button>
-            </form>
-          ) : court ? (
-            <div className="w-full flex gap-2 mt-auto">
-              <button disabled={isProcessing} onClick={() => setSwapCourtModal(match)} className="p-2.5 border border-subtle dark:border-subtle-dark rounded-lg text-faint hover:bg-app dark:hover:bg-elevated-dark dark:hover:text-white transition-colors disabled:opacity-50" title="Manage Court"><ArrowRightLeft size={16}/></button>
-              {hasEmptySlot && <button onClick={() => handleAutoFillEmptySlots(match.id)} disabled={isProcessing || sessionStatus !== 'active'} className="px-3 bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-lg text-[10px] font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Fill Empty</button>}
-              <button onClick={() => handleStartMatch(match.id)} disabled={isProcessing || sessionStatus !== 'active' || hasEmptySlot} className="flex-1 bg-[#10B981] hover:bg-[#059669] text-white py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                <Play fill="currentColor" size={14}/> {t('start', 'Start')}
-              </button>
-            </div>
-          ) : (
-            <div className="w-full mt-auto flex gap-2">
-              {hasEmptySlot && <button onClick={() => handleAutoFillEmptySlots(match.id)} disabled={isProcessing || sessionStatus !== 'active'} className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Fill Empty</button>}
-              <button disabled={isProcessing || sessionStatus !== 'active'} onClick={() => setSwapCourtModal(match)} className="flex-1 py-2.5 bg-accent-soft hover:bg-accent-soft dark:bg-elevated-dark dark:hover:bg-strong-dark text-ink dark:text-primary-dark rounded-lg text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                Move to Court
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+  return <div className={`${cardShell} flex h-full min-h-[370px] flex-col overflow-hidden ${isActive ? 'ring-2 ring-emerald-500/20' : ''}`}>
+    <div className="flex min-h-16 items-center justify-between gap-3 border-b border-subtle bg-app px-4 py-3 dark:border-zinc-800 dark:bg-[#18181b] sm:px-5"><div className="min-w-0 flex items-center gap-2.5"><div><p className="text-[10px] font-black uppercase tracking-widest text-muted-ink dark:text-zinc-500">{court ? 'Court' : 'Queue position'}</p><h3 className="truncate text-base font-black text-primary dark:text-white">{court?.name || `Match ${queueIndex + 1}`}</h3></div>{!court && <span className="rounded-lg bg-muted px-2 py-1 text-[10px] font-black text-muted-ink dark:bg-zinc-800 dark:text-zinc-300">#{queueIndex + 1}</span>}{court && <span className="rounded-lg bg-accent-soft px-2 py-1 text-[10px] font-black uppercase tracking-wider text-ink dark:bg-zinc-800 dark:text-zinc-200">Auto</span>}</div><div className="flex shrink-0 items-center gap-2"><span className={`rounded-full px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest ${statusTone}`}>{statusLabel}</span>{!isActive && <div className="flex items-center gap-0.5 border-l border-subtle pl-2 dark:border-zinc-700">{!court && queueIndex > 0 && <button type="button" disabled={isProcessing} onClick={() => handleReorderQueue(queueIndex, 'up')} className="rounded-lg p-1.5 text-muted-ink hover:bg-muted disabled:opacity-40 dark:hover:bg-zinc-800"><ChevronUp size={15} /></button>}{!court && queueIndex < totalQueued - 1 && <button type="button" disabled={isProcessing} onClick={() => handleReorderQueue(queueIndex, 'down')} className="rounded-lg p-1.5 text-muted-ink hover:bg-muted disabled:opacity-40 dark:hover:bg-zinc-800"><ChevronDown size={15} /></button>}{onExplainMatch && <button type="button" disabled={isProcessing} onClick={() => onExplainMatch(match)} className="rounded-lg p-1.5 text-muted-ink hover:bg-muted disabled:opacity-40 dark:hover:bg-zinc-800" title="Why this match?"><CircleHelp size={15} /></button>}<button type="button" disabled={isProcessing} onClick={() => openEditMatchModal(match)} className="rounded-lg p-1.5 text-muted-ink hover:bg-muted disabled:opacity-40 dark:hover:bg-zinc-800" title="Edit players"><SettingsIcon size={15} /></button><button type="button" disabled={isProcessing} onClick={() => setConfirmDeleteMatchId(match.id)} className="rounded-lg p-1.5 text-muted-ink hover:bg-rose-500/10 hover:text-rose-500 disabled:opacity-40" title="Delete match"><Trash2 size={15} /></button></div>}</div></div>
+    <div className="flex flex-1 flex-col gap-4 p-4 sm:p-5"><div className="relative grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto_1fr] sm:items-stretch"><div className="pointer-events-none absolute left-1/2 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 rounded-full border border-subtle bg-surface px-2 py-1 text-[10px] font-black uppercase tracking-widest text-muted-ink dark:border-zinc-700 dark:bg-[#121214] sm:block">{match.matchType}</div>{teamPanel('home', homeNames, match.teamA_player1, match.teamA_player2, isTeamA)}<div className="flex items-center justify-center text-xs font-black uppercase tracking-widest text-muted-ink dark:text-zinc-500 sm:hidden">{match.matchType} · VS</div>{teamPanel('away', awayNames, match.teamB_player1, match.teamB_player2, isTeamB)}</div>
+      {isActive ? <form onSubmit={event => { event.preventDefault(); if (!isProcessing) handleFinishMatch(match.id, true, scores, court?.id); }} className="mt-auto space-y-3"><div className="rounded-2xl border border-subtle bg-app p-3 dark:border-zinc-800 dark:bg-[#0f0f11]">{maxSets > 1 && <div className="mb-3 flex h-9 items-center justify-between rounded-xl border border-subtle bg-surface px-2 dark:border-zinc-800 dark:bg-[#18181b]"><button type="button" onClick={() => setCurrentSet(current => current - 1)} disabled={currentSet <= 1 || isProcessing} className="rounded-lg p-1.5 text-muted-ink hover:bg-muted disabled:opacity-30 dark:hover:bg-zinc-800"><ChevronLeft size={15} /></button><span className="text-[10px] font-black uppercase tracking-widest text-muted-ink dark:text-zinc-400">Set {currentSet} of {maxSets}</span><button type="button" onClick={() => setCurrentSet(current => current + 1)} disabled={currentSet >= maxSets || isProcessing} className="rounded-lg p-1.5 text-muted-ink hover:bg-muted disabled:opacity-30 dark:hover:bg-zinc-800"><ChevronRight size={15} /></button></div>}<div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2"><ScoreBox side="home" label={homeNames.join(' & ')} value={scores[`a${currentSet}` as keyof typeof scores]} onChange={(value: string) => updateScore('a', value)} winning={numA > numB && numA > 0} disabled={isProcessing} styles={teamStyles.home} /><div className="pb-7 text-[11px] font-black uppercase tracking-widest text-muted-ink dark:text-zinc-500">VS</div><ScoreBox side="away" label={awayNames.join(' & ')} value={scores[`b${currentSet}` as keyof typeof scores]} onChange={(value: string) => updateScore('b', value)} winning={numB > numA && numB > 0} disabled={isProcessing} styles={teamStyles.away} /></div></div><button type="submit" disabled={isProcessing} className="h-12 w-full rounded-xl bg-emerald-600 text-sm font-black text-white shadow-sm transition-colors hover:bg-emerald-500 disabled:opacity-50">{t('finish_free_court', 'Finish & Free Court')}</button><button type="button" disabled={isProcessing} onClick={() => setConfirmResetMatchId(match.id)} className="h-10 w-full rounded-xl border border-rose-200 bg-rose-50 text-xs font-black text-rose-700 transition-colors hover:bg-rose-100 disabled:opacity-50 dark:border-rose-900/60 dark:bg-rose-950/20 dark:text-rose-300 dark:hover:bg-rose-950/40">Cancel match</button></form> : court ? <div className="mt-auto grid grid-cols-[auto_1fr] gap-2"><button type="button" disabled={isProcessing} onClick={() => setSwapCourtModal(match)} className="h-11 rounded-xl border border-subtle px-3 text-muted-ink transition-colors hover:bg-muted hover:text-primary disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-white" title="Manage court"><ArrowRightLeft size={16} /></button>{hasEmptySlot && <button type="button" onClick={() => handleAutoFillEmptySlots(match.id)} disabled={isProcessing || sessionStatus !== 'active'} className="h-11 rounded-xl bg-blue-600 px-3 text-xs font-black text-white transition-colors hover:bg-blue-500 disabled:opacity-50">Fill empty</button>}<button type="button" onClick={() => handleStartMatch(match.id)} disabled={isProcessing || sessionStatus !== 'active' || hasEmptySlot} className={`${hasEmptySlot ? 'col-span-2' : ''} h-11 rounded-xl bg-emerald-600 text-sm font-black text-white transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50`}><Play fill="currentColor" size={14} className="mr-1.5 inline" />Start</button></div> : <div className="mt-auto grid grid-cols-2 gap-2">{hasEmptySlot && <button type="button" onClick={() => handleAutoFillEmptySlots(match.id)} disabled={isProcessing || sessionStatus !== 'active'} className="h-11 rounded-xl bg-blue-600 text-xs font-black text-white transition-colors hover:bg-blue-500 disabled:opacity-50">Fill empty</button>}<button type="button" disabled={isProcessing || sessionStatus !== 'active'} onClick={() => setSwapCourtModal(match)} className={`${hasEmptySlot ? '' : 'col-span-2'} h-11 rounded-xl border border-subtle bg-app text-sm font-black text-primary transition-colors hover:bg-muted disabled:opacity-50 dark:border-zinc-700 dark:bg-[#18181b] dark:text-white dark:hover:bg-zinc-800`}>Move to court</button></div>}
     </div>
-  );
+  </div>;
 };
+
+const ScoreBox = ({ label, value, onChange, winning, disabled, styles }: any) => <div className="min-w-0"><p className={`mb-2 truncate text-center text-[10px] font-black uppercase tracking-wide ${styles.name}`}>{label}</p><input type="number" min="0" inputMode="numeric" placeholder="0" disabled={disabled} onWheel={event => event.currentTarget.blur()} value={value} onChange={event => onChange(event.target.value)} className={`h-16 w-full rounded-xl border-2 bg-white text-center text-3xl font-black outline-none transition focus:ring-4 dark:bg-[#111113] ${winning ? 'ring-4 ring-emerald-500/10' : ''} ${styles.input} disabled:opacity-50 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`} /></div>;
